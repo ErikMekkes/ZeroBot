@@ -1,0 +1,34 @@
+{
+    "addmember": [
+        "staff_bot_command"
+    ],
+    "updatelist": [
+        "staff_bot_command"
+    ],
+    "edit": [
+        "staff_bot_command"
+    ],
+    "setrank": [
+        "staff_bot_command"
+    ],
+    "todos": [
+        "staff_bot_command"
+    ],
+    "findmember": [
+        "staff_bot_command"
+    ],
+    "inactives": [
+        "staff_bot_command"
+    ],
+    "restart": [
+        "staff_bot_command"
+    ],
+    "banlist": [
+        "staff_bot_command"
+    ],
+    "archive": [],
+    "accept": [],
+    "reject": [],
+    "cancel": [],
+    "sitelink": []
+}
