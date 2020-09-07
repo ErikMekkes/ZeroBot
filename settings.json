@@ -1,5 +1,5 @@
 {
-    "bot_auth_token_filename": "credentials/bot_auth_token",
+    "bot_auth_token_filename": "credentials/test_bot_auth_token",
     "drive_creds_keyfile_name": "credentials/drive_creds_keyfile.json",
     "site_login_credentials_filename": "credentials/site_login_credentials.json",
     "dateformat": "%Y-%m-%d",

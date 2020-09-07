@@ -2,6 +2,7 @@ import zerobot_common
 import requests
 # for date strings
 import time
+import os
 from datetime import datetime
 # to store data as member objects
 from member import Member, read_member, int_0
