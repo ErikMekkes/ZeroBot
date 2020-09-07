@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import File
 from pathlib import Path
 from application import Application
+import traceback
 
 class ApplicationsCog(commands.Cog):
     '''
