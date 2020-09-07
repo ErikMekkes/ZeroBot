@@ -3,6 +3,7 @@ from discord.ext import commands
 from discord import File
 from pathlib import Path
 from application import Application
+import traceback
 
 class ApplicationsCog(commands.Cog):
     '''
@@ -208,7 +209,7 @@ class ApplicationsCog(commands.Cog):
         '''
         Accept join application = addmember from normal zerobot.
         '''
-        memblist = self.bot.get_cog('MembList')
+        memblist = self.bot.get_cog('MemberlistCog')
         if (memblist == None):
             zerobot_common.applications_log.log(f'Failed to retrieve memberlist cog for addmember call')
             return
@@ -301,3 +302,14 @@ class ApplicationsCog(commands.Cog):
         app_type = app.fields_dict['type']
         discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
         await discord_user.send(f'Your application for {app_type} has been closed. Reason: The channel was removed.')
+    
+    @commands.Cog.listener()
+    async def on_command_error(self, ctx, error):
+        '''
+        This event executes whenever a command encounters an error that isn't handled.
+        '''
+        # send simple message to location the error came from.
+        await ctx.send('An error occured.')
+        # write down full error trace in log files on disk.
+        zerobot_common.applications_log.log(f'Error in command : {ctx.command}')
+        zerobot_common.applications_log.log(traceback.format_exception(type(error), error, error.__traceback__))

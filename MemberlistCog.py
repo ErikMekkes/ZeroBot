@@ -671,9 +671,9 @@ class MemberlistCog(commands.Cog):
         message = f"{discord_user.mention}: "
         for role in discord_user.roles:
             # found waiting approval role, remove
-            if role.name == "Waiting approval":
+            if role.name == "Waiting Approval":
                 await discord_user.remove_roles(role, reason="Adding member")
-                message += f"Removed Waiting approval role. "
+                message += f"Removed Waiting Approval role. "
             # found guest role, remove
             if role.name == "Guest":
                 await discord_user.remove_roles(role, reason="Adding member")
