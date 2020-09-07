@@ -388,8 +388,8 @@ def UpdateList():
 
     zerobot_common.logfile.log("Writing backup copy to disk...")
     # create local copies of the memberlists
-    _writeMemberlistCopyToDisk(current_members_list, ("backup_memberlists/current_membs/current_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
-    _writeMemberlistCopyToDisk(old_members_list, ("backup_memberlists/old_membs/old_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
+    _writeMemberlistCopyToDisk(current_members_list, ("backup_memberlists/current_members/current_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
+    _writeMemberlistCopyToDisk(old_members_list, ("backup_memberlists/old_members/old_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
 
     zerobot_common.logfile.log("clantrack update done")
     return update_res
