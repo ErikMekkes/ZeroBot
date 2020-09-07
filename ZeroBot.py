@@ -3,6 +3,7 @@ from discord.ext import commands
 from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
+from GuidesCog import GuidesCog
 
 # set up the basic discord bot object along with some basic settings
 bot = commands.Bot(command_prefix='-zbot ', case_insensitive=True, fetch_offline_members=True, guild_subscriptions=True)
@@ -47,6 +48,7 @@ async def on_ready():
     bot.add_cog(MemberlistCog(bot))
     bot.add_cog(ReactionRolesCog(bot))
     bot.add_cog(ApplicationsCog(bot))
+    bot.add_cog(GuidesCog(bot))
 
 # actually start the bot
 bot.run(zerobot_common.auth_token)

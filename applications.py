@@ -1,6 +1,6 @@
-import zerobot_common
 import json
 from application import Application
+from utilities import load_json, dump_json
 
 class Applications:
     '''
@@ -13,7 +13,7 @@ class Applications:
         '''
         Load the state of applications from disk.
         '''
-        apps = zerobot_common.load_json(self.applications_filename)
+        apps = load_json(self.applications_filename)
 
         self.applist = []
         # apps dictionary contains ("channel_id": fields_dict) pairs, channel_id are keys.
@@ -28,7 +28,7 @@ class Applications:
         app_dict = {}
         for app in self.applist:
             app_dict[app.channel_id] = app.fields_dict
-        zerobot_common.dump_json(app_dict, self.applications_filename)
+        dump_json(app_dict, self.applications_filename)
     def append(self, app):
         '''
         Appends the app to the applist and syncs with file on disk.

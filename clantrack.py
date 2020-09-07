@@ -2,6 +2,7 @@ import zerobot_common
 import requests
 # for date strings
 import time
+import os
 from datetime import datetime
 # to store data as member objects
 from member import Member, read_member, int_0
@@ -335,6 +336,13 @@ def _printRecentChanges(recent_changes_sheet, update_res):
         recent_changes_sheet.insert_row(summary[i],1,value_input_option = 'USER_ENTERED')
 
 def _writeMemberlistCopyToDisk(memberlist, filename):
+    '''
+    Writes a copy of the memberlist to the specified file, overwriting it if it existed already.
+    '''
+    # ensure directory for file exists if not creating in current directory
+    dirname = os.path.dirname(filename)
+    if (dirname != ''):
+        os.makedirs(os.path.dirname(filename), exist_ok=True)
     # write a copy with todays date to disk as backup
     memberlist_file = open(filename, "w", encoding="utf-8")
     for x in memberlist:

@@ -1,5 +1,6 @@
-import zerobot_common
 import json
+import zerobot_common
+from utilities import load_json, dump_json
 
 class Permissions:
     '''
@@ -16,12 +17,12 @@ class Permissions:
         '''
         Load the state of permissions from file on disk
         '''
-        self.permissions = zerobot_common.load_json(self.permissions_filename)
+        self.permissions = load_json(self.permissions_filename)
     def dump(self):
         '''
         Write the current state of permissions to file on disk
         '''
-        zerobot_common.dump_json(self.permissions, self.permissions_filename)
+        dump_json(self.permissions, self.permissions_filename)
     def allow(self, command, channel):
         '''
         Allow a command to be used in the specified channel. New state of permissions is written to disk afterwards.
