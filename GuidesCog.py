@@ -1,3 +1,11 @@
+'''
+Enables syncing guide channels with contents posted on a google spreadsheet. Allows multiple
+people to collaborate on discord posts for guides.
+
+This module uses some components from other zerobot common for convenience, but everything
+related to this google drive guide syncing functionality is in here, removing this cog from
+the bot is enough to disable it completely.
+'''
 import zerobot_common
 from discord.ext import commands
 from logfile import LogFile
@@ -9,7 +17,7 @@ guides_doc = zerobot_common.drive_client.open('Discord Guides')
 guideslog_filename = 'logs/guideslog' + datetime.utcnow().strftime(zerobot_common.dateformat)
 guideslog = LogFile(guideslog_filename, zerobot_common.dateformat, zerobot_common.timeformat)
 # load config that describes which channels contain which guides
-guidechannels_filename = 'guide_channels.json'
+guidechannels_filename = zerobot_common.settings.get('guidechannels_filename')
 guidechannels = load_json(guidechannels_filename)
 
 class Post():
