@@ -209,7 +209,7 @@ class ApplicationsCog(commands.Cog):
         '''
         Accept join application = addmember from normal zerobot.
         '''
-        memblist = self.bot.get_cog('MembList')
+        memblist = self.bot.get_cog('MemberlistCog')
         if (memblist == None):
             zerobot_common.applications_log.log(f'Failed to retrieve memberlist cog for addmember call')
             return
