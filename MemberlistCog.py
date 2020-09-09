@@ -128,7 +128,7 @@ class MemberlistCog(commands.Cog):
     '''
     def __init__(self, bot):
         self.bot = bot
-        self.logfile = LogFile("logs/botlog_" + datetime.utcnow().strftime(zerobot_common.dateformat), zerobot_common.dateformat, zerobot_common.timeformat)
+        self.logfile = LogFile("logs/botlog")
         self.logfile.log(f'MembList cog loaded and ready.')
         self.updating = False
         self.update_msg = ""

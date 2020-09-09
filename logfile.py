@@ -1,11 +1,19 @@
 from datetime import datetime
 import os
+# uses date and time formats defined in utilities
+import utilities
 
 class LogFile:
     """
     Logfile(listbot).
     """
-    def __init__(self, filename, dateformat, timeformat):
+    def __init__(self, filename):
+        '''
+        Sets up a logfile with specified filename. Ensures directory structure
+        exists if filename uses a different folder. Current date is appended to
+        filename with a _ separator when the log is created.
+        '''
+        filename += f'_{datetime.utcnow().strftime(utilities.dateformat)}'
         # ensure directory for file exists if not creating in current directory
         dirname = os.path.dirname(filename)
         if (dirname != ''):
@@ -14,10 +22,10 @@ class LogFile:
         if (not os.path.exists(filename)):
             open(filename, 'w')
         self.filename = filename
-        self.dateformat = dateformat
-        self.timeformat = timeformat
-        self.datetimeformat = f"{dateformat} {timeformat}"
     def log(self, text):
+        '''
+        Appends text to this logfile, with 'datetime : ' prepended to it.
+        '''
         if (isinstance(text, list)):
             err_string = ''
             for errstr in text:
@@ -25,5 +33,6 @@ class LogFile:
             text = err_string
         print(text)
         file = open(self.filename, "a", encoding="utf-8")
-        file.write((datetime.utcnow().strftime(self.datetimeformat) + ' : ' + text + '\n'))
+        timestamp = datetime.utcnow().strftime(utilities.datetimeformat)
+        file.write((timestamp + ' : ' + text + '\n'))
         file.close()

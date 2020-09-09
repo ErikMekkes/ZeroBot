@@ -1,3 +1,13 @@
+'''
+Almost entirely self contained, need to work out:
+- code that calls updatelist (timer and command)    make new cog for tracking?
+- zerobot_common.rs_api_clan_name       only used here but ok as setting, move retrieve here
+- zerobot_common.logfile                make one here? in cog? both should work its append?
+- zerobot_common.drive_connect()        not bad, maybe utility but needs drive stuff?
+- zerobot_common.current_members_sheet  ok common use
+- zerobot_common.old_members_sheet      ok common use
+- zerobot_common.recent_changes_sheet   ok common use
+'''
 import zerobot_common
 import requests
 # for date strings
@@ -240,7 +250,7 @@ def _compareMembers(session, current_members_list, ingame_members_list, joining_
                         join.last_active = datetime.utcnow()
             # already know nobody stayed in clan with same name
             # no data to compare, leave member in to remove and continue with next.
-            zerobot_common.logfile.log(f"Missing data for leaving member : {leave.name}. Can not check for renames, member will be removed")
+            zerobot_common.logfile.log(f"Missing data for leaving member : {leave.name}. Can not check for renames")
             continue
         # calculate match chances
         best_match = 0
