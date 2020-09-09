@@ -411,28 +411,15 @@ def validSiteProfile(profile_link):
             return False
     return False
 
-# there are a few unique id's that are shorter but valid
-# perhaps these are older legacy ones? if more show up need to edit validation.
-discord_id_exceptions = [
-    "77714252336467968",
-    77714252336467968,
-    "82996849245425664",
-    82996849245425664
-]
-
 def validDiscordId(discord_id):
-    # 286608712628699138
-    # int?
-    if discord_id in discord_id_exceptions:
-        return True
-    
+    # 77714252336467968 <- at least this old
     if isinstance(discord_id, int):
-        if (len(str(discord_id)) == 18):
+        if (len(str(discord_id)) >= 17):
             return True
         return False
 
     # not int, assuming str
-    if (len(discord_id) != 18):
+    if (len(discord_id) < 17):
         return False
     try:
         int(discord_id)
