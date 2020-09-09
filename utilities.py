@@ -1,6 +1,10 @@
 import json
 import os
 
+dateformat = '%Y-%m-%d'
+timeformat = '%H:%M:%S'
+datetimeformat = '%Y-%m-%d %H:%M:%S'
+
 def load_json(filename):
     '''
     Wrapper function to load json from filename. Creates file and loads a blank json dictionary if it does not exist.

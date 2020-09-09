@@ -54,13 +54,13 @@ class SiteOps:
     """
     Clan site account operations.
     """
-    def __init__(self, dateformat, timeformat):
+    def __init__(self):
         """
         New object for site access operations
         - logfile = logfile object from bot for logging / debugging
         """
         self.session = requests.session()
-        self.logfile = LogFile("logs/sitelog_" + datetime.utcnow().strftime(dateformat), dateformat, timeformat)
+        self.logfile = LogFile("logs/sitelog")
         self.logfile.log(f'New log started for site operations.')
 
         self.token = None
