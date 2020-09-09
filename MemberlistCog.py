@@ -771,7 +771,7 @@ class MemberlistCog(commands.Cog):
         # run this concurrently, so that other commands that dont require spreadsheet can still execute in the meantime.
         await self.bot.loop.run_in_executor(None, RefreshList)
         # finished with updating, can release lock
-        self.unlock()
+        await self.unlock()
 
         await ctx.send('Refreshed discord ranks & tags on the spreadsheet, and re-colored and sorted it for you :)')
     
@@ -808,7 +808,7 @@ class MemberlistCog(commands.Cog):
                     await self.removeroles(memb)
                     zerobot_common.siteops.setrank(memb.profile_link, "Retired member")
             await ctx.send(update_res.summary())
-            self.unlock()
+            await self.unlock()
             self.confirmed_update = False
             return
         # not confirmed yet, ask for confirm
