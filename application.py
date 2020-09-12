@@ -1,5 +1,5 @@
 class Application:
-    def __init__(self, channel_id, requester_id, type='guest', voters=None, votes_required=1, status='open', site_profile='no site', applist=None):
+    def __init__(self, channel_id, requester_id, type='guest', rank=None, voters=None, votes_required=1, status='open', site_profile='no site', applist=None):
         '''
         An application, identifiable by a discord channel id.
         May or may not be part of an application list that is synced to disk.
@@ -11,6 +11,7 @@ class Application:
         self.fields_dict = {
             'requester_id': requester_id,
             'type': type,
+            'rank': rank,
             'voters': voters,
             'votes_required': votes_required,
             'status': status,
@@ -61,6 +62,7 @@ class Application:
             channel_id,
             fields_dict['requester_id'],
             fields_dict['type'],
+            fields_dict['rank'],
             fields_dict['voters'],
             fields_dict['votes_required'],
             fields_dict['status'],

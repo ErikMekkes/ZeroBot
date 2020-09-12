@@ -77,7 +77,7 @@ class Permissions:
         return False
     def lookup_channel(self, channel):
         '''
-        Looks up channel in channel_ids if channel is a string, if channel is a number it just returns the number.
+        Looks up channel in channel_ids if channel is a string, if channel is a number it just returns it.
         Throws TypeError if channel is a string but can't be found as known (channel:id) pair.
         channel : id number of a channel, or a name present in channel_ids
         '''

@@ -39,7 +39,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import utilities
 from utilities import load_json, dump_json
 from logfile import LogFile
-from applications import Applications
 from site_ops import SiteOps
 from permissions import Permissions
 
@@ -104,13 +103,6 @@ rs_api_clan_name = settings.get('rs_api_clan_name')
 clan_server_id = settings.get('clan_server_id')
 guild = None
 
-# category new application channels should be added under, loaded on bot start 
-# from guild object.
-applications_category_id = settings.get('applications_category_id')
-# channel that allows application commands and gets cleared typing after them.
-app_requests_channel_id = settings.get('app_requests_channel_id')
-applications_category = None
-
 # channel names and their ids, loaded on bot startup from guild.
 discord_channels = None
 # role names and their ids, loaded on bot startup from guild.
@@ -122,15 +114,10 @@ default_bot_channel_id = settings.get('default_bot_channel_id')
 # logfiles
 logfile = LogFile('logs/logfile')
 reactionlog = LogFile('logs/reactionroles')
-applications_log = LogFile('logs/applications')
 
 # load known messages that should give a role for a reaction from disk
 reaction_messages_filename = settings.get('reaction_messages_filename')
 reaction_messages = load_json(reaction_messages_filename)
-
-# load applications status from disk
-applications_filename = settings.get('applications_filename')
-applications = Applications(applications_filename)
 
 # load permissions for use of commands in channels from disk
 permissions_filename = settings.get('permissions_filename')
@@ -140,3 +127,24 @@ permissions = Permissions(permissions_filename)
 inactive_exceptions_filename = settings.get('inactive_exceptions_filename')
 json_dictionary = load_json(inactive_exceptions_filename)
 inactive_exceptions = json_dictionary.get('inactive_exceptions')
+
+# Discord roles and their ranks, because you might have discord roles that are
+# not used for ranks, and because the bot needs to know the rank order.
+# If you want the bot to be able to check if members have the right ranks, you
+# need to give matching ingame / discord / site ranks the same number.
+# THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
+# Required for:
+#  - ApplicationsCog : tells it which roles are ranks to give and their order
+discord_ranks = {
+	'Leaders' : 10,
+	'Staff Member' : 9,
+	'MasterClass PvMer' : 8,
+	'Supreme PvMer' : 7,
+	'PvM Specialists' : 6,
+	'Veteran Member' : 5,
+	'Advanced Member' : 4,
+	'Full Member' : 3,
+	'Recruit' : 2,
+    'Guest' : 1,
+    'Waiting Approval' : 0
+}

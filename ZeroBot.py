@@ -26,11 +26,6 @@ async def on_ready():
     if (zerobot_common.guild == None):
         zerobot_common.logfile.log(f'not connected to clan server id in settings: {zerobot_common.clan_server_id}')
         return
-    # Find applications category in Zer0 server and load into common
-    categories = zerobot_common.guild.categories
-    for cat in categories:
-        if cat.id == zerobot_common.applications_category_id:
-            zerobot_common.applications_category = cat
     # store a lookup dictionary for channel names and their ids
     channels = zerobot_common.guild.channels
     chann_dict = {}
