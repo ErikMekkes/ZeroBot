@@ -215,7 +215,7 @@ class ApplicationsCog(commands.Cog):
             return
         discord_id = app.fields_dict['requester_id']
         discord_user = zerobot_common.guild.get_member(discord_id)
-        name = discord_user.name
+        name = discord_user.display_name
         site_profile = app.fields_dict['site_profile']
         await ctx.send(f'Application to join accepted, ready for an ingame invite? :)\n You can continue to talk in this channel until it is archived.')
         # act like accept comes from staff bot command, response goes there too
