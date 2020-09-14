@@ -45,10 +45,14 @@ async def on_ready():
     zerobot_common.discord_roles = role_dict
     
     # start the different command modules of the bot.
-    bot.add_cog(MemberlistCog(bot))
-    bot.add_cog(ReactionRolesCog(bot))
-    bot.add_cog(ApplicationsCog(bot))
-    bot.add_cog(GuidesCog(bot))
+    if (bot.get_cog('MemberlistCog') == None):
+        bot.add_cog(MemberlistCog(bot))
+    if (bot.get_cog('ReactionRolesCog') == None):
+        bot.add_cog(ReactionRolesCog(bot))
+    if (bot.get_cog('ApplicationsCog') == None):
+        bot.add_cog(ApplicationsCog(bot))
+    if (bot.get_cog('GuidesCog') == None):
+        bot.add_cog(GuidesCog(bot))
 
 # actually start the bot
 bot.run(zerobot_common.auth_token)
