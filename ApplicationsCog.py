@@ -1,9 +1,10 @@
 '''
 This module lets you configure a channel that people can request applications
-in. The bot creates a channel for each new application. The applicant will be
-given access to post in that channel by the bot. Use the category permissions
-in discord to give other people the permissions they need, they will be taken
-over for each new application channel.
+in. The bot creates a new channel for each application under a preset category.
+The applicant will be given access to post in that channel by the bot.
+Use the category settings in discord to set the permissions for the others who 
+may need access to react to applications, the new channels created by the bot 
+will take over those settings from the category to give them access.
 
 Idea of this file is simple, there's commands (guest, join, rankup) to start an
 app in the app request channel, and commands (accept, reject, archive, cancel)
@@ -11,8 +12,10 @@ to manage applications in each newly created application channel. Each type of
 app that can be started has it's own accept_type function, that tells the bot
 what to do to accept them.
 
+On it's own, this module will just manage their discord ranks. If you have the
+memberlist module enabled as well, it will also update their status there.
+
 Config required for this module:
- - add cog to zerobot.py
  - check these settings in settings.json:
    - clan_server_id
    - applications_category_id
@@ -31,47 +34,38 @@ from application import Application
 from applications import Applications
 import traceback
 
-# logfile for applications
-app_log = LogFile('logs/applications')
-# load permissions for use of commands in application channels from disk
-permissions_filename = 'application_permissions.json'
-permissions = Permissions(permissions_filename)
-# load applications status from disk
-applications_filename = 'applications/applications.json'
-applications = Applications(applications_filename)
-
-# discord clan server object (guild) to use, loaded at bot start using the
-# clan_server_id in settings.json.
-guild = None
-# channel that allows application commands and gets cleared typing after them.
-app_req_channel_id = zerobot_common.settings.get('app_requests_channel_id')
-# discord category that new application channels should be created under 
-# loaded on bot start from guild object using app_category_id.
-app_category_id = zerobot_common.settings.get('applications_category_id')
-app_category = None
-
-
 # number of votes required for accepting applications
 votes_for_guest = 1
 votes_for_join = 3
 votes_for_rankup = 2
 
-# rank required to be able to start an application (can be None).
-# useful as a whitelist for apps, or if they need to do something else first.
-can_apply_role = 'Waiting Approval'
-can_apply_rank = zerobot_common.discord_ranks.get(can_apply_role)
-# response message sent to people who can not apply but tried to (can be None)
+# It is assumed that you have set the channel everyone on the discord can type in the channel.
+
+# Rank required to be able to start a guest or join application. If they do not
+# have a rank or only lower ones the bot will ignore them. the bot will only
+# start applications for users with a higher rank
+# Useful as a whitelist for apps, or if they need to do something else first.
+# If you do not want such a minimum rank and want th
+# is assumed to be able to start an application as long as you gave them the
+# right to type it in the channel on discord. If you want to disable this and
+can_apply_role_name = 'Waiting Approval'
+can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
+can_apply_rank = zerobot_common.discord_ranks.get(can_apply_role_name, None)
+# response message sent to people who can not apply but tried to
 cant_apply_message = (
     'Please check our <#748523828291960892> channel before ' +
     'starting an application :).'
 )
 
-# rank given for guest applications
-guest_role = 'Guest'
-guest_rank = zerobot_common.discord_ranks.get(guest_role)
+# rank given to guests
+guest_role_name = 'Guest'
+guest_role = zerobot_common.get_named_role(guest_role_name)
+guest_rank = zerobot_common.discord_ranks.get(guest_role_name)
+
 # rank given to joining members
-join_role = 'Recruit'
-join_rank = zerobot_common.discord_ranks.get(join_role)
+join_role_name = 'Recruit'
+join_role = zerobot_common.get_named_role(join_role_name)
+join_rank = zerobot_common.discord_ranks.get(join_role_name)
 # message for non members who try to rankup instead of join
 join_before_rankup_message = (
     'You have to join the clan first before you can rank up :) Use ' +
@@ -127,6 +121,26 @@ disallowed_rankups = [
     'Leaders'
 ]
 
+# The remaining ones below are automated, you shouldnt have to change anything
+# there. But you can edit permissions / applications .json files by hand if
+# something went wrong that cant be fixed with a command.
+
+# logfile for applications
+app_log = LogFile('logs/applications')
+# load permissions for use of commands in application channels from disk
+permissions_filename = 'application_permissions.json'
+permissions = Permissions(permissions_filename)
+# load applications status from disk
+applications_filename = 'applications/applications.json'
+applications = Applications(applications_filename)
+
+# channel that allows application commands and gets cleared typing after them.
+app_req_channel_id = zerobot_common.settings.get('app_requests_channel_id')
+# discord category that new application channels should be created under 
+# loaded on bot start from guild object using app_category_id.
+app_category_id = zerobot_common.settings.get('applications_category_id')
+app_category = None
+
 def highest_discord_rank(discord_user):
     '''
     Returns a discord user's highest rank, using the discord_ranks table.
@@ -138,6 +152,20 @@ def highest_discord_rank(discord_user):
         if (role_rank > rank):
             rank = role_rank
     return rank
+
+def highest_discord_role(discord_user):
+    '''
+    Returns a discord user's highest rank, using the discord_ranks table.
+    Returns None if not ranked.
+    '''
+    rank = -1
+    result_role = None
+    for role in discord_user.roles:
+        role_rank  = zerobot_common.discord_ranks.get(role.name,-1)
+        if (role_rank > rank):
+            rank = role_rank
+            result_role = role
+    return result_role
 
     
 async def setup_app_channel(ctx, channel, app_type):
@@ -182,15 +210,9 @@ class ApplicationsCog(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
         app_log.log(f'Applications cog loaded and ready.')
-        # check that bot is connected to the right clan discord and store it.
-        global guild
-        guild = bot.get_guild(zerobot_common.clan_server_id)
-        if (guild == None):
-            app_log.log(f'not connected to the clan server id set in settings.json: {zerobot_common.clan_server_id}')
-            self.bot.logout()
 
         # Find applications category in Zer0 server and store it
-        categories = guild.categories
+        categories = zerobot_common.guild.categories
         for cat in categories:
             if cat.id == app_category_id:
                 global app_category
@@ -244,7 +266,7 @@ class ApplicationsCog(commands.Cog):
             return
         
         # actually start making the application
-        channel = await guild.create_text_channel(
+        channel = await zerobot_common.guild.create_text_channel(
             f'{rank_name}-{ctx.author.display_name}',
             category=app_category,
             reason='joining'
@@ -256,7 +278,7 @@ class ApplicationsCog(commands.Cog):
             channel.id,
             ctx.author.id,
             type = 'rankup',
-            rank = rank_name,
+            rank = discord_rank_name,
             votes_required=votes_for_rankup
         )
         applications.append(join_app)
@@ -278,7 +300,7 @@ class ApplicationsCog(commands.Cog):
             return
 
         # actually start making the application
-        channel = await guild.create_text_channel(
+        channel = await zerobot_common.guild.create_text_channel(
             f'join-{ctx.author.display_name}',
             category=app_category,
             reason='joining'
@@ -325,7 +347,7 @@ class ApplicationsCog(commands.Cog):
             return
 
         name = f'guest-{ctx.author.display_name}'
-        channel = await guild.create_text_channel(name, category=app_category, reason='guesting')
+        channel = await zerobot_common.guild.create_text_channel(name, category=app_category, reason='guesting')
         await ctx.author.send(f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
         await channel.set_permissions(ctx.author, read_messages=True, send_messages=True, read_message_history=True)
         permissions.allow('archive', channel.id)
@@ -431,54 +453,77 @@ class ApplicationsCog(commands.Cog):
     
     async def accept_guest(self, ctx, app):
         '''
-        Accept guest application = give guest role on discord.
+        Accept guest application = give guest role, remove applicant role.
         Assumes they are new, and do not need check / removal of other roles.
         '''
-        discord_user = guild.get_member(app.fields_dict['requester_id'])
+        discord_id = app.fields_dict['requester_id']
+        discord_user = zerobot_common.guild.get_member(discord_id)
 
         # add guest role
-        new_role = guild.get_role(zerobot_common.discord_roles.get(guest_role))
-        await discord_user.add_roles(new_role, reason="accepted guest application")
+        await discord_user.add_roles(guest_role, reason="accepted guest")
         # remove waiting approval role
-        approval_role = guild.get_role(zerobot_common.discord_roles.get(can_apply_role))
-        await discord_user.remove_roles(approval_role, reason='Adding member')
+        await discord_user.remove_roles(can_apply_role, reason='Adding guest')
 
         await discord_user.send(f'Your application for Guest in the Zer0 discord was accepted :)')
         await ctx.send(f'Application for Guest accepted :). \n You can continue to talk in this channel until it is archived.')
     
     async def accept_join(self, ctx, app):
         '''
-        Accept join application = addmember from normal zerobot.
+        Accept join application = give new member role, remove applicant role.
+        + if enabled, instruct memberlist module to add the member.
         '''
+        discord_id = app.fields_dict['requester_id']
+        discord_user = zerobot_common.guild.get_member(discord_id)
+
+        # add member role
+        await discord_user.add_roles(join_role, reason="accepted member")
+        # remove waiting approval role
+        await discord_user.remove_roles(can_apply_role, reason='Adding member')
+
+        await discord_user.send(f'Your application to join Zer0 PvM was accepted :)')
+        await ctx.send(f'Application to join accepted, ready for an ingame invite? :)\n You can continue to talk in this channel until it is archived.')
+
+        # instruct memberlist to add member if enabled
         memblist = self.bot.get_cog('MemberlistCog')
         if (memblist == None):
-            app_log.log(f'Failed to retrieve memberlist cog for addmember call')
+            app_log.log(f'no memberlistcog, dont need to tell it to add')
             return
-        discord_id = app.fields_dict['requester_id']
-        discord_user = guild.get_member(discord_id)
         name = discord_user.display_name
         site_profile = app.fields_dict['site_profile']
-        await ctx.send(f'Application to join accepted, ready for an ingame invite? :)\n You can continue to talk in this channel until it is archived.')
         # act like accept comes from staff bot command, response goes there too
-        staff_bot_channel = guild.get_channel(zerobot_common.default_bot_channel_id)
+        staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
         ctx.channel = staff_bot_channel
-        await memblist.addmember(ctx, name, join_role, discord_id, site_profile)
+        await memblist.addmember(ctx, name, join_role_name, discord_id, site_profile)
     
     async def accept_rankup(self, ctx, app):
-        #asdf
+        '''
+        Accept rankup application = Remove member's old role, give new role.
+        + if enabled, instruct memberlist module to change the member's rank.
+        '''
+        discord_id = app.fields_dict['requester_id']
+        discord_user = zerobot_common.guild.get_member(discord_id)
+        # find current role and new role
+        current_role = highest_discord_role(discord_user)
+        new_role_name = app.fields_dict['rank']
+        new_role = zerobot_common.get_named_role(new_role_name)
+        # add new rank role
+        await discord_user.add_roles(new_role, reason="member rankup")
+        # remove old rank role
+        await discord_user.remove_roles(current_role, reason='member rankup')
+
+        await discord_user.send(f'Your application for {new_role_name} was accepted :)')
+        await ctx.send(f'Rankup application to {new_role_name} accepted :)\n You can continue to talk in this channel until it is archived.')
+        
+        #instruct memberlist to change rank if enabled
         memblist = self.bot.get_cog('MemberlistCog')
         if (memblist == None):
-            app_log.log(f'Failed to retrieve memberlist cog for setrank call')
+            app_log.log(f'no memberlistcog, dont need to tell it to set rank')
             return
-        discord_id = app.fields_dict['requester_id']
-        discord_user = guild.get_member(discord_id)
         name = discord_user.display_name
-        rank = app.fields_dict['rank']
-        await ctx.send(f'Rankup application to {rank} accepted :)\n You can continue to talk in this channel until it is archived.')
         # act like accept comes from staff bot command, response goes there too
-        staff_bot_channel = guild.get_channel(zerobot_common.default_bot_channel_id)
+        staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
         ctx.channel = staff_bot_channel
-        await memblist.setrank(ctx, name, rank)
+        await memblist.setrank(ctx, name, new_role_name)
 
     
     @commands.command()
@@ -503,7 +548,7 @@ class ApplicationsCog(commands.Cog):
             reason = 'Reason: ' + ' '.join(args)
         app.set_status('rejected')
         app_type = app.fields_dict['type']
-        discord_user = guild.get_member(app.fields_dict['requester_id'])
+        discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
         await discord_user.send(f'Your application for {app_type} has been closed. {reason}')
         await ctx.send(f'Your application for {app_type} has been rejected. \n You can continue to talk in this channel until it is archived.')
 
@@ -528,7 +573,7 @@ class ApplicationsCog(commands.Cog):
         
         app.set_status('closed')
         app_type = app.fields_dict['type']
-        discord_user = guild.get_member(app.fields_dict['requester_id'])
+        discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
         await discord_user.send(f'Your application for {app_type} has been closed. {reason}')
         await self.archive(ctx)
 
@@ -557,5 +602,5 @@ class ApplicationsCog(commands.Cog):
         permissions.disallow('sitelink', channel.id)
         # notify applicant of closing channel
         app_type = app.fields_dict['type']
-        discord_user = guild.get_member(app.fields_dict['requester_id'])
+        discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
         await discord_user.send(f'Your application for {app_type} has been closed. Reason: The channel was removed.')

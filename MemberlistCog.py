@@ -539,15 +539,15 @@ class MemberlistCog(commands.Cog):
             # This is to make any unexpected results / possible mistakes visible.
             message += f"Discord User: {discord_user.name}, "
             # remove waiting approval role if present
-            approval_role = zerobot_common.guild.get_role(zerobot_common.discord_roles.get('Waiting Approval'))
+            approval_role = zerobot_common.get_named_role('Waiting Approval')
             await discord_user.remove_roles(approval_role, reason='Adding member')
             message += f'Removed {approval_role.name} role, '
             # remove guest role if present
-            guest_role = zerobot_common.guild.get_role(zerobot_common.discord_roles.get('Guest'))
+            guest_role = zerobot_common.get_named_role('Guest')
             await discord_user.remove_roles(guest_role, reason='Adding member')
             message += f'Removed {guest_role.name} role, '
             # add recruit role
-            recruit_role = zerobot_common.guild.get_role(zerobot_common.discord_roles.get('Recruit'))
+            recruit_role = zerobot_common.get_named_role('Recruit')
             await discord_user.add_roles(recruit_role, reason='Adding member')
             message += f'Added {recruit_role.name} role on discord. '
 
@@ -688,7 +688,7 @@ class MemberlistCog(commands.Cog):
             message += f"Did not have old rank: {old_rank} on discord. "
         
         # add new role
-        new_role = zerobot_common.guild.get_role(zerobot_common.discord_roles.get(new_rank))
+        new_role = zerobot_common.get_named_role(new_rank)
         await discord_user.add_roles(new_role, reason="rank change command")
         message += f"Added {new_role.name} role on discord. "
         await self.bot_channel.send(message)

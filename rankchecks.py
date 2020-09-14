@@ -115,7 +115,18 @@ parse_discord_rank = {
     'guest' : 'Guest',
     'retired' : 'Retired member',
     'kicked' : 'Kicked Member',
-    'full' : 'Full Member'
+    'full' : 'Full Member',
+	'leader' : 'Leaders',
+	'staff_member' : 'Staff Member',
+	'masterclass_pvmer' : 'MasterClass PvMer',
+	'supreme_pvmer' : 'Supreme PvMer',
+	'pvm_specialist' : 'PvM Specialists',
+	'veteran_member' : 'Veteran Member',
+	'advanced_member' : 'Advanced Member',
+	'full_member' : 'Full Member',
+	'recruit' : 'Recruit',
+    'guest' : 'Guest',
+    'waiting_approval' : 'Waiting Approval'
 }
 
 

@@ -15,9 +15,9 @@
 # NOT update zerobot_common.discord_roles_filename
 
 # Note on imports and circular dependencies:
-# This module should not have circular depencies, it should be self contained 
-# and decoupled from other files as much as possible.
-# - utilities, logfile, applications modules are safe, self contained imports.
+# This module should not have circular depencies, it should also load no matter
+# which modules have been enabled or disabled.
+# - utilities and logfile modules are safe, self contained imports.
 #
 # site_ops and permissions modules break this promise, they require references 
 # to this module. However, they only use references to this module in functions
@@ -76,18 +76,15 @@ old_members_sheet = drive_doc.worksheet('Old Members')
 banned_members_sheet = drive_doc.worksheet('Banned Members')
 recent_changes_sheet = drive_doc.worksheet('Recent Changes')
 
-def drive_connect():
-    '''
-    Reconnects to the google drive API if not used recently.
-    '''
-    if (drive_creds.access_token_expired): drive_client.login()
-
 # if set, use date and time formats from settings 
 dateformat = settings.get('dateformat', utilities.dateformat)
 timeformat = settings.get('timeformat', utilities.dateformat)
 utilities.dateformat = dateformat
 utilities.timeformat = timeformat
 utilities.datetimeformat = dateformat + ' ' + timeformat
+
+# Check which modules should be enabled.
+enable_applications = settings.get('enable_applications')
 
 # Manager for operations to clan site, hosted by shivtr (https://shivtr.com/)
 site_login_creds_filename = settings.get('site_login_credentials_filename')
@@ -105,8 +102,6 @@ guild = None
 
 # channel names and their ids, loaded on bot startup from guild.
 discord_channels = None
-# role names and their ids, loaded on bot startup from guild.
-discord_roles = None
 
 # default channel where bot can post status and error messages
 default_bot_channel_id = settings.get('default_bot_channel_id')
@@ -133,8 +128,8 @@ inactive_exceptions = json_dictionary.get('inactive_exceptions')
 # If you want the bot to be able to check if members have the right ranks, you
 # need to give matching ingame / discord / site ranks the same number.
 # THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
-# Required for:
-#  - ApplicationsCog : tells it which roles are ranks to give and their order
+# Required for these modules:
+#  - Applications : tells it which roles are the ranks to give and their order
 discord_ranks = {
 	'Leaders' : 10,
 	'Staff Member' : 9,
@@ -148,3 +143,45 @@ discord_ranks = {
     'Guest' : 1,
     'Waiting Approval' : 0
 }
+
+
+
+
+
+# recommended not to modify the functions below
+
+def drive_connect():
+    '''
+    Reconnects to the google drive API if not used recently.
+    '''
+    if (drive_creds.access_token_expired): drive_client.login()
+
+def get_named_channel(channel_name):
+    '''
+    Searches the guild for the channel name, returns the channel if found.
+    CAUTION: channel names are NOT unique, this returns the first result if
+    there are duplicate names.
+    Returns None if no matching channel found.
+
+    Intended to find pre-defined, unique channels by name. Operates on the
+    common guild object.
+    '''
+    for chann in guild.channels:
+        if (chann.name == channel_name):
+            return chann
+    return None
+
+def get_named_role(role_name):
+    '''
+    Searches the guild for the role name, returns the role if found. 
+    CAUTION: channel names are NOT unique, this returns the first result if
+    there are duplicate names.
+    Returns None if no matching role found.
+
+    Intended to find pre-defined, unique role by name. Operates on the
+    common guild object.
+    '''
+    for role in guild.roles:
+        if (role.name == role_name):
+            return role
+    return None

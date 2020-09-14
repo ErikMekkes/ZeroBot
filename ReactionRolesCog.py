@@ -35,7 +35,7 @@ class ReactionRolesCog(commands.Cog):
             zerobot_common.reactionlog.log(f'Could not find role : {role_id} on {zerobot_common.guild.name}')
             return
         # specific case for waiting approval role
-        if (role_id == zerobot_common.discord_roles.get('Waiting Approval')):
+        if (role_id == zerobot_common.get_named_role('Waiting Approval').id):
             # return if user already has a ranked role, dont need to assign waiting approval.
             for role in discord_user.roles:
                 if (role.name in discord_ranks):
