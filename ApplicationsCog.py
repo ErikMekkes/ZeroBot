@@ -49,7 +49,6 @@ votes_for_rankup = 2
 # is assumed to be able to start an application as long as you gave them the
 # right to type it in the channel on discord. If you want to disable this and
 can_apply_role_name = 'Waiting Approval'
-can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
 can_apply_rank = zerobot_common.discord_ranks.get(can_apply_role_name, None)
 # response message sent to people who can not apply but tried to
 cant_apply_message = (
@@ -59,12 +58,10 @@ cant_apply_message = (
 
 # rank given to guests
 guest_role_name = 'Guest'
-guest_role = zerobot_common.get_named_role(guest_role_name)
 guest_rank = zerobot_common.discord_ranks.get(guest_role_name)
 
 # rank given to joining members
 join_role_name = 'Recruit'
-join_role = zerobot_common.get_named_role(join_role_name)
 join_rank = zerobot_common.discord_ranks.get(join_role_name)
 # message for non members who try to rankup instead of join
 join_before_rankup_message = (
@@ -217,6 +214,8 @@ class ApplicationsCog(commands.Cog):
             if cat.id == app_category_id:
                 global app_category
                 app_category = cat
+        
+
     
     @commands.command()
     async def rankup(self, ctx, *args):
@@ -460,8 +459,10 @@ class ApplicationsCog(commands.Cog):
         discord_user = zerobot_common.guild.get_member(discord_id)
 
         # add guest role
+        guest_role = zerobot_common.get_named_role(guest_role_name)
         await discord_user.add_roles(guest_role, reason="accepted guest")
         # remove waiting approval role
+        can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
         await discord_user.remove_roles(can_apply_role, reason='Adding guest')
 
         await discord_user.send(f'Your application for Guest in the Zer0 discord was accepted :)')
@@ -476,8 +477,10 @@ class ApplicationsCog(commands.Cog):
         discord_user = zerobot_common.guild.get_member(discord_id)
 
         # add member role
+        join_role = zerobot_common.get_named_role(join_role_name)
         await discord_user.add_roles(join_role, reason="accepted member")
         # remove waiting approval role
+        can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
         await discord_user.remove_roles(can_apply_role, reason='Adding member')
 
         await discord_user.send(f'Your application to join Zer0 PvM was accepted :)')
