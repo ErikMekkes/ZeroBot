@@ -125,7 +125,7 @@ disallowed_rankups = [
 # logfile for applications
 app_log = LogFile('logs/applications')
 # load permissions for use of commands in application channels from disk
-permissions_filename = 'application_permissions.json'
+permissions_filename = 'applications/application_permissions.json'
 permissions = Permissions(permissions_filename)
 # load applications status from disk
 applications_filename = 'applications/applications.json'
