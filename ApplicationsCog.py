@@ -381,7 +381,7 @@ class ApplicationsCog(commands.Cog):
         filedir = f'applications/{ctx.channel.id}-{ctx.channel.name}/'
         Path(filedir).mkdir(parents=True, exist_ok=True)
         messages = []
-        async for msg in ctx.channel.history():
+        async for msg in ctx.channel.history(limit=None):
             message = ''
             time = msg.created_at.strftime("%Y-%m-%d_%H.%M.%S")
             message +=f'{time}:{msg.author}:{msg.content}'
