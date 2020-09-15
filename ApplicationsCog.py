@@ -187,15 +187,15 @@ async def setup_app_channel(ctx, channel, app_type):
     permissions.allow('reject', channel.id)
     permissions.allow('cancel', channel.id)
     # set up the channel with the basic message
-    msg = f'Hello {ctx.author.mention}! ' + open('app_base_message').read()
+    msg = f'Hello {ctx.author.mention}! ' + open('application_templates/app_base_message').read()
     await channel.send(msg)
     # try to find and send message, image, and instructions for app.
     try:
-        app_message = open(f'{app_type}_app_text').read()
-        img_file = open(f'{app_type}_image.png', 'rb')
+        app_message = open(f'application_templates/{app_type}_app_text').read()
+        img_file = open(f'application_templates/{app_type}_image.png', 'rb')
         app_img = File(img_file)
         await channel.send(app_message, file=app_img)
-        instructions = open(f'{app_type}_instructions').read()
+        instructions = open(f'application_templates/{app_type}_instructions').read()
         await channel.send(instructions)
     except FileNotFoundError:
         pass
@@ -326,12 +326,12 @@ class ApplicationsCog(commands.Cog):
         if not(ctx.channel.id == app_req_channel_id) : return
 
         await ctx.channel.purge()
-        with open('join_image.png', 'rb') as f:
+        with open('application_templates/join_image.png', 'rb') as f:
             picture = File(f)
             await ctx.channel.send('**To join Zer0 you will need the following entry requirements:** (not required for guest access)', file=picture)
             await ctx.channel.send('**Entry Reqs minimum perks:** (not required for guest access)\n - Weapon Perks: precise 6, equilibrium 4, or better combinations.\n - Armor Perks: biting 3, crackling 4, impatient 4, relentless 5, (enhanced) devoted 4, or better combinations.')
-        app_requests_message = open('app_requests_message').read()
-        await ctx.channel.send(app_requests_message)
+        application_instructions = open('application_templates/application_instructions').read()
+        await ctx.channel.send(application_instructions)
 
     
     @commands.command()
@@ -357,10 +357,10 @@ class ApplicationsCog(commands.Cog):
         guest_app = Application(channel.id, ctx.author.id)
         applications.append(guest_app)
 
-        app_base_message = f'Hello {ctx.author.mention}! ' + open('app_base_message').read()
+        app_base_message = f'Hello {ctx.author.mention}! ' + open('application_templates/app_base_message').read()
         await channel.send(app_base_message)
-        guest_request_message = open('guest_request_message').read()
-        await channel.send(guest_request_message)
+        guest_instructions = open('application_templates/guest_instructions').read()
+        await channel.send(guest_instructions)
 
         await self.clean_app_requests(ctx)
     
