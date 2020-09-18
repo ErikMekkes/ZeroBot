@@ -15,51 +15,51 @@ gem_exceptions = ["Erwin","Alexanderke","Veteran Member","PvM Specialists"]
 
 # used to find a member's highest dps tag
 dps_tags = {
-	'170k Mage DPM' : 1,
-	'170k Range DPM' : 1,
-	'170k Melee DPM' : 1,
-	'180k Mage DPM' : 2,
-	'180k Range DPM' : 2,
-	'180k Melee DPM' : 2,
-	'200k Mage DPM' : 3,
-	'200k Range DPM' : 3,
-	'200k Melee DPM' : 3,
-	'Extreme Mage' : 4,
-	'Extreme Range' : 4,
-	'Extreme Melee' : 4,
-	'Extreme DPS' : 5
+    '170k Mage DPM' : 1,
+    '170k Range DPM' : 1,
+    '170k Melee DPM' : 1,
+    '180k Mage DPM' : 2,
+    '180k Range DPM' : 2,
+    '180k Melee DPM' : 2,
+    '200k Mage DPM' : 3,
+    '200k Range DPM' : 3,
+    '200k Melee DPM' : 3,
+    'Extreme Mage' : 4,
+    'Extreme Range' : 4,
+    'Extreme Melee' : 4,
+    'Extreme DPS' : 5
 }
 
 # the rank tables below are used to find a users highest rank
 # they are also used to check if ranks match, a matching rank has an equal value.
 # example: Staff Member on discord, Coordinator ingame, Clan-Coordinator on the site are matching ranks.
 discord_ranks = {
-	'Leaders' : 10,
-	'Staff Member' : 9,
-	'MasterClass PvMer' : 8,
-	'Supreme PvMer' : 7,
-	'PvM Specialists' : 6,
-	'Veteran Member' : 5,
-	'Advanced Member' : 4,
-	'Full Member' : 3,
-	'Recruit' : 2,
+    'Leaders' : 10,
+    'Staff Member' : 9,
+    'MasterClass PvMer' : 8,
+    'Supreme PvMer' : 7,
+    'PvM Specialists' : 6,
+    'Veteran Member' : 5,
+    'Advanced Member' : 4,
+    'Full Member' : 3,
+    'Recruit' : 2,
     'Clan Friends/Allies' : 1,
     'Guest' : 1,
     'Waiting Approval' : 0
 }
 ingame_ranks = {
-	'Owner' : 10,
-	'Deputy Owner' : 10,
-	'Overseer' : 10,
-	'Coordinator' : 9,
-	'Organiser' : 9,
-	'Admin' : 8,
-	'General' : 7,
-	'Captain' : 6,
-	'Lieutenant' : 5,
-	'Sergeant' : 4,
-	'Corporal' : 3,
-	'Recruit' : 2
+    'Owner' : 10,
+    'Deputy Owner' : 10,
+    'Overseer' : 10,
+    'Coordinator' : 9,
+    'Organiser' : 9,
+    'Admin' : 8,
+    'General' : 7,
+    'Captain' : 6,
+    'Lieutenant' : 5,
+    'Sergeant' : 4,
+    'Corporal' : 3,
+    'Recruit' : 2
 }
 site_ranks = {
     'Leader' : 10,
@@ -115,7 +115,16 @@ parse_discord_rank = {
     'guest' : 'Guest',
     'retired' : 'Retired member',
     'kicked' : 'Kicked Member',
-    'full' : 'Full Member'
+    'full' : 'Full Member',
+    'leader' : 'Leaders',
+    'staff_member' : 'Staff Member',
+    'masterclass_pvmer' : 'MasterClass PvMer',
+    'supreme_pvmer' : 'Supreme PvMer',
+    'pvm_specialist' : 'PvM Specialists',
+    'veteran_member' : 'Veteran Member',
+    'advanced_member' : 'Advanced Member',
+    'full_member' : 'Full Member',
+    'waiting_approval' : 'Waiting Approval'
 }
 
 

@@ -1,6 +1,5 @@
 import zerobot_common
 import requests
-from datetime import datetime
 import json
 from logfile import LogFile
 from member import validSiteProfile
@@ -96,6 +95,9 @@ class SiteOps:
         Requires signing in to make edits. Assumes the site profile link is valid and exists.
         """
         if (zerobot_common.site_disabled): return
+        if not(validSiteProfile(profile_link)):
+            self.logfile.log(f"invalid site profile : {profile_link}, can't set rank")
+            return
         self._signin()
         update_user_url = profile_link + '.json?auth_token=' + self.token
         new_site_rank_id = _site_rank_ids.get(rank, 0)
