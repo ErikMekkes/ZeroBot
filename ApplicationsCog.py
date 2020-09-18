@@ -1,9 +1,26 @@
 import zerobot_common
 from discord.ext import commands
 from discord import File
+import discord
 from pathlib import Path
 from application import Application
 import traceback
+
+
+async def message_user(user, message, alt_ctx=None):
+    """
+    Tries to send message to user, send it to alternative contect if not
+    allowed to message the user directly. (it's possible for discord users
+    to disable direct messaging)
+    """
+    try:
+        await user.send(message)
+    except discord.errors.Forbidden:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
+    except discord.ext.commands.CommandInvokeError:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
 
 class ApplicationsCog(commands.Cog):
     '''
@@ -21,13 +38,12 @@ class ApplicationsCog(commands.Cog):
 
         open_app = zerobot_common.applications.has_open_app(ctx.author.id)
         if (open_app != None):
-            await ctx.author.send(f'You already have an open application at <#{open_app.channel_id}>')
-            zerobot_common.applications_log.log(f'already has an open application at <#{open_app.channel_id}>')
+            await message_user(ctx.author, f'You already have an open application at <#{open_app.channel_id}>', ctx)
             return
 
         name = f'join-{ctx.author.name}'
         channel = await zerobot_common.guild.create_text_channel(name, category=zerobot_common.applications_category, reason='joining')
-        await ctx.author.send(f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
+        await message_user(ctx.author, f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
         await channel.set_permissions(
             ctx.author,
             read_messages=True,
@@ -81,12 +97,12 @@ class ApplicationsCog(commands.Cog):
 
         open_app = zerobot_common.applications.has_open_app(ctx.author.id)
         if (open_app != None):
-            await ctx.send(f'You already have an open application at <#{open_app.channel_id}>')
+            await message_user(ctx.author, f'You already have an open application at <#{open_app.channel_id}>', ctx)
             return
 
         name = f'guest-{ctx.author.name}'
         channel = await zerobot_common.guild.create_text_channel(name, category=zerobot_common.applications_category, reason='guesting')
-        await ctx.author.send(f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
+        await message_user(ctx.author, f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
         await channel.set_permissions(ctx.author, read_messages=True, send_messages=True, read_message_history=True)
         zerobot_common.permissions.allow('archive', channel.id)
         zerobot_common.permissions.allow('accept', channel.id)
@@ -202,7 +218,7 @@ class ApplicationsCog(commands.Cog):
         approval_role = zerobot_common.guild.get_role(zerobot_common.discord_roles.get('Waiting Approval'))
         await discord_user.remove_roles(approval_role, reason='Adding member')
 
-        await discord_user.send(f'Your application for Guest in the Zer0 discord was accepted :)')
+        await message_user(discord_user, f'Your application for Guest in the Zer0 discord was accepted :)')
         await ctx.send(f'Application for Guest accepted :). \n You can continue to talk in this channel until it is archived.')
     
     async def accept_join(self, ctx, app):
@@ -217,6 +233,7 @@ class ApplicationsCog(commands.Cog):
         discord_user = zerobot_common.guild.get_member(discord_id)
         name = discord_user.display_name
         site_profile = app.fields_dict['site_profile']
+        await message_user(discord_user, f'Your application to join Zer0 PvM was accepted :)')
         await ctx.send(f'Application to join accepted, ready for an ingame invite? :)\n You can continue to talk in this channel until it is archived.')
         # act like accept comes from staff bot command, response goes there too
         staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
@@ -247,8 +264,8 @@ class ApplicationsCog(commands.Cog):
         app.set_status('rejected')
         app_type = app.fields_dict['type']
         discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
-        await discord_user.send(f'Your application for {app_type} has been closed. {reason}')
-        await ctx.send(f'Your application for {app_type} has been rejected. \n You can continue to talk in this channel until it is archived.')
+        await message_user(discord_user, f'Your application for {app_type} has been rejected. {reason}')
+        await ctx.send(f'Your application for {app_type} has been rejected. {reason}\n You can continue to talk in this channel until it is archived.')
 
     @commands.command()
     async def cancel(self, ctx, *args):
@@ -272,7 +289,7 @@ class ApplicationsCog(commands.Cog):
         app.set_status('closed')
         app_type = app.fields_dict['type']
         discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
-        await discord_user.send(f'Your application for {app_type} has been closed. {reason}')
+        await message_user(discord_user, f'Your application for {app_type} has been closed. {reason}')
         await self.archive(ctx)
 
 
@@ -301,4 +318,4 @@ class ApplicationsCog(commands.Cog):
         # notify applicant of closing channel
         app_type = app.fields_dict['type']
         discord_user = zerobot_common.guild.get_member(app.fields_dict['requester_id'])
-        await discord_user.send(f'Your application for {app_type} has been closed. Reason: The channel was removed.')
+        await message_user(discord_user, f'Your application for {app_type} has been closed. Reason: The channel was removed.')
