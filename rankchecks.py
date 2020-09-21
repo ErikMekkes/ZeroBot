@@ -291,22 +291,38 @@ def TodosJoinDiscord(memberlist):
     response = [f"**Need to join discord or need a discord id update on sheet:** {len(response)}\n"] + response
     return response
 def TodosUpdateRanks(memberlist):
-    response = list()
     _need_rank_update = list()
     for memb in memberlist:
+        site_rank_name = memb.site_rank
+        site_rank = site_ranks.get(site_rank_name, None)
+        discord_rank_name = memb.discord_rank
+        discord_rank = discord_ranks.get(discord_rank_name, 0)
+        ingame_rank_name = memb.rank
+        ingame_rank = ingame_ranks.get(ingame_rank_name, 0)
+        passed_gem = memb.passed_gem
+        rank_after_gem_name = memb.rank_after_gem
+        rank_after_gem = discord_ranks.get(rank_after_gem_name, 0)
+        discord_recruit_rank = discord_ranks['Recruit']
         # passed gem, and listed to get rankup with gem = need rank update
-        if memb.passed_gem and (discord_ranks.get(memb.rank_after_gem, 0) > discord_ranks.get(memb.discord_rank, 0)):
+        if passed_gem and (rank_after_gem > discord_rank):
             _need_rank_update.append(memb)
-        # not passed gem, not veteran or specialist, rank higher than novice, 
-        if (not(memb.passed_gem) and not(memb.discord_rank in gem_exceptions or memb.name in gem_exceptions) and (
-            ingame_ranks.get(memb.rank, 0) > ingame_ranks.get('Recruit') or
-            discord_ranks.get(memb.discord_rank, 0) > discord_ranks['Recruit']
-            )):
+            continue
+        # no gem, rank higher than recruit, rank or name not in gem exceptions.
+        if not passed_gem and discord_rank > discord_recruit_rank:
+            if not(discord_rank_name in gem_exceptions or memb.name in gem_exceptions):
+                _need_rank_update.append(memb)
+                continue
+        # has a site rank and it's different from discord rank
+        if site_rank is not None:
+            if site_rank is not discord_rank:
+                _need_rank_update.append(memb)
+                continue
+        # different ingame and discord rank
+        if ingame_rank is not discord_rank:
             _need_rank_update.append(memb)
-        # difference between ranks = need rank update
-        if ((ingame_ranks.get(memb.rank, 0) != discord_ranks.get(memb.discord_rank, 0)) or 
-            (site_ranks.get(memb.site_rank, 0) != discord_ranks.get(memb.discord_rank, 0))):
-            _need_rank_update.append(memb)
+            continue
+    # build up response
+    response = list()
     for memb in _need_rank_update:
         response.append(memb.rankInfo())
     response = [f"**Need a rank update:** {len(response)}\n"] + response
