@@ -36,6 +36,10 @@ async def message_user(user, message, alt_ctx=None):
     allowed to message the user directly. (it's possible for discord users
     to disable direct messaging)
     """
+    if user is None:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
+        return
     try:
         await user.send(message)
     except discord.errors.Forbidden:
