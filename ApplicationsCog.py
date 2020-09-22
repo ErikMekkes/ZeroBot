@@ -211,9 +211,15 @@ async def setup_app_channel(ctx, channel, app_type):
     # try to find and send message, image, and instructions for app.
     try:
         app_message = open(f'application_templates/{app_type}_app_text').read()
+    except FileNotFoundError:
+        app_message = ''
+    try:
         img_file = open(f'application_templates/{app_type}_image.png', 'rb')
         app_img = File(img_file)
         await channel.send(app_message, file=app_img)
+    except FileNotFoundError:
+        await channel.send(app_message)
+    try:
         instructions = open(f'application_templates/{app_type}_instructions').read()
         await channel.send(instructions)
     except FileNotFoundError:
