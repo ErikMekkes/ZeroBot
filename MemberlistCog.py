@@ -1,4 +1,5 @@
 from discord.ext import tasks, commands
+import discord
 import traceback
 import time
 from datetime import datetime
@@ -28,6 +29,25 @@ def _AddMember(name, profile_link, discord_id):
     new_member.join_date = today_str
     new_member.last_active = currentDT
     zerobot_common.current_members_sheet.insert_row(new_member.asList(),6,value_input_option = 'USER_ENTERED')
+
+async def message_user(user, message, alt_ctx=None):
+    """
+    Tries to send message to user, send it to alternative contect if not
+    allowed to message the user directly. (it's possible for discord users
+    to disable direct messaging)
+    """
+    if user is None:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
+        return
+    try:
+        await user.send(message)
+    except discord.errors.Forbidden:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
+    except discord.ext.commands.CommandInvokeError:
+        if alt_ctx is not None:
+            await alt_ctx.send(message)
 
 def _FindMembers(query, query_type):
     """
@@ -396,11 +416,11 @@ class MemberlistCog(commands.Cog):
                 message += f"Can't pm {name} on discord. You should tell them to sign up for notify tags, to use them for their pvm in #ranks-chat, tell them about dps gems and what to work on. "
             else:
                 welcome_message = f"Hello {name}, Welcome back to Zer0!\n\n" + open('welcome_message1.txt').read()
-                await discord_user.send(welcome_message)
+                await message_user(discord_user, welcome_message)
                 welcome_message = open('welcome_message2.txt').read()
-                await discord_user.send(welcome_message)
+                await message_user(discord_user, welcome_message)
                 welcome_message = open('welcome_message3.txt').read()
-                await discord_user.send(welcome_message)
+                await message_user(discord_user, welcome_message)
                 message += f"I have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. "
 
         # TODO: check site / discord functions further to see if the actual update was successful if given valid input?
@@ -607,11 +627,11 @@ class MemberlistCog(commands.Cog):
 
             # send welcome message on discord
             welcome_message = f"Hello {name}, Welcome to Zer0 PvM, your application has been accepted!\n\n" + open('welcome_message1.txt').read()
-            await discord_user.send(welcome_message)
+            await message_user(discord_user, welcome_message, ctx)
             welcome_message = open('welcome_message2.txt').read()
-            await discord_user.send(welcome_message)
+            await message_user(discord_user, welcome_message, ctx)
             welcome_message = open('welcome_message3.txt').read()
-            await discord_user.send(welcome_message)
+            await message_user(discord_user, welcome_message, ctx)
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
         message += f"Ranked {name} to Recruit on the website. "
