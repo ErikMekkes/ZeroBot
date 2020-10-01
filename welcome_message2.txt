@@ -1,7 +1,6 @@
 _ _
 _ _
 _ _
-_ _
 - - - - - - - - - - - - - - - - -
 === **Additional Info** ===
 
@@ -9,16 +8,15 @@ The PVM Encyclopedia Discord : https://discord.gg/6djqFVN
 This discord has excellent information from top pvmers on all bosses, including gear setups, mechanics and tactics.
 It also has a lot of generic info channels for pvming, such as interface and keybind layout suggestions, dps tips and which abilities you should prioritise, suggested gear upgrades or unlocks you should work towards.
 
-Channel with suggested upgrades to work on: <https://discordapp.com/channels/534508796639182860/689236598847701075/714937645226262610>
-Channel with suggested perks to put on your weapons and armour: <https://discordapp.com/channels/534508796639182860/553632787639435284/728319302800900156>
-The 'entry level' ones at the top are cheap to get, and already make a huge difference, you should at least have those. Details on how to make are further down in the channel or on rswiki.
+Channel with suggested upgrades to work on: <#689236598847701075>
+Channel with suggested perks to put on your weapons and armour: <#689236234912137266>
+The 'entry level' ones are cheap to get, and already make a huge difference, you should at least have those. See rs wiki or <#553632787639435284> for combinations to make them.
 
-Planted feet is a must have if maging or ranging : <https://runescape.wiki/w/Planted_Feet> (get pf+as1 put on cywir wand or mainhand glaive)
-Flanking switch will also help a ton with dps at any group boss : <https://runescape.wiki/w/Flanking> (just try once for a flank 3 or 4, put on cheapest 2nd offhand you can afford)
+A Planted feet switch is a must have if maging or ranging : <https://runescape.wiki/w/Planted_Feet> (get pf+as1 put on cywir wand or mainhand shadow glaive)
+Flanking switch is a very important upgrade for group bosses : <https://runescape.wiki/w/Flanking> (try at least once for a flank 3 or 4, put on cheapest 2nd offhand you can afford)
 
-Ranged dps tips: https://discordapp.com/channels/534508796639182860/563917498169425930/714937648053223565
-Mage dps tips: https://discordapp.com/channels/534508796639182860/534567464370044928/708104940433965187
-Melee dps tips: https://discordapp.com/channels/534508796639182860/534912860711550989/717045671093600277
-
-The rules for our dps challenge are slightly different than those in the pvme channels, but the knowledge for them remains the same.
-again, you can check our rules in the pinned messages of the dps tags channel: https://discordapp.com/channels/192299572607844352/591052148385775616/702482979917660270
+Channels for advice on abilities and rotations:
+Ranged dpm tips: <#563917498169425930>
+Mage dpm tips: <#534567464370044928>
+Melee dpm tips: <#534912860711550989>
+The rules for our dpm challenge slightly different than those in the pvme channels, but the knowledge for them remains the same.
