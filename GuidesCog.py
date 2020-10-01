@@ -57,7 +57,7 @@ class GuidesCog(commands.Cog):
 
     @commands.command()
     async def reloadguide(self, ctx, guide_name):
-        self.reload_guide(guide_name)
+        await self.reload_guide(guide_name)
     
     async def reload_guide(self, guide_name):
         channel_id = guidechannels[guide_name]
