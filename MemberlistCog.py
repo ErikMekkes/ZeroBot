@@ -14,14 +14,14 @@ from clantrack import UpdateList
 from searchresult import SearchResult
 from memberembed import member_embed
 from member import Member, read_member, memblist_sort_clan_xp, validDiscordId, validSiteProfile
+from exceptions import BannedUserError, ExistingUserWarning
 
-def _AddMember(name, profile_link, discord_id):
+def _AddMember(name, discord_id, profile_link):
     zerobot_common.drive_connect()
 
     currentDT = datetime.utcnow()
     today_str = currentDT.strftime('%Y-%m-%d')
     new_member = Member(name, 'needs invite', 0, 0)
-    new_member.rank_after_gem = ''
     new_member.discord_rank = 'Recruit'
     new_member.site_rank = "Recruit"
     new_member.profile_link = profile_link
@@ -277,6 +277,30 @@ class MemberlistCog(commands.Cog):
         # TODO: create an internal restart that does not rely on the server restarting the python script. tricky with scheduled tasks
         await self.bot.logout()
 
+    async def full_search(self, name, discord_id, profile_link):
+        """
+        Tries to find any results in the memberlist and groups the results.
+        Checks for name, discord id and profile link matches on the current,
+        old and banned memberlists. Might include duplicates.
+        """
+        await self.await_lock()
+        # find results for name matches (non-empty)
+        if name == "" or name is None:
+            name_results = SearchResult()
+        else:
+            name_results = _FindMembers(name, 'name')
+        # find results for discord id matches (non-empty)
+        if discord_id == 0 or discord_id is None:
+            id_results = SearchResult()
+        else:
+            id_results = _FindMembers(discord_id, 'discord_id')
+        # find results for profile link matches (non-empty)
+        if profile_link == "" or profile_link is None or profile_link == "no site":
+            link_results = SearchResult()
+        else:
+            link_results = _FindMembers(profile_link, 'profile_link')
+        await self.unlock()
+        return name_results + id_results + link_results
 
     @commands.command()
     async def todos(self, ctx, *args):
@@ -505,6 +529,73 @@ class MemberlistCog(commands.Cog):
             res.append(memb.bannedInfo() + "\n")
         await send_multiple(ctx, res, codeblock=True)
 
+    async def background_check(self, ctx, app):
+        """
+        Runs a background check on the application, matches found are posted
+        to the provided context (channel or user).
+
+        Raises BannedUserError when there is matching info on the banlist.
+        Raises ExistingUserWarning when matches found outside bans.
+        """
+        name = app.fields_dict["name"]
+        discord_id = app.fields_dict['requester_id']
+        profile_link = app.fields_dict['profile_link']
+
+        search_result = await self.full_search(
+            name, discord_id, profile_link
+        )
+
+        # if result in bans, post results and refuse to add
+        if (search_result.has_ban()):
+            for memb in search_result.banned_results:
+                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
+                    memb.discord_rank = ""
+                if (memb.profile_link == "no site"):
+                    memb.site_rank = ""
+                await ctx.send(embed=member_embed(memb))
+            raise BannedUserError("This person is banned.")
+        
+        # if already known as member some other way, just post results, warn that they might need a check and continue adding
+        if (search_result.has_result()):
+            for memb in search_result.combined_list():
+                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
+                    memb.discord_rank = ""
+                if (memb.profile_link == "no site"):
+                    memb.site_rank = ""
+                await ctx.send(embed=member_embed(memb))
+            raise ExistingUserWarning("This person was a member before")
+    
+    async def post_inactives(self, ctx, days_inactive, number_of_inactives):
+        """
+        Posts a list of currently inactive members to the specified context.
+         - days_inactive: minimum days without activity to show up in list.
+         - number_of_inactives: size of list to post, ordered by least active.
+        """
+        message = "\nSuggested inactives to kick if you need to make room:\n"
+        message += '```Name         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n'
+        inactives = await self.bot.loop.run_in_executor(None, _Inactives, days_inactive)
+        for i in range(0, number_of_inactives):
+            if (i >= len(inactives)) : break
+            message += inactives[i].inactiveInfo() + '\n'
+        message += "```"
+
+        await ctx.send(message)
+        
+    async def add_member(self, ctx, app):
+        """
+        Accepts a member from an application, adding their information to the 
+        memberlist.
+        """
+        name = app.fields_dict["name"]
+        discord_id = app.fields_dict['requester_id']
+        profile_link = app.fields_dict['profile_link']
+        
+        # critical section, editing spreadsheet
+        await self.await_lock()
+        # runs concurrently, other commands that dont require spreadsheet can execute.
+        await self.bot.loop.run_in_executor(None, _AddMember, name, discord_id, profile_link)
+        # finished with updating, can release lock
+        await self.unlock()
 
     @commands.command()
     async def addmember(self, ctx, *args):
@@ -596,7 +687,7 @@ class MemberlistCog(commands.Cog):
         # critical section, editing spreadsheet
         if not(await self.lock(ctx, f"Adding new member {name}, should take ~1 second")): return
         # runs concurrently, other commands that dont require spreadsheet can execute.
-        await self.bot.loop.run_in_executor(None, _AddMember, name, profile_link, discord_id)
+        await self.bot.loop.run_in_executor(None, _AddMember, name, discord_id, profile_link)
         # finished with updating, can release lock
         await self.unlock()
         
@@ -627,11 +718,11 @@ class MemberlistCog(commands.Cog):
 
             # send welcome message on discord
             welcome_message = f"Hello {name}, Welcome to Zer0 PvM, your application has been accepted!\n\n" + open('welcome_message1.txt').read()
-            await message_user(discord_user, welcome_message, ctx)
+            await message_user(discord_user, welcome_message)
             welcome_message = open('welcome_message2.txt').read()
-            await message_user(discord_user, welcome_message, ctx)
+            await message_user(discord_user, welcome_message)
             welcome_message = open('welcome_message3.txt').read()
-            await message_user(discord_user, welcome_message, ctx)
+            await message_user(discord_user, welcome_message)
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
         message += f"Ranked {name} to Recruit on the website. "
@@ -818,6 +909,19 @@ class MemberlistCog(commands.Cog):
         lock_time = currentDT.strftime(zerobot_common.timeformat)
         self.update_msg = f"Waiting for spreadsheet access started at {lock_time} to finish: " + message
         return True
+    async def await_lock(self, interval=60):
+        """
+        Acts as an imperfect mutex, locks access to the spreadsheet to prevent simultanious editing.
+        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
+        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
+
+        Retries obtaining the lock at interval times until succesful. Default
+        interval between attempts is 60 seconds. No fifo / other scheduling.
+        """
+        while self.updating:
+            await asyncio.sleep(interval)
+        self.updating = True
+
     async def unlock(self):
         """
         Acts as an imperfect mutex, unlocks access to the spreadsheet to prevent simultanious editing.
