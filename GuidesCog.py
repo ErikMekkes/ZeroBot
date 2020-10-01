@@ -52,24 +52,31 @@ class GuidesCog(commands.Cog):
 
     @commands.command()
     async def reloadguides(self, ctx):
-        for guide in guidechannels:
-            channel_id = guidechannels[guide]
-            channel = zerobot_common.guild.get_channel(channel_id)
-            posts = read_guides_sheet(guide)
-            await channel.purge()
-            # create empty posts
-            for post in posts:
-                msg = await channel.send(post.row)
-                post.msg = msg
-            # edit text to include references
-            for post in posts:
-                # loop over # of posts, for each #, replace [#] in text with <mention>
-                for i in range(1,len(posts)+1):
-                    referenced_post = find_post(posts, i)
-                    mention = f'https://discordapp.com/channels/{zerobot_common.clan_server_id}/{channel_id}/{referenced_post.msg.id}'
-                    post.text = post.text.replace(f'[{i}]', mention)
-                await post.msg.edit(content=post.text)
-            
+        for guide_name in guidechannels:
+            self.reload_guide(guide_name)
+
+    @commands.command()
+    async def reloadguide(self, ctx, guide_name):
+        self.reload_guide(guide_name)
+    
+    async def reload_guide(self, guide_name):
+        channel_id = guidechannels[guide_name]
+        channel = zerobot_common.guild.get_channel(channel_id)
+        posts = read_guides_sheet(guide_name)
+        await channel.purge()
+        # create empty posts
+        for post in posts:
+            msg = await channel.send(post.row)
+            post.msg = msg
+        # edit text to include references
+        for post in posts:
+            # loop over # of posts, for each #, replace [#] in text with <mention>
+            for i in range(1,len(posts)+1):
+                referenced_post = find_post(posts, i)
+                mention = f'https://discordapp.com/channels/{zerobot_common.clan_server_id}/{channel_id}/{referenced_post.msg.id}'
+                post.text = post.text.replace(f'[{i}]', mention)
+            await post.msg.edit(content=post.text)
+
 
         
         
