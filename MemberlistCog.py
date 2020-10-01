@@ -528,8 +528,14 @@ class MemberlistCog(commands.Cog):
         for memb in memberlist:
             res.append(memb.bannedInfo() + "\n")
         await send_multiple(ctx, res, codeblock=True)
+    
+    async def background_check_app(self, ctx, app):
+        name = app.fields_dict["name"]
+        discord_id = app.fields_dict['requester_id']
+        profile_link = app.fields_dict['profile_link']
+        return self.background_check(ctx, name, discord_id, profile_link)
 
-    async def background_check(self, ctx, app):
+    async def background_check(self, ctx, name, discord_id, profile_link):
         """
         Runs a background check on the application, matches found are posted
         to the provided context (channel or user).
@@ -537,10 +543,6 @@ class MemberlistCog(commands.Cog):
         Raises BannedUserError when there is matching info on the banlist.
         Raises ExistingUserWarning when matches found outside bans.
         """
-        name = app.fields_dict["name"]
-        discord_id = app.fields_dict['requester_id']
-        profile_link = app.fields_dict['profile_link']
-
         search_result = await self.full_search(
             name, discord_id, profile_link
         )
@@ -572,24 +574,26 @@ class MemberlistCog(commands.Cog):
          - number_of_inactives: size of list to post, ordered by least active.
         """
         message = "\nSuggested inactives to kick if you need to make room:\n"
-        message += '```Name         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n'
+        message += "```Name         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n"
         inactives = await self.bot.loop.run_in_executor(None, _Inactives, days_inactive)
         for i in range(0, number_of_inactives):
             if (i >= len(inactives)) : break
-            message += inactives[i].inactiveInfo() + '\n'
+            message += inactives[i].inactiveInfo() + "\n"
         message += "```"
 
         await ctx.send(message)
-        
-    async def add_member(self, ctx, app):
+    
+    async def add_member_app(self, ctx, app):
+        name = app.fields_dict["name"]
+        discord_id = app.fields_dict["requester_id"]
+        profile_link = app.fields_dict["profile_link"]
+        return self.add_member(ctx, name, discord_id, profile_link)
+
+    async def add_member(self, ctx, name, discord_id, profile_link):
         """
         Accepts a member from an application, adding their information to the 
         memberlist.
         """
-        name = app.fields_dict["name"]
-        discord_id = app.fields_dict['requester_id']
-        profile_link = app.fields_dict['profile_link']
-        
         # critical section, editing spreadsheet
         await self.await_lock()
         # runs concurrently, other commands that dont require spreadsheet can execute.
@@ -643,54 +647,16 @@ class MemberlistCog(commands.Cog):
                 await ctx.send(f"Could not add, {profile_link} is not a correct profile link\ncheck if the site link and number are correct, example: https://zer0pvm.com/members/1234567). Use `no site` if they really can't make a site account.")
                 return
         
-        # check against current/old/blacklisted members
-        name_results = _FindMembers(name, 'name')
-        if (discord_id == 0):
-            # prevent empty / no discord matches
-            id_results = SearchResult()
-        else:
-            id_results = _FindMembers(discord_id, 'discord_id')
-        if (profile_link == 'no site'):
-            # prevent empty / no site matches
-            link_results = SearchResult()
-        else:
-            link_results = _FindMembers(profile_link, 'profile_link')
-        # combine results, could replace with override of + operator for searchresult class
-        search_result = SearchResult()
-        search_result.current_results = name_results.current_results + id_results.current_results + link_results.current_results
-        search_result.old_results = name_results.old_results + id_results.old_results + link_results.old_results
-        search_result.banned_results = name_results.banned_results + id_results.banned_results + link_results.banned_results
-
-        # if result in bans, post results and refuse to add
-        if (search_result.has_ban()):
-            for memb in search_result.banned_results:
-                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
-                    memb.discord_rank = ""
-                if (memb.profile_link == "no site"):
-                    memb.site_rank = ""
-                await ctx.send(embed=member_embed(memb))
+        # do background check
+        try:
+            self.background_check(ctx, name, discord_id, profile_link)
+        except BannedUserError:
             await ctx.send(f"You can not add a \uD83D\uDE21 Banned Member \U0001F621, clear their banlist status first.")
             return
-        
-        # if already known as member some other way, just post results, warn that they might need a check and continue adding
-        if (search_result.has_result()):
-            for memb in search_result.combined_list():
-                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
-                    memb.discord_rank = ""
-                if (memb.profile_link == "no site"):
-                    memb.site_rank = ""
-                await ctx.send(embed=member_embed(memb))
+        except ExistingUserWarning:
             await ctx.send(f"Adding, but found previous member results above searching for name, discord id, and profile link matches for {name} (might show duplicates). You might want to check / remove them from the sheet")
-        
-        # first actual edits start if update lock check passes, add command has passed the checks and should not fail from now on.
-        
-        # critical section, editing spreadsheet
-        if not(await self.lock(ctx, f"Adding new member {name}, should take ~1 second")): return
-        # runs concurrently, other commands that dont require spreadsheet can execute.
-        await self.bot.loop.run_in_executor(None, _AddMember, name, discord_id, profile_link)
-        # finished with updating, can release lock
-        await self.unlock()
-        
+        # add member to memberlist
+        await self.add_member(ctx, name, discord_id, profile_link)
         # update rank on site, not needed if no site.
         if (profile_link.lower() != "no site"):
             zerobot_common.siteops.setrank(profile_link, 'Recruit')
@@ -725,19 +691,13 @@ class MemberlistCog(commands.Cog):
             await message_user(discord_user, welcome_message)
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
-        message += f"Ranked {name} to Recruit on the website. "
-        message += f"Also added {name} to the memberlist spreadsheet."
-        message += f"\n\nYou still need to invite them ingame (check if their gear is augmented)."
-
-        message += f"\nSuggested inactives to kick if you need to make room:\n"
-        message += '```Name         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n'
-        inactives = await self.bot.loop.run_in_executor(None, _Inactives, 30)
-        for i in range(0, 5):
-            if (i >= len(inactives)) : break
-            message += inactives[i].inactiveInfo() + '\n'
-        message += f"```"
-
+        message += (
+            f"Ranked {name} to Recruit on the website. Also added {name} to "
+            f"the memberlist spreadsheet. \n\nYou still need to invite them "
+            f"ingame. Check if their gear is augmented."
+        )
         await ctx.send(message)
+        await self.post_inactives(ctx, 30, 6)
     
     @commands.command()
     async def edit(self, ctx, *args):

@@ -24,11 +24,11 @@ Config required for this module:
  - check discord_ranks table in zerobot_common
  - check the setup below for this module
 '''
-import zerobot_common
 from discord.ext import commands
-from discord import File
 import discord
 from pathlib import Path
+
+import zerobot_common
 from logfile import LogFile
 from permissions import Permissions
 from application import Application
@@ -39,8 +39,6 @@ from exceptions import BannedUserError, ExistingUserWarning
 votes_for_guest = 1
 votes_for_join = 3
 votes_for_rankup = 2
-
-# It is assumed that you have set the channel everyone on the discord can type in the channel.
 
 # Rank required to be able to start a guest or join application. If they do not
 # have a rank or only lower ones the bot will ignore them. the bot will only
@@ -66,10 +64,13 @@ join_role_name = 'Recruit'
 join_rank = zerobot_common.discord_ranks.get(join_role_name)
 # message for non members who try to rankup instead of join
 join_before_rankup_message = (
-    'You have to join the clan first before you can rank up :) Use ' +
-    '`-zbot join` to join the clan'
+    "You have to join the clan first before you can rank up :) "
+    "Use `-zbot join` to join the clan"
 )
-
+channel_creation_message = (
+    "I have a created a channel for your application on the Zer0 Discord "
+    "server, please go to : "
+)
 
 # I do not like adding these... but our names are a bit inconsistent. And
 # people also get annoyed at the 'I meant that why didnt it get it' thing.
@@ -218,7 +219,7 @@ async def setup_app_channel(ctx, channel, app_type):
         app_message = ''
     try:
         img_file = open(f'application_templates/{app_type}_image.png', 'rb')
-        app_img = File(img_file)
+        app_img = discord.File(img_file)
         await channel.send(app_message, file=app_img)
     except FileNotFoundError:
         await channel.send(app_message)
@@ -299,7 +300,7 @@ class ApplicationsCog(commands.Cog):
             reason='joining'
         )
         await setup_app_channel(ctx, channel, rank_name)
-        await message_user(ctx.author, f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
+        await message_user(ctx.author, channel_creation_message + channel.mention)
         # register the application and update copy on disk
         join_app = Application(
             channel.id,
@@ -332,7 +333,7 @@ class ApplicationsCog(commands.Cog):
             reason='joining'
         )
         await setup_app_channel(ctx, channel, 'join')
-        await message_user(ctx.author, f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
+        await message_user(ctx.author, channel_creation_message + channel.mention)
         permissions.allow('sitelink', channel.id)
         # register the application and update copy on disk
         join_app = Application(
@@ -354,7 +355,7 @@ class ApplicationsCog(commands.Cog):
 
         await ctx.channel.purge()
         with open('application_templates/join_image.png', 'rb') as f:
-            picture = File(f)
+            picture = discord.File(f)
             await ctx.channel.send('**To join Zer0 you will need the following entry requirements:** (not required for guest access)', file=picture)
             await ctx.channel.send('**Entry Reqs minimum perks:** (not required for guest access)\n - Weapon Perks: precise 6, equilibrium 4, or better combinations.\n - Armor Perks: biting 3, crackling 4, impatient 4, relentless 5, (enhanced) devoted 4, or better combinations.')
         application_instructions = open('application_templates/application_instructions').read()
@@ -374,7 +375,7 @@ class ApplicationsCog(commands.Cog):
 
         name = f'guest-{ctx.author.display_name}'
         channel = await zerobot_common.guild.create_text_channel(name, category=app_category, reason='guesting')
-        await message_user(ctx.author, f'I have a created a channel for your application on the Zer0 Discord server, please go to : {channel.mention}')
+        await message_user(ctx.author, channel_creation_message + channel.mention)
         await channel.set_permissions(ctx.author, read_messages=True, send_messages=True, read_message_history=True)
         permissions.allow('archive', channel.id)
         permissions.allow('accept', channel.id)
@@ -402,7 +403,10 @@ class ApplicationsCog(commands.Cog):
             await ctx.send(app_not_found_msg)
             return
         if (app.fields_dict['status'] == 'open'):
-            await ctx.send('This application has not been accepted or rejected yet! use `-zbot accept` or `-zbot reject`')
+            await ctx.send(
+                "This application has not been accepted or rejected yet! "
+                "Use `-zbot accept` or `-zbot reject`"
+            )
             return
 
         filedir = f'applications/{ctx.channel.id}-{ctx.channel.name}/'
@@ -463,7 +467,10 @@ class ApplicationsCog(commands.Cog):
         votes_required = app.fields_dict['votes_required']
         if (app.add_vote(ctx.author.id)):
             num_votes += 1
-            await ctx.send(f'Added your vote to accept this application, the application now has {num_votes} of the {votes_required} required votes')
+            await ctx.send(
+                f'Added your vote to accept this application, the application '
+                f'now has {num_votes} of the {votes_required} required votes'
+            )
         else:
             await ctx.send(
                 f'You have already voted to accept this application, the '
@@ -523,7 +530,7 @@ class ApplicationsCog(commands.Cog):
         if memblist is not None:
             # do background check
             try:
-                await memblist.background_check(staff_bot_channel, app)
+                await memblist.background_check_app(staff_bot_channel, app)
             except BannedUserError:
                 await ctx.send(f"There was a problem accepting this app, please check the staff bot channel")
                 message += f"Could not accept, \uD83D\uDE21 Banned Member \U0001F621."
@@ -533,7 +540,7 @@ class ApplicationsCog(commands.Cog):
                 message += f"Found previous member results above for them on the spreadsheet, you may want to check / remove those."
             message += f" they are not on the banlist."
             # add member to memberlist
-            await memblist.add_member(staff_bot_channel, app)
+            await memblist.add_member_app(staff_bot_channel, app)
             message += f" I have added them to the memberlist spreadsheet."
             # post 6 least active people that were not active in last 30 days
             await memblist.post_inactives(staff_bot_channel, 30, 6)
@@ -552,12 +559,19 @@ class ApplicationsCog(commands.Cog):
         # remove guest role if present
         guest_role = zerobot_common.get_named_role(guest_role_name)
         await discord_user.remove_roles(guest_role, reason='Adding member')
-        message += f" I have given them the {join_role_name} rank on discord and removed their lower rank(s)."
+        message += (
+            f" I have given them the {join_role_name} rank on discord and "
+            f"removed their previous lower rank(s)."
+        )
 
         # send welcome messages
         await send_welcome_messages(discord_user, ctx)
 
-        message += f" I have also sent them info on notify tags, dpm tags, and links to all the useful pvm info / discords. \n\nYou still need to invite them ingame. I have asked them to look for an invite."
+        message += (
+            f" I have also them info on notify tags, dpm tags, and links to "
+            f"all the useful pvm info / discords. \n\nYou still need to "
+            f"invite them ingame. I have asked them to look for an invite."
+        )
         await staff_bot_channel.send(message)
     
     async def accept_rankup(self, ctx, app):
