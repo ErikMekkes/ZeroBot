@@ -1,5 +1,5 @@
 class Application:
-    def __init__(self, channel_id, requester_id, type='guest', rank=None, voters=None, votes_required=1, status='open', site_profile='no site', applist=None):
+    def __init__(self, channel_id, requester_id, type='guest', rank=None, voters=None, votes_required=1, status='open', profile_link='no site', applist=None):
         '''
         An application, identifiable by a discord channel id.
         May or may not be part of an application list that is synced to disk.
@@ -15,7 +15,7 @@ class Application:
             'voters': voters,
             'votes_required': votes_required,
             'status': status,
-            'site_profile': site_profile
+            'profile_link': profile_link
         }
         self.applist = applist
     def __eq__(self, other):
@@ -33,12 +33,12 @@ class Application:
         self.fields_dict['status'] = status
         if (self.applist != None):
             self.applist.dump()
-    def set_site(self, site_profile):
+    def set_site(self, profile_link):
         '''
         Sets the site profile of this app.
         If app is part of an applist it will sync it with the applist on disk.
         '''
-        self.fields_dict['site_profile'] = site_profile
+        self.fields_dict['profile_link'] = profile_link
         if (self.applist != None):
             self.applist.dump()
     def add_vote(self, voter_id):
@@ -66,6 +66,6 @@ class Application:
             fields_dict['voters'],
             fields_dict['votes_required'],
             fields_dict['status'],
-            fields_dict['site_profile'],
+            fields_dict['profile_link'],
             applist
         )

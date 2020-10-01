@@ -9,6 +9,14 @@ class SearchResult():
         self.old_results = list()
         # results from banned sheet
         self.banned_results = list()
+    def __add__(self, other):
+        if not isinstance(other, SearchResult):
+            raise TypeError
+        result = SearchResult()
+        result.current_results = self.current_results + other.current_results
+        result.old_results = self.old_results + other.old_results
+        result.banned_results = self.banned_results + other.banned_results
+        return result
     def combined_list(self):
         """
         Returns a list of combined search results ordered as current > retired > kicked members

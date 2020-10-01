@@ -174,7 +174,7 @@ def get_named_channel(channel_name):
 def get_named_role(role_name):
     '''
     Searches the guild for the role name, returns the role if found. 
-    CAUTION: channel names are NOT unique, this returns the first result if
+    CAUTION: role names are NOT unique, this returns the first result if
     there are duplicate names.
     Returns None if no matching role found.
 
