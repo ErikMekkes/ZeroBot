@@ -14,7 +14,7 @@ from clantrack import UpdateList
 from searchresult import SearchResult
 from memberembed import member_embed
 from member import Member, read_member, memblist_sort_clan_xp, validDiscordId, validSiteProfile
-from exceptions import BannedUserError, ExistingUserWarning
+from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError
 
 def _AddMember(name, discord_id, profile_link):
     zerobot_common.drive_connect()
@@ -388,6 +388,32 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
+    async def set_rank(self, name, rank):
+        """
+        Sets a current member's rank on the memberlist to the specified rank.
+
+        Raises StaffMemberError if trying to make staff rank changes.
+        Raises MemberNotFoundError if no member could be found for given name.
+        """
+        # find member on memberlist.
+        await self.await_lock()
+        result = _FindMembers(name, "name")
+        if (not(result.has_exact())):
+            await self.unlock()
+            raise MemberNotFoundError(f"{name} not found on memberlist.")
+        member = result.get_exact()
+        # if not a current member
+        if member.sheet is not zerobot_common.current_members_sheet:
+            raise NotACurrentMemberError(f"{name} is not a current member.")
+        # update rank on memberlist.
+        UpdateMember(zerobot_common.current_members_sheet, member.row, member)
+        await self.unlock()
+        
+        # if site module enabled...
+        # TODO should be separate module
+        if not zerobot_common.site_disabled:
+            zerobot_common.siteops.setrank_member(member, rank)
+    
     @commands.command()
     async def setrank(self, ctx, *args):
         # log command attempt and check if command allowed
@@ -533,7 +559,7 @@ class MemberlistCog(commands.Cog):
         name = app.fields_dict["name"]
         discord_id = app.fields_dict['requester_id']
         profile_link = app.fields_dict['profile_link']
-        return self.background_check(ctx, name, discord_id, profile_link)
+        await self.background_check(ctx, name, discord_id, profile_link)
 
     async def background_check(self, ctx, name, discord_id, profile_link):
         """
@@ -584,15 +610,17 @@ class MemberlistCog(commands.Cog):
         await ctx.send(message)
     
     async def add_member_app(self, ctx, app):
+        """
+        Adds the member from the application to the memberlist.
+        """
         name = app.fields_dict["name"]
         discord_id = app.fields_dict["requester_id"]
         profile_link = app.fields_dict["profile_link"]
-        return self.add_member(ctx, name, discord_id, profile_link)
+        await self.add_member(ctx, name, discord_id, profile_link)
 
     async def add_member(self, ctx, name, discord_id, profile_link):
         """
-        Accepts a member from an application, adding their information to the 
-        memberlist.
+        Adds a member's information to the memberlist.
         """
         # critical section, editing spreadsheet
         await self.await_lock()
@@ -603,6 +631,9 @@ class MemberlistCog(commands.Cog):
 
     @commands.command()
     async def addmember(self, ctx, *args):
+        """
+        Discord bot command to add a member (name, discord id, site link)
+        """
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('addmember', ctx.channel.id)) : return

@@ -33,7 +33,7 @@ from logfile import LogFile
 from permissions import Permissions
 from application import Application
 from applications import Applications
-from exceptions import BannedUserError, ExistingUserWarning
+from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError
 
 # number of votes required for accepting applications
 votes_for_guest = 1
@@ -532,16 +532,16 @@ class ApplicationsCog(commands.Cog):
             try:
                 await memblist.background_check_app(staff_bot_channel, app)
             except BannedUserError:
-                await ctx.send(f"There was a problem accepting this app, please check the staff bot channel")
+                await ctx.send(f"There was a problem accepting this app, please check the staff bot channel.")
                 message += f"Could not accept, \uD83D\uDE21 Banned Member \U0001F621."
                 return
             except ExistingUserWarning:
-                await ctx.send(f"You may have been a previous member, I tried to post info that could help in the staff bot channel")
-                message += f"Found previous member results above for them on the spreadsheet, you may want to check / remove those."
-            message += f" they are not on the banlist."
+                await ctx.send(f"You may have been a previous member, I tried to post info that could help in the staff bot channel.")
+                message += f"Found previous member results above for them on the spreadsheet, you may want to check / remove those. "
+            message += f"They are not on the banlist. "
             # add member to memberlist
             await memblist.add_member_app(staff_bot_channel, app)
-            message += f" I have added them to the memberlist spreadsheet."
+            message += f"I have added them to the memberlist spreadsheet. "
             # post 6 least active people that were not active in last 30 days
             await memblist.post_inactives(staff_bot_channel, 30, 6)
         else:
@@ -593,16 +593,21 @@ class ApplicationsCog(commands.Cog):
         await message_user(discord_user, f'Your application for {new_role_name} was accepted :)')
         await ctx.send(f'Rankup application to {new_role_name} accepted :)\n You can continue to talk in this channel until it is archived.')
         
-        #instruct memberlist to change rank if enabled
-        memblist = self.bot.get_cog('MemberlistCog')
-        if (memblist == None):
-            app_log.log(f'no memberlistcog, dont need to tell it to set rank')
-            return
-        name = discord_user.display_name
-        # act like accept comes from staff bot command, response goes there too
         staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
-        ctx.channel = staff_bot_channel
-        await memblist.setrank(ctx, name, new_role_name)
+
+        # if memberlist module enabled...
+        memblist = self.bot.get_cog('MemberlistCog')
+        if memblist is not None:
+            try:
+                name = discord_user.display_name
+                # TODO also does site currently, should split out
+                await memblist.set_rank(name, new_role_name)
+            except NotACurrentMemberError as ex:
+                await staff_bot_channel.send(f"{ex} Could not update rank on spreadsheet memberlist.")
+            except MemberNotFoundError as ex:
+                await staff_bot_channel.send(f"{ex} Could not update rank on spreadsheet memberlist.")
+        else:
+            await staff_bot_channel.send(f"Failed to access spreadsheet to update rank.")
 
     
     @commands.command()
