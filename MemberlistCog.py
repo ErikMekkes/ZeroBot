@@ -17,18 +17,34 @@ from member import Member, read_member, memblist_sort_clan_xp, validDiscordId, v
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError
 
 def _AddMember(name, discord_id, profile_link):
+    """
+    Adds a new member to the memberlist spreadsheet. 
+    - Stores their name, discord id and profile link.
+    - Sets ingame rank to "needs invite".
+    - Sets discord rank to "Recruit" or "" if no valid discord id.
+    - Sets site rank to "Recruit" or "" if no valid profile link.
+    - Sets join date and last active date as today.
+    """
     zerobot_common.drive_connect()
 
     currentDT = datetime.utcnow()
-    today_str = currentDT.strftime('%Y-%m-%d')
-    new_member = Member(name, 'needs invite', 0, 0)
-    new_member.discord_rank = 'Recruit'
-    new_member.site_rank = "Recruit"
+    today_str = currentDT.strftime(zerobot_common.dateformat)
+    new_member = Member(name, "needs invite", 0, 0)
+    if validDiscordId(discord_id):
+        new_member.discord_rank = "Recruit"
+    else:
+        new_member.discord_rank = ""
+    if validSiteProfile(profile_link):
+        new_member.site_rank = "Recruit"
+    else:
+        new_member.site_rank = ""
     new_member.profile_link = profile_link
     new_member.discord_id = discord_id
     new_member.join_date = today_str
     new_member.last_active = currentDT
-    zerobot_common.current_members_sheet.insert_row(new_member.asList(),6,value_input_option = 'USER_ENTERED')
+    zerobot_common.current_members_sheet.insert_row(
+        new_member.asList(), 6, value_input_option = 'USER_ENTERED'
+    )
 
 async def message_user(user, message, alt_ctx=None):
     """
