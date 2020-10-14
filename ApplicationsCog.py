@@ -446,7 +446,7 @@ class ApplicationsCog(commands.Cog):
             await ctx.send(app_not_found_msg)
             return
         app.set_site(profile_link)
-        ctx.send('Saved their site account link.')
+        await ctx.send('Saved their site account link.')
     
     @commands.command()
     async def accept(self, ctx):
