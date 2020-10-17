@@ -1,12 +1,16 @@
 import zerobot_common
+from discord import Intents
 from discord.ext import commands
 from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
 from GuidesCog import GuidesCog
 
+intents = Intents.default()
+intents.members = True
+
 # set up the basic discord bot object along with some basic settings
-bot = commands.Bot(command_prefix='-zbot ', case_insensitive=True, fetch_offline_members=True, guild_subscriptions=True)
+bot = commands.Bot(command_prefix='-zbot ', intents=intents, case_insensitive=True, fetch_offline_members=True, guild_subscriptions=True)
 # TODO create our own, for now remove the default help command to hide commands that normal users shouldnt see.
 bot.remove_command('help')
 
