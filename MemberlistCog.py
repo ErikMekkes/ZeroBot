@@ -209,6 +209,30 @@ async def daily_update(self):
     to_update_rank = TodosUpdateRanks(memberlist)
     await send_multiple(self.bot_channel, to_update_rank)
 
+async def send_welcome_messages(user, ctx=None):
+    """
+    Sends the welcome messages to user privately. If user is a name string or 
+    a discord user that does not allow direct messaging without being friends
+    this will try to send the messages to ctx if it is not None.
+    """
+    if isinstance(user, str):
+        name = user
+        user = None
+    else:
+        name = user.display_name
+    # send welcome message on discord
+    welcome_message = (
+        f"Hello {name}, Welcome to Zer0 PvM, your "
+        f"application has been accepted!\n\n"
+    ) + open('welcome_message1.txt').read()
+    await message_user(user, welcome_message, ctx)
+    welcome_message = open('welcome_message2.txt').read()
+    await message_user(user, welcome_message, ctx)
+    welcome_message = open('welcome_message3.txt').read()
+    await message_user(user, welcome_message, ctx)
+    welcome_message = open('welcome_message4.txt').read()
+    await message_user(user, welcome_message, ctx)
+
 class MemberlistCog(commands.Cog):
     '''
     Handles commands related to memberlist changes and starts the daily update.
@@ -546,16 +570,15 @@ class MemberlistCog(commands.Cog):
         await self.findmember(ctx, *args)
     
     @commands.command()
-    async def welcome_message(self, ctx):
+    async def welcome(self, ctx, *args):
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('welcome_message', ctx.channel.id)) : return
-        
-        name = ctx.author.name
-        welcome_message = f"Hello {name}! " + open('welcome_message1.txt').read()
-        await ctx.send(welcome_message)
-        welcome_message = open('welcome_message2.txt').read()
-        await ctx.send(welcome_message)
+        if not(zerobot_common.permissions.is_allowed('welcome', ctx.channel.id)) : return
+
+        if len(args) == 1 and args[0] == "me":
+            await send_welcome_messages(ctx.author, None)
+        else:
+            await send_welcome_messages(ctx.author.name, ctx.channel)
 
     @commands.command()
     async def banlist(self, ctx):
@@ -729,13 +752,7 @@ class MemberlistCog(commands.Cog):
             await discord_user.add_roles(recruit_role, reason='Adding member')
             message += f'Added {recruit_role.name} role on discord. '
 
-            # send welcome message on discord
-            welcome_message = f"Hello {name}, Welcome to Zer0 PvM, your application has been accepted!\n\n" + open('welcome_message1.txt').read()
-            await message_user(discord_user, welcome_message)
-            welcome_message = open('welcome_message2.txt').read()
-            await message_user(discord_user, welcome_message)
-            welcome_message = open('welcome_message3.txt').read()
-            await message_user(discord_user, welcome_message)
+            await send_welcome_messages(discord_user)
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
         message += (
