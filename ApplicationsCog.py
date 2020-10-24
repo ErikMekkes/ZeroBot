@@ -706,6 +706,8 @@ async def send_welcome_messages(discord_user, ctx):
     await message_user(discord_user, welcome_message, ctx)
     welcome_message = open('welcome_message3.txt').read()
     await message_user(discord_user, welcome_message, ctx)
+    welcome_message = open('welcome_message4.txt').read()
+    await message_user(discord_user, welcome_message, ctx)
     # send confirmation of sending info to new member in staff bot channel.
     staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
     await staff_bot_channel.send(

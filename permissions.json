@@ -26,6 +26,9 @@
     "banlist": [
         "staff_bot_command"
     ],
+    "welcome": [
+        "staff_bot_command"
+    ],
     "archive": [],
     "accept": [],
     "reject": [],
