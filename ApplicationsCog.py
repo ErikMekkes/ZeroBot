@@ -27,8 +27,10 @@ Config required for this module:
 from discord.ext import commands
 import discord
 from pathlib import Path
+import os
 
 import zerobot_common
+from utilities import load_json
 from logfile import LogFile
 from permissions import Permissions
 from application import Application
@@ -208,26 +210,24 @@ async def setup_app_channel(ctx, channel, app_type):
     permissions.allow('accept', channel.id)
     permissions.allow('reject', channel.id)
     permissions.allow('cancel', channel.id)
-    # set up the channel with the basic message
+    # start the app channel with a basic message
     msg = (f'Hello {ctx.author.mention}! '
         + open('application_templates/app_base_message').read())
     await channel.send(msg)
-    # try to find and send message, image, and instructions for app.
-    try:
-        app_message = open(f'application_templates/{app_type}_app_text').read()
-    except FileNotFoundError:
-        app_message = ''
-    try:
-        img_file = open(f'application_templates/{app_type}_image.png', 'rb')
-        app_img = discord.File(img_file)
-        await channel.send(app_message, file=app_img)
-    except FileNotFoundError:
-        await channel.send(app_message)
-    try:
-        instructions = open(f'application_templates/{app_type}_instructions').read()
-        await channel.send(instructions)
-    except FileNotFoundError:
-        pass
+
+    # load the messages that need to be sent for this app.
+    msgs = load_json(f'application_templates/{app_type}_messages.json')
+    # loop over messages, send as text or image depending on extension.
+    for k,v in msgs.items():
+        split_ext = os.path.splitext(v)
+        if len(split_ext) == 2:
+            if split_ext[1] == '.txt':
+                message = open(f'application_templates/{v}').read()
+                await channel.send(message)
+            if split_ext[1] == '.png':
+                img_file = open(f'application_templates/{v}', 'rb')
+                img = discord.File(img_file)
+                await channel.send(file=img)
 
 class ApplicationsCog(commands.Cog):
     '''
@@ -354,10 +354,13 @@ class ApplicationsCog(commands.Cog):
         if not(ctx.channel.id == app_req_channel_id) : return
 
         await ctx.channel.purge()
-        with open('application_templates/join_image.png', 'rb') as f:
-            picture = discord.File(f)
-            await ctx.channel.send('**To join Zer0 you will need the following entry requirements:** (not required for guest access)', file=picture)
-            await ctx.channel.send('**Entry Reqs minimum perks:** (not required for guest access)\n - Weapon Perks: precise 6, equilibrium 4, or better combinations.\n - Armor Perks: biting 3, crackling 4, impatient 4, relentless 5, (enhanced) devoted 4, or better combinations.')
+        entry_reqs_img = open(f'application_templates/join_image.png', 'rb')
+        entry_reqs_img = discord.File(entry_reqs_img)
+        await ctx.channel.send('**To join Zer0 PvM you will need the following entry requirements:** (not required for guest access)', file=entry_reqs_img)
+        entry_perks_img = open(f'application_templates/join_perks.png', 'rb')
+        entry_perks_img = discord.File(entry_perks_img)
+        entry_perks_text = '**Entry Reqs minimum perks and how to make them:** (not required for guest access)\n'
+        await ctx.channel.send(entry_perks_text, file=entry_perks_img)
         application_instructions = open('application_templates/application_instructions').read()
         await ctx.channel.send(application_instructions)
 
@@ -372,24 +375,18 @@ class ApplicationsCog(commands.Cog):
         if (open_app != None):
             await message_user(ctx.author, f'You already have an open application at <#{open_app.channel_id}>', ctx)
             return
-
-        name = f'guest-{ctx.author.display_name}'
-        channel = await zerobot_common.guild.create_text_channel(name, category=app_category, reason='guesting')
+        
+        channel = await zerobot_common.guild.create_text_channel(
+            f'guest-{ctx.author.display_name}',
+            category=app_category,
+            reason='guesting'
+        )
+        await setup_app_channel(ctx, channel, 'guest')
         await message_user(ctx.author, channel_creation_message + channel.mention)
-        await channel.set_permissions(ctx.author, read_messages=True, send_messages=True, read_message_history=True)
-        permissions.allow('archive', channel.id)
-        permissions.allow('accept', channel.id)
-        permissions.allow('cancel', channel.id)
-        permissions.allow('reject', channel.id)
+
         # register the application and update copy on disk
         guest_app = Application(channel.id, ctx.author.id)
         applications.append(guest_app)
-
-        app_base_message = f'Hello {ctx.author.mention}! ' + open('application_templates/app_base_message').read()
-        await channel.send(app_base_message)
-        guest_instructions = open('application_templates/guest_instructions').read()
-        await channel.send(guest_instructions)
-
         await self.clean_app_requests(ctx)
     
     @commands.command()
