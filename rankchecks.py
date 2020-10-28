@@ -11,7 +11,7 @@ from datetime import datetime
 import discord
 import traceback
 
-gem_exceptions = ["Erwin","Alexanderke","Veteran Member","PvM Specialists"]
+gem_exceptions = ["Alexanderke","Veteran Member","PvM Specialists"]
 
 # used to find a member's highest dps tag
 dps_tags = {
