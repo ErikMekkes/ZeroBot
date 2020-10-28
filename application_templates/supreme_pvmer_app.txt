@@ -1,0 +1,28 @@
+A single specialist rank? That's for plebs...
+
+```Supreme PvMer:```
+- Must have three Specialist boss tags, or one God boss tag.
+- Must have all the gear / PvM unlocks from advanced member and lower ranks.
+- Must have these additional gear reqs to perfect your setup:
+       * Limitless Sigil
+       * At least one Essence of Finality amulet
+       * Grimoire
+       * T99 prayers for your preferred 2 combat styles
+- Must have the optimal weapon perks for your preferred 2 styles (t92 weapons):
+       * MH: AS1P6
+       * OH: AS4E2
+       * 2H: AS4E2 and P6R1 / AS4Inv2 and P6E1 can be used for staff
+       * Flanking (must be t90+): F4E1
+- Must have the optimal armour perks for your preferred 2 styles (t90+ armour):
+    For melee or ranged:
+       * Biting 4 + mobile/other
+       * Relentless 5 + Crackling 4
+       * Impatient 4 + mobile/other
+       * Enhanced Devoted 4
+    For mage you must know 4TAA and have the specialized perks for it:
+       * Invigorating 4 + mobile/other
+       * Biting 4 + mobile/other
+       * Impatient 4 + devoted 4
+       * Relentless 5 + Crackling 4
+
+See the <#755476321609580635> channel for specialist tag requirements for each boss.
