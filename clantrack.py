@@ -70,7 +70,11 @@ def _updateUserData(memb, session):
         return _updateUserData(memb, session)
 
     if (memb_req_res.status_code == requests.codes['ok']):
+        #TODO process result into proper array rather than use splits?
+        #TODO create function in member to update from api result
         memb_info = memb_req_res.text.splitlines()
+
+        # name, rank, clan_xp, kills, already updated by clan data
         # first 28 are skills, 3 columns : rank, lvl, xp
         for num, x in enumerate(memb_info) :
             if num > 28 : break
@@ -78,6 +82,19 @@ def _updateUserData(memb, session):
 
         # runescore = 53, 2 columns : rank, score
         memb.runescore = int_0(memb_info[53].split(',')[1])
+        # clues = next 5 after runescore
+        memb.easy_clues = int_0(memb_info[54].split(',')[1])
+        memb.medium_clues = int_0(memb_info[55].split(',')[1])
+        memb.hard_clues = int_0(memb_info[56].split(',')[1])
+        memb.elite_clues = int_0(memb_info[57].split(',')[1])
+        memb.master_clues = int_0(memb_info[58].split(',')[1])
+        memb.total_clues = (
+            memb.easy_clues
+            + memb.medium_clues
+            + memb.hard_clues
+            + memb.elite_clues
+            + memb.master_clues
+        )
         return True
     else:
         zerobot_common.logfile.log(f"Failed to get member data : {memb.name}")
@@ -209,11 +226,18 @@ def _compareMembers(session, current_members_list, ingame_members_list, joining_
             if (existing_member.last_active == None or existing_member.last_active < datetime.utcnow()):
                 if (existing_member.wasActive(ingame_memb)):
                     existing_member.last_active = datetime.utcnow()
+            # update member in current list with new ingame data
             existing_member.rank = ingame_memb.rank
             existing_member.clan_xp = ingame_memb.clan_xp
             existing_member.kills = ingame_memb.kills
             existing_member.runescore = ingame_memb.runescore
             existing_member.skills = ingame_memb.skills
+            existing_member.easy_clues = ingame_memb.easy_clues
+            existing_member.medium_clues = ingame_memb.medium_clues
+            existing_member.hard_clues = ingame_memb.hard_clues
+            existing_member.elite_clues = ingame_memb.elite_clues
+            existing_member.master_clues = ingame_memb.master_clues
+            existing_member.total_clues = ingame_memb.total_clues
             
             if (just_joined):
                 current_members_list.remove(existing_member)

@@ -2,7 +2,7 @@ from member import read_member, memblist_sort
 
 class SheetParams:
     start_col = 'A'
-    end_col = 'BB'
+    end_col = 'BH'
 
     # number of header rows on the memberlist spreadsheets
     header_rows = 4
@@ -10,12 +10,12 @@ class SheetParams:
     header_entries_currmembs = [
             "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
             "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3","Clan XP","Kills","Runescore",
-            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range"]
+            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range","Total Clues","Easy Clues","Medium Clues","Hard Clues","Elite Clues","Master Clues"]
     # header entries for the old members spreadsheet
     header_entries_oldmembs = [
             "Name","Old Ingame Rank","Old Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
             "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3","Clan XP","Kills","Runescore",
-            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range"]
+            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range","Total Clues","Easy Clues","Medium Clues","Hard Clues","Elite Clues","Master Clues"]
 
 def UpdateMember(sheet, row, member):
     """

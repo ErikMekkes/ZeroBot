@@ -60,6 +60,12 @@ class Member:
         self.highest_mage = ""
         self.highest_melee = ""
         self.highest_range = ""
+        self.total_clues = 0
+        self.easy_clues = 0
+        self.medium_clues = 0
+        self.hard_clues = 0
+        self.elite_clues = 0
+        self.master_clues = 0
         # not stored on sheet, based on last active, used for sorting inactives
         self.days_inactive = 0
         # not stored on sheet, only set if member originates from a search result to allow editing.
@@ -76,6 +82,7 @@ class Member:
         for x in self.skills:
             user_str += "\t" + str(x)
         user_str += f"\t{self.highest_mage}\t{self.highest_melee}\t{self.highest_range}"
+        user_str += f"\t{str(self.total_clues)}\t{str(self.easy_clues)}\t{str(self.medium_clues)}\t{str(self.hard_clues)}\t{str(self.elite_clues)}\t{str(self.master_clues)}"
         return user_str
     def __eq__(self, other):
         if isinstance(other, str):
@@ -112,13 +119,16 @@ class Member:
         self.highest_mage = other.highest_mage
         self.highest_melee = other.highest_melee
         self.highest_range = other.highest_range
+        self.total_clues = other.total_clues
     def wasActive(self, other):
         # True if made gains in any of the below
-        if other.clan_xp > self.clan_xp : return True
-        if other.kills > self.kills : return True
-        if other.runescore > self.runescore : return True
+        if other.clan_xp > self.clan_xp: return True
+        if other.kills > self.kills: return True
+        if other.runescore > self.runescore: return True
         for num,x in enumerate(other.skills):
             if x > self.skills[num] : return True
+        # dont have to check individual clues, comparing to self, cant lower
+        if other.total_clues > self.total_clues: return True
         # Did not have gains in any of the above, false
         return False
     def match(self, other):
@@ -126,14 +136,22 @@ class Member:
             # don't attempt to compare against unrelated types
             return -1
         # can't lose xp, lower xp = not same person
-        if other.clan_xp < self.clan_xp : 
+        if other.clan_xp < self.clan_xp: 
             return -1
         for num,x in enumerate(other.skills):
-            if x < self.skills[num] : 
+            if x < self.skills[num]: 
                 return -1
         # can't lose kills, lower kills = not same person
-        if other.kills < self.kills : 
+        if other.kills < self.kills: 
             return -1
+        # cant lose clue count, fewer clues = different person
+        if other.total_clues < self.total_clues: return -1
+        # same count but different distribution = different person
+        if other.easy_clues < self.easy_clues: return -1
+        if other.medium_clues < self.medium_clues: return -1
+        if other.hard_clues < self.hard_clues: return -1
+        if other.elite_clues < self.elite_clues: return -1
+        if other.master_clues < self.master_clues: return -1
 
         # High end estimate of expected gains over a day
         clanxp_exp = 20000000       # 10M
@@ -188,7 +206,13 @@ class Member:
         memb_info += [
             self.highest_mage,
             self.highest_melee,
-            self.highest_range
+            self.highest_range,
+            self.total_clues,
+            self.easy_clues,
+            self.medium_clues,
+            self.hard_clues,
+            self.elite_clues,
+            self.master_clues
         ]
         return memb_info
     def rankInfo(self):
@@ -335,6 +359,18 @@ def read_member(memb_info):
     memb.highest_mage = memb_info[51]
     memb.highest_melee = memb_info[52]
     memb.highest_range = memb_info[53]
+    memb.easy_clues = int_0(memb_info[54])
+    memb.medium_clues = int_0(memb_info[55])
+    memb.hard_clues = int_0(memb_info[56])
+    memb.elite_clues = int_0(memb_info[57])
+    memb.master_clues = int_0(memb_info[58])
+    memb.total_clues = (
+        memb.easy_clues
+        + memb.medium_clues
+        + memb.hard_clues
+        + memb.elite_clues
+        + memb.master_clues
+    )
     return memb
 
 # for sorting memberlist accounting for jagex spaces
