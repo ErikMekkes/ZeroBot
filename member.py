@@ -315,21 +315,34 @@ class Member:
         )
         return info_str
 
-
-
-# custom int() function that returns 0 for empty strings
-# prevents int parse errors when info is missing
 def int_0(int_str):
+    """
+    custom int() function to parse spreadsheet cells and api results.
+    returns 0 for empty strings.
+    returns 0 for a -1 string or int.
+    returns 0 for decimal numbers.
+    """
+    result = 0
+    if isinstance(int_str, int):
+        result = int_str
     # filter out empty strings
     if int_str == '':
-        return 0
+        result = 0
     # filter out decimal number format
     if '.' in int_str:
-        return 0
+        result = 0
     else:
-        return int(int_str)
+        result = int(int_str)
+    # if the final number was -1
+    if result == -1:
+        result = 0
+    return result
 
 def read_member(memb_info):
+    """
+    Used for reading a member back from a spreadsheet row.
+    Uses int_0 to ensure all numbers are read as ints, 0 if format is wrong. 
+    """
     memb = Member(memb_info[0], memb_info[1], int_0(memb_info[19]), int_0(memb_info[20]))
     memb.discord_rank = memb_info[2]
     memb.site_rank = memb_info[3]
@@ -359,18 +372,12 @@ def read_member(memb_info):
     memb.highest_mage = memb_info[51]
     memb.highest_melee = memb_info[52]
     memb.highest_range = memb_info[53]
-    memb.easy_clues = int_0(memb_info[54])
-    memb.medium_clues = int_0(memb_info[55])
-    memb.hard_clues = int_0(memb_info[56])
-    memb.elite_clues = int_0(memb_info[57])
-    memb.master_clues = int_0(memb_info[58])
-    memb.total_clues = (
-        memb.easy_clues
-        + memb.medium_clues
-        + memb.hard_clues
-        + memb.elite_clues
-        + memb.master_clues
-    )
+    memb.total_clues = int_0(memb_info[54])
+    memb.easy_clues = int_0(memb_info[55])
+    memb.medium_clues = int_0(memb_info[56])
+    memb.hard_clues = int_0(memb_info[57])
+    memb.elite_clues = int_0(memb_info[58])
+    memb.master_clues = int_0(memb_info[59])
     return memb
 
 # for sorting memberlist accounting for jagex spaces

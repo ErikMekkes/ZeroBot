@@ -217,8 +217,6 @@ def _compareMembers(session, current_members_list, ingame_members_list, joining_
 
             # dropped from hiscores = keep old last active, and stats
             if not(on_hiscores):
-                # but subtract 1 from their clan xp, to make them show up as active as soon as they do anything
-                existing_member.clan_xp = (existing_member.clan_xp - 1)
                 continue
 
             # check if member was active, if so update last active date, need to do before skills update
