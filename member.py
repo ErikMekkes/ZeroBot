@@ -322,20 +322,24 @@ def int_0(int_str):
     returns 0 for a -1 string or int.
     returns 0 for decimal numbers.
     """
-    result = 0
+    # if its an actual int return 0 if -1, otherwise return the int
     if isinstance(int_str, int):
-        result = int_str
+        if int_str == -1:
+            return 0
+        return int_str
+    
+    # not an int, assuming string
     # filter out empty strings
     if int_str == '':
-        result = 0
+        return 0
     # filter out decimal number format
     if '.' in int_str:
-        result = 0
-    else:
-        result = int(int_str)
-    # if the final number was -1
+        return 0
+    # finally try to parse as int
+    result = int(int_str)
+    # if the given number string was -1
     if result == -1:
-        result = 0
+        return 0
     return result
 
 def read_member(memb_info):
