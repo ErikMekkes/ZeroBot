@@ -1,3 +1,7 @@
+"""
+Bot module for all the memberlist modifying functions. Also includes the 
+scheduled daily update.
+"""
 from discord.ext import tasks, commands
 import discord
 import traceback
@@ -8,43 +12,17 @@ import asyncio
 # custom modules
 import zerobot_common
 import utilities
-from sheet_ops import UpdateMember, DeleteMember, InsertMember, read_member_sheet, SheetParams
-from rankchecks import RefreshList, Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
-from clantrack import UpdateList
+from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
+from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
+from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
-from member import Member, read_member, memblist_sort_clan_xp, validDiscordId, validSiteProfile
-from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError
+from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get
+from member import Member, validDiscordId, validSiteProfile
+from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError
 
-def _AddMember(name, discord_id, profile_link):
-    """
-    Adds a new member to the memberlist spreadsheet. 
-    - Stores their name, discord id and profile link.
-    - Sets ingame rank to "needs invite".
-    - Sets discord rank to "Recruit" or "" if no valid discord id.
-    - Sets site rank to "Recruit" or "" if no valid profile link.
-    - Sets join date and last active date as today.
-    """
-    zerobot_common.drive_connect()
-
-    currentDT = datetime.utcnow()
-    today_str = currentDT.strftime(zerobot_common.dateformat)
-    new_member = Member(name, "needs invite", 0, 0)
-    if validDiscordId(discord_id):
-        new_member.discord_rank = "Recruit"
-    else:
-        new_member.discord_rank = ""
-    if validSiteProfile(profile_link):
-        new_member.site_rank = "Recruit"
-    else:
-        new_member.site_rank = ""
-    new_member.profile_link = profile_link
-    new_member.discord_id = discord_id
-    new_member.join_date = today_str
-    new_member.last_active = currentDT
-    zerobot_common.current_members_sheet.insert_row(
-        new_member.asList(), 6, value_input_option = 'USER_ENTERED'
-    )
+# logfile for clantrack
+memberlist_log = LogFile('logs/memberlist')
 
 async def message_user(user, message, alt_ctx=None):
     """
@@ -72,7 +50,6 @@ def _FindMembers(query, query_type):
     Query type - one of : name, profile_link, discord_id
     """
     result = SearchResult()
-    zerobot_common.drive_connect()
     result.current_results = _FindMember(query, query_type, zerobot_common.current_members_sheet)
     result.old_results = _FindMember(query, query_type, zerobot_common.old_members_sheet)
     result.banned_results = _FindMember(query, query_type, zerobot_common.banned_members_sheet)
@@ -83,8 +60,7 @@ def _FindMember(query, query_type, sheet):
     Result is a list, first list item is the exact match, or None if no exact match found.
     Remainder of the list are results that are similar to the original query.
     """
-    zerobot_common.drive_connect()
-    memberlist = read_member_sheet(sheet)
+    memberlist = memberlist_from_sheet(sheet)
     results = list()
 
     # name search can have multiple results, is handled slightly differently
@@ -119,30 +95,27 @@ def _FindMember(query, query_type, sheet):
     return results
 
 def _Inactives(days):
-    zerobot_common.drive_connect()
-
-    results = list()
-
-    # retrieve memberlist from google docs
-    curr_memb_matrix = zerobot_common.current_members_sheet.get_all_values()
+    """
+    Returns a list of players that have been inactive for more than the 
+    specified number of days. List is sorted by lowest clan xp first.
+    """
+    memberlist = memberlist_from_disk(zerobot_common.current_members_filename)
     today = datetime.utcnow()
-    # skip header rows
-    for i in range(SheetParams.header_rows, len(curr_memb_matrix)):
-        memb = read_member(curr_memb_matrix[i])
+    results = list()
+    for memb in memberlist:
         if (memb.name in zerobot_common.inactive_exceptions):
             continue
         if (memb.last_active == None):
-            days_inactive = today - datetime.strptime("2020-04-14", zerobot_common.dateformat)
-            memb.last_active = datetime.strptime("2020-04-14", zerobot_common.dateformat)
+            days_inactive = today - datetime.strptime("2020-04-14", utilities.dateformat)
+            memb.last_active = datetime.strptime("2020-04-14", utilities.dateformat)
         else:
             days_inactive = today - memb.last_active
         if (days_inactive.days >= days):
             memb.days_inactive = days_inactive.days
             results.append(memb)
     
-    memblist_sort_clan_xp(results)
+    memberlist_sort_clan_xp(results)
     return results
-
     
 async def send_multiple(ctx, str_list, codeblock=False):
     """
@@ -162,53 +135,126 @@ async def send_multiple(ctx, str_list, codeblock=False):
 
 
 @tasks.loop(hours=23, reconnect=False)
-async def daily_update(self):
+async def daily_update_scheduler(self):
     """
     Schedules the daily updates at the time specified in settings.
     """
+    # wait remaining time until update after 23h task loop wakes up
     update_time_str = zerobot_common.settings.get("daily_update_time")
     update_time = datetime.strptime(update_time_str, utilities.timeformat)
     wait_time = update_time - datetime.utcnow()
-    self.logfile.log(f'auto_upd in {wait_time.seconds/3600}h')
+    memberlist_log.log(f'auto_upd in {wait_time.seconds/3600}h')
     # async sleep to be able to do other stuff until update time
     await asyncio.sleep(wait_time.seconds)
+    daily_update(self)
+
+async def daily_update(self):
+    """
+    The actual daily update process.
+     - retrieve ingame data if not provided
+     - load any changes on sheet into memory
+     - compare memory with ingame
+     - handle stay/leave/join/rename in memory
+        - for leave, set site retired, remove discord roles
+     - load discord info for current membs
+     - load site info for current membs
+     - write finished versions to backup
+     - write finished versions to disk
+     - write finished versions to sheet
+     - re-color spreadsheet
+     - print changes summary
+     - print todo lists
+    """
+    # start posting update warnings on spreadsheet
+    await self.bot_channel.send("Starting to collect ingame data for update")
+
+    # retrieve the latest ingame data as a new concurrent ask
+    ingame_members = await self.bot.loop.run_in_executor(
+        None, get_ingame_memberlist
+    )
     
-    # try to obtain spreadsheet lock, wait one minute inbetween attempts
-    while (self.updating):
-        self.logfile.log('auto_upd waiting for updating to be false')
-        await asyncio.sleep(60)
-    self.lock(None, 'Memberlist update with ingame data, should take ~35 minutes')
-    # start update, notify in bot channel
-    await self.bot_channel.send('Updating the memberlist with ingame data, should take ~35 minutes')
-    # run this concurrently, so that other commands that dont require spreadsheet can still execute in the meantime.
-    update_res = await self.bot.loop.run_in_executor(None, UpdateList)
-    # update site ranks
-    zerobot_common.siteops.update_sheet_site_ranks()
-    # Update colors on current members sheet
-    RefreshList()
-    leaving_size = len(update_res.leaving)
-    if (leaving_size > 10):
-        await self.bot_channel.send(f"Safety Check: too many members leaving for automatic deranks: {leaving_size}, no discord roles removed or site ranks changed. You will have to update them manually")
-    else:
-        # for leaving members, remove all discord roles, set site rank to retired, sheet info is already updated
-        for memb in update_res.leaving:
-            if (discord_ranks.get(memb.discord_rank, 0) > 7):
-                await self.bot_channel.send(f"Can not do automatic derank for leaving member: {memb.name}, bot isn't allowed to change staff ranks. You will have to update this manually.")
-                continue
-            await self.removeroles(memb)
-            zerobot_common.siteops.setrank(memb.profile_link, "Retired member")
-    await self.bot_channel.send(update_res.summary())
-    self.updating = False
+    # start posting update warnings on spreadsheet
+    await self.bot_channel.send("Daily update starting in 5 minutes")
+    await self.bot.loop.run_in_executor(None, start_update_warnings)
 
-    # print todos
-    memberlist = read_member_sheet(zerobot_common.current_members_sheet)
-    to_invite = TodosInviteIngame(memberlist)
+    #=== try to obtain editing lock, loads sheet changes ===
+    await self.lock()
+    # compare against new ingame data to find joins, leaves, renames
+    comp_res = compare_lists(ingame_members, self.current_members)
+    # use result to update our list of current members
+    self.current_members = comp_res.staying + comp_res.joining + comp_res.renamed
+    # get site updates, send list to siteops func that updates it
+    update_discord_info(self.current_members)
+    zerobot_common.siteops.update_site_info(self.current_members)
+    # for leaving members remove discord roles, set site rank to retired
+    await process_leaving(self, comp_res.leaving)
+
+    # sort updated lists
+    memberlist_sort_name(self.current_members)
+    memberlist_sort_name(self.old_members)
+    memberlist_sort_name(self.banned_members)
+
+    # write backup memberlists to disk
+    date_str = datetime.utcnow().strftime(utilities.dateformat)
+    cur_backup_name = "memberlists/current_members/current_membs_" + date_str
+    old_backup_name = "memberlists/old_members/old_membs_" + date_str
+    ban_backup_name = "memberlists/banned_members/banned_membs_" + date_str
+    memberlist_to_disk(self.current_members, cur_backup_name)
+    memberlist_to_disk(self.old_members, old_backup_name)
+    memberlist_to_disk(self.banned_members, ban_backup_name)
+
+    #=== release editing lock, writes to sheet and disk ===
+    await self.unlock()
+    
+    #update colors on sheet
+    color_spreadsheet()
+
+    # post summary of changes
+    await self.bot_channel.send(comp_res.summary())
+    #post todo lists,
+    to_invite = TodosInviteIngame(self.current_members)
     await send_multiple(self.bot_channel, to_invite)
-    to_join_discord = TodosJoinDiscord(memberlist)
+    to_join_discord = TodosJoinDiscord(self.current_members)
     await send_multiple(self.bot_channel, to_join_discord)
-    to_update_rank = TodosUpdateRanks(memberlist)
+    to_update_rank = TodosUpdateRanks(self.current_members)
     await send_multiple(self.bot_channel, to_update_rank)
-
+    
+async def process_leaving(self, leaving_list):
+    """
+    Process the leaving members, removes their discord roles, sets their
+    site rank to retired. 
+    """
+    leaving_size = len(leaving_list)
+    if (leaving_size > 10):
+        await self.bot_channel.send(
+            f"Safety Check: too many members leaving for automatic site "
+            f"rank and discord role removal: {leaving_size}. No discord "
+            f"roles or site ranks changed, you will have to update them "
+            f"manually."
+        )
+        return
+    
+    for memb in leaving_list:
+        if (discord_ranks.get(memb.discord_rank, 0) > 7):
+            await self.bot_channel.send(
+                f"Can not do automatic deranks for leaving member: "
+                f"{memb.name}, bot isn't allowed to change staff ranks. "
+                f"You will have to update their discord roles and site "
+                f"rank manually."
+            )
+            continue
+        # remove discord roles
+        await self.removeroles(memb)
+        # set site rank to retired member
+        zerobot_common.siteops.setrank_member(memb, "Retired member")
+        # update leave date and reason
+        if (memb.leave_date == ""):
+            today_date = datetime.utcnow()
+            memb.leave_date = today_date.strftime(utilities.dateformat)
+        if (memb.leave_reason == ""):
+            memb.leave_reason = "left or inactive kick"
+        self.old_members.append(memb)
+    
 async def send_welcome_messages(user, ctx=None):
     """
     Sends the welcome messages to user privately. If user is a name string or 
@@ -246,67 +292,88 @@ class MemberlistCog(commands.Cog):
         self.confirmed_update = False
         self.ingame_update_result = None
 
+        self.current_members = memberlist_from_disk(zerobot_common.current_members_filename)
+        self.old_members = memberlist_from_disk(zerobot_common.old_members_filename)
+        self.banned_members = memberlist_from_disk(zerobot_common.banned_members_filename)
+
+        self.list_access = {}
+
         # direct reference to known channels TODO, move to common?
         self.bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
 
         # start daily update loop
         try:
-            daily_update.start(self)
+            daily_update_scheduler.start(self)
         except RuntimeError:
             # loop already running, happens when reconnecting.
             pass
     
-    async def daily_update_ingame(self):
+    async def lock(self, interval=60, message=None, ctx=None):
         """
-        Updates the memberlist from ingame data using the clantrack module.
-         - players who joined the clan ingame are added to current members.
-         - players who left the clan ingame are moved to old members.
-         - players who stayed in clan but renamed have their names updated.
-         - all clan members also have their stats updated on the memberlist.
-        
-        Posts the start and result of the update in the preset bot channel.
-        Latest update result is stored internally for other modules to use.
-        """
-        # try to obtain spreadsheet lock, wait one minute inbetween attempts
-        while (self.updating):
-            self.logfile.log('auto_upd waiting for updating to be false')
-            await asyncio.sleep(60)
-        self.lock(None, 'Memberlist update with ingame data, should take ~35 minutes')
-        # start update, notify in bot channel
-        await self.bot_channel.send('Updating the memberlist with ingame data, should take ~35 minutes')
-        # run this concurrently, so that other commands that dont require spreadsheet can still execute in the meantime.
-        update_res = await self.bot.loop.run_in_executor(None, UpdateList)
-        # finished modifying spreadsheet, unlock
-        self.unlock()
-        # publish result in bot channel and store it for reference by others
-        await self.bot_channel.send(update_res.summary())
-        self.ingame_update_result = update_res
-    
-    async def update_site(self, daily_result=None):
-        """
-        Updates the site rank for every member on the sheet. If a daily update
-        result is passed it will also process those changes for the site.
-        """
-        # update site ranks for every member on the list
-        zerobot_common.siteops.update_sheet_site_ranks()
+        Signals that you wish to access and edit the memberlist.
+        Returns a list_access dictionary with references to each memberlist.
 
-        # if the site ranks have not yet been updated for the daily update
-        if (daily_result is not None):
-            leaving_size = len(daily_result.leaving)
-            if (leaving_size > 10):
-                err_msg = ("Safety Check: Too many members leaving for "
-                f"automatic deranks: {leaving_size}, no discord roles removed "
-                "or site ranks changed. You will have to update them "
-                "manually.")
-                await self.bot_channel.send(err_msg)
-            else:
-                # set site rank to retired for leaving members.
-                for memb in daily_result.leaving:
-                    if (site_ranks.get(memb.site_rank, 0) > 8):
-                        await self.bot_channel.send(f"Can not do automatic derank for leaving member: {memb.name}, bot isn't allowed to change staff ranks. You will have to update this manually.")
-                        continue
-                    await self.removeroles(memb)
-                    zerobot_common.siteops.setrank(memb.profile_link, "Retired member")
+        Load a copy from disk instead if you do not need to make edits. Use
+        memberlist.memberlist_from_disk(filename) for this.
+
+        DO NOT copy / replace references in list_access! Always act on them by
+        looking up the key value in the list_access object. GOOD examples :
+         - list_access["current_members"].append(new_member).
+         - member_foo = memberlist_get(list_access["current_members"], "foo")
+           member_foo.note1 = "this guy did well"
+        BAD example, copies list reference. The banlist reference copy points
+        to the actual banlist even after unlock. If you modify it after unlock
+        you may wreck other functions by breaking the single accesss promise.
+         - banlist = list_access["banned_members"]
+        BAD example, replaces list reference but wont affect the actual list:
+         - list_access["banned_members"] = my_new_list
+
+        Acts as an imperfect mutex, locks access to the memberlist to prevent simultanious editing.
+        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
+        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
+
+        Retries obtaining the lock at interval times until succesful. Default
+        interval between attempts is 60 seconds. No fifo / other scheduling.
+        """
+        while self.updating:
+            if message is not None:
+                if ctx is not None:
+                    await ctx.send(message)
+                else:
+                    await self.bot_channel.send(message)
+            await asyncio.sleep(interval)
+        self.updating = True
+        load_sheet_changes(self.current_members, zerobot_common.current_members_sheet)
+        load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
+        load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
+        self.list_access['current_members'] = self.current_members
+        self.list_access['old_members'] = self.old_members
+        self.list_access['banned_members'] = self.banned_members
+        return self.list_access
+    async def unlock(self):
+        """
+        Signals that you finished accessing and editing the memberlist.
+        Writes the current version of the memberlist to drive / sheet.
+
+        Revokes access to the memberlist by clearing the references from the
+        dictionary. As long as the function calling lock() did not make copies
+        of the references it will no longer be able to edit.
+
+        Acts as an imperfect mutex, unlocks access to the spreadsheet to prevent simultanious editing.
+        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
+        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
+        """
+        self.list_access['current_members'] = None
+        self.list_access['old_members'] = None
+        self.list_access['banned_members'] = None
+        memberlist_to_disk(self.current_members, zerobot_common.current_members_filename)
+        memberlist_to_disk(self.old_members, zerobot_common.old_members_filename)
+        memberlist_to_disk(self.banned_members, zerobot_common.banned_members_filename)
+        if zerobot_common.sheet_memberlist_enabled:
+            memberlist_to_sheet(self.current_members, zerobot_common.current_members_sheet)
+            memberlist_to_sheet(self.old_members, zerobot_common.old_members_sheet)
+            memberlist_to_sheet(self.banned_members, zerobot_common.banned_members_sheet)
+        self.updating = False
     
     @commands.command()
     async def restart(self, ctx):
@@ -314,46 +381,33 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('restart', ctx.channel.id)) : return
 
-        # TODO: create an internal restart that does not rely on the server restarting the python script. tricky with scheduled tasks
+        # TODO: create an internal restart that does not rely on the server restarting the python script. very tricky with scheduled tasks
         await self.bot.logout()
-
-    async def full_search(self, name, discord_id, profile_link):
-        """
-        Tries to find any results in the memberlist and groups the results.
-        Checks for name, discord id and profile link matches on the current,
-        old and banned memberlists. Might include duplicates.
-        """
-        await self.await_lock()
-        # find results for name matches (non-empty)
-        if name == "" or name is None:
-            name_results = SearchResult()
-        else:
-            name_results = _FindMembers(name, 'name')
-        # find results for discord id matches (non-empty)
-        if discord_id == 0 or discord_id is None:
-            id_results = SearchResult()
-        else:
-            id_results = _FindMembers(discord_id, 'discord_id')
-        # find results for profile link matches (non-empty)
-        if profile_link == "" or profile_link is None or profile_link == "no site":
-            link_results = SearchResult()
-        else:
-            link_results = _FindMembers(profile_link, 'profile_link')
-        await self.unlock()
-        return name_results + id_results + link_results
-
+    
     @commands.command()
-    async def todos(self, ctx, *args):
+    async def updatelist(self, ctx):
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('todos', ctx.channel.id)) : return
+        if not(zerobot_common.permissions.is_allowed('updatelist', ctx.channel.id)) : return
 
-        if self.updating:
-            await ctx.send(self.update_msg)
+        # check if confirmed
+        if self.confirmed_update:
+            await daily_update(self)
             return
-        await ctx.send("Gathering latest info, takes a minute, ingame ranks only update daily and might be outdated")
-        result = await self.bot.loop.run_in_executor(None, Todos, *args)
-        await send_multiple(ctx, result)
+        # not confirmed yet, ask for confirm
+        await ctx.send((
+            'Fully updating the memberlist spreadsheet takes a long time! (~30 minutes!)\n' +
+            'The spreadsheet can not be edited while the full update is running.\n' +
+            'If you are sure you want to start the full update, type the command again within 30 seconds'
+        ))
+        self.confirmed_update = True
+        await asyncio.sleep(30)
+        self.confirmed_update = False
+    
+    @commands.command()
+    async def find(self, ctx, *args):
+        # alias for findmember, no checks needed here.
+        await self.findmember(ctx, *args)
 
     @commands.command()
     async def findmember(self, ctx, *args):
@@ -387,7 +441,7 @@ class MemberlistCog(commands.Cog):
         
         # get most up to date info for members in results, no ingame data for now (slow/impractical)
         update_discord_info(results.combined_list())
-        zerobot_common.siteops.updateSiteRanks(results.combined_list())
+        zerobot_common.siteops.update_site_info(results.combined_list())
 
         if (len(results.combined_list()) == 0):
             await ctx.send('No results found in search.')
@@ -397,6 +451,44 @@ class MemberlistCog(commands.Cog):
             if (memb.profile_link == "no site"):
                 memb.site_rank = ""
             await ctx.send(embed=member_embed(memb))
+
+    async def full_search(self, name, discord_id, profile_link):
+        """
+        Tries to find any results in the memberlist and groups the results.
+        Checks for name, discord id and profile link matches on the current,
+        old and banned memberlists. Might include duplicates.
+        """
+        await self.lock()
+        # find results for name matches (non-empty)
+        if name == "" or name is None:
+            name_results = SearchResult()
+        else:
+            name_results = _FindMembers(name, 'name')
+        # find results for discord id matches (non-empty)
+        if discord_id == 0 or discord_id is None:
+            id_results = SearchResult()
+        else:
+            id_results = _FindMembers(discord_id, 'discord_id')
+        # find results for profile link matches (non-empty)
+        if profile_link == "" or profile_link is None or profile_link == "no site":
+            link_results = SearchResult()
+        else:
+            link_results = _FindMembers(profile_link, 'profile_link')
+        await self.unlock()
+        return name_results + id_results + link_results
+
+    @commands.command()
+    async def todos(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('todos', ctx.channel.id)) : return
+
+        if self.updating:
+            await ctx.send(self.update_msg)
+            return
+        await ctx.send("Gathering latest info, takes a minute, ingame ranks only update daily and might be outdated")
+        result = await self.bot.loop.run_in_executor(None, Todos, *args)
+        await send_multiple(ctx, result)
     
     @commands.command()
     async def inactives(self, ctx, *args):
@@ -404,9 +496,6 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('inactives', ctx.channel.id)) : return
 
-        if self.updating :
-            await ctx.send(self.update_msg)
-            return
         if len(args) != 1:
             await ctx.send(('Needs to be : -zbot inactives <number of days>'))
             return
@@ -428,31 +517,40 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
-    async def set_rank(self, name, rank):
+    async def set_rank(self, name, discord_rank):
         """
         Sets a current member's rank on the memberlist to the specified rank.
 
         Raises StaffMemberError if trying to make staff rank changes.
+        Raises NotACurrentMemberError if member found but not in clan.
         Raises MemberNotFoundError if no member could be found for given name.
         """
-        # find member on memberlist.
-        await self.await_lock()
-        result = _FindMembers(name, "name")
-        if (not(result.has_exact())):
-            await self.unlock()
-            raise MemberNotFoundError(f"{name} not found on memberlist.")
-        member = result.get_exact()
-        # if not a current member
-        if member.sheet is not zerobot_common.current_members_sheet:
-            raise NotACurrentMemberError(f"{name} is not a current member.")
-        # update rank on memberlist.
-        UpdateMember(zerobot_common.current_members_sheet, member.row, member)
-        await self.unlock()
+        # find the right person and checks to not make staff changes
+        if discord_ranks.get(discord_rank, 0) > 8:
+            raise StaffMemberError(
+                f"Trying to make {name} a staff member, bot is not allowed to"
+                f"make staff member changes."
+            )
         
-        # if site module enabled...
-        # TODO should be separate module
-        if not zerobot_common.site_disabled:
-            zerobot_common.siteops.setrank_member(member, rank)
+        list_access = await self.lock()
+
+        member = memberlist_get(list_access["current_members"], name)
+        if member is None:
+            await self.unlock()
+            raise MemberNotFoundError(f"{name} not found on current memberlist.")
+        if discord_ranks.get(member.discord_rank > 8):
+            await self.unlock()
+            raise StaffMemberError(
+                f"{name} is a staff member, bot is not allowed to"
+                f"make staff member changes."
+            )
+        
+        # update discord rank on memberlist.
+        member.discord_rank = discord_rank
+        await self.unlock()
+        # update site rank if site module enabled TODO move to separate module
+        if zerobot_common.site_enabled:
+            zerobot_common.siteops.setrank_member(member, discord_rank)
     
     @commands.command()
     async def setrank(self, ctx, *args):
@@ -471,12 +569,12 @@ class MemberlistCog(commands.Cog):
             await ctx.send(f"{rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return
         # new rank too high
-        if (discord_ranks.get(rank, -1) > 7):
+        if (discord_ranks.get(rank, -1) > 8):
             await ctx.send(f"can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
 
         # critical section, editing spreadsheet
-        if not(await self.lock(ctx, f"Rank change of {name}, should take ~1 second")): return
+        await self.lock()
         # could make this run concurrently, but it should be fast anyway.
         result = _FindMembers(name, "name")
         if (not(result.has_exact())):
@@ -486,7 +584,7 @@ class MemberlistCog(commands.Cog):
         member = result.get_exact()
         # old rank too high
         old_rank = member.discord_rank
-        if (discord_ranks.get(old_rank, -1) > 7):
+        if (discord_ranks.get(old_rank, -1) > 8):
             await ctx.send(f"{name}'s old rank is {old_rank}, bot currently isn't allowed to change staff ranks")
             await self.unlock()
             return
@@ -565,11 +663,6 @@ class MemberlistCog(commands.Cog):
         await self.addmember(ctx, *args)
     
     @commands.command()
-    async def find(self, ctx, *args):
-        # alias for findmember, no checks needed here.
-        await self.findmember(ctx, *args)
-    
-    @commands.command()
     async def welcome(self, ctx, *args):
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
@@ -586,8 +679,7 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('banlist', ctx.channel.id)) : return
 
-        zerobot_common.drive_connect()
-        memberlist = read_member_sheet(zerobot_common.banned_members_sheet)
+        memberlist = memberlist_from_disk(zerobot_common.banned_members_filename)
 
         res = ["Name         | Ban reason\n", "-------------------------\n"]
         for memb in memberlist:
@@ -662,9 +754,25 @@ class MemberlistCog(commands.Cog):
         Adds a member's information to the memberlist.
         """
         # critical section, editing spreadsheet
-        await self.await_lock()
-        # runs concurrently, other commands that dont require spreadsheet can execute.
-        await self.bot.loop.run_in_executor(None, _AddMember, name, discord_id, profile_link)
+        list_access = await self.lock()
+
+        currentDT = datetime.utcnow()
+        today_str = currentDT.strftime(utilities.dateformat)
+        new_member = Member(name, "needs invite", 0, 0)
+        if validDiscordId(discord_id):
+            new_member.discord_rank = "Recruit"
+        else:
+            new_member.discord_rank = ""
+        if validSiteProfile(profile_link):
+            new_member.site_rank = "Recruit"
+        else:
+            new_member.site_rank = ""
+        new_member.profile_link = profile_link
+        new_member.discord_id = discord_id
+        new_member.join_date = today_str
+        new_member.last_active = currentDT
+        list_access["current_members"].append(new_member)
+
         # finished with updating, can release lock
         await self.unlock()
 
@@ -695,7 +803,7 @@ class MemberlistCog(commands.Cog):
         if (discord_ranks.get(rank, 0) == 0):
             await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return
-        if (discord_ranks.get(rank, 0) > 7):
+        if (discord_ranks.get(rank, 0) > 8):
             await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
         # should be an 18 length number, or "0" as explicit 'doesnt have discord' case
@@ -818,7 +926,7 @@ class MemberlistCog(commands.Cog):
         name = args[0]
 
         # critical section, editing spreadsheet
-        if not(await self.lock(ctx, f"Updating user info of {name}, should take ~1 second")): return
+        await self.lock()
         results = _FindMembers(name, "name")
         # member not found, cant edit
         if (not(results.has_exact())):
@@ -834,7 +942,7 @@ class MemberlistCog(commands.Cog):
 
         # get most up to date info of member for sheet update
         update_discord_info([member])
-        zerobot_common.siteops.updateSiteRanks([member])
+        zerobot_common.siteops.update_site_info([member])
         # update sheet with new info
         UpdateMember(member.sheet, member.row, member)
         await self.unlock()
@@ -915,46 +1023,6 @@ class MemberlistCog(commands.Cog):
         await discord_user.edit(roles=[], reason="remove roles")
         member.discord_rank = ""
 
-    async def lock(self, ctx, message):
-        """
-        Acts as an imperfect mutex, locks access to the spreadsheet to prevent simultanious editing.
-        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
-        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
-
-        True if allowed to edit, false if not allowed. Sends previous 'message' to 'ctx' when False.
-        """
-        # TODO would be cleaner to not have the message part here, make this awaitable, have it retry until succesful / use some kind of queue for locks
-        if self.updating :
-            if (ctx is not None):
-                await ctx.send(self.update_msg)
-            return False
-        self.updating = True
-        currentDT = datetime.utcnow()
-        lock_time = currentDT.strftime(zerobot_common.timeformat)
-        self.update_msg = f"Waiting for spreadsheet access started at {lock_time} to finish: " + message
-        return True
-    async def await_lock(self, interval=60):
-        """
-        Acts as an imperfect mutex, locks access to the spreadsheet to prevent simultanious editing.
-        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
-        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
-
-        Retries obtaining the lock at interval times until succesful. Default
-        interval between attempts is 60 seconds. No fifo / other scheduling.
-        """
-        while self.updating:
-            await asyncio.sleep(interval)
-        self.updating = True
-
-    async def unlock(self):
-        """
-        Acts as an imperfect mutex, unlocks access to the spreadsheet to prevent simultanious editing.
-        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
-        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
-        """
-        self.updating = False
-        self.update_msg = ""
-
     @commands.command()
     async def respond(self, ctx):
         # log command attempt, allowed everwhere
@@ -962,67 +1030,6 @@ class MemberlistCog(commands.Cog):
 
         await ctx.send('Hello!')
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
-    
-    @commands.command()
-    async def refreshlist(self, ctx):
-        # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('refreshlist', ctx.channel.id)) : return
-
-        # critical section, editing spreadsheet
-        if not(await self.lock(ctx, f'Memberlist refresh, should take ~10 seconds')): return
-        # run this concurrently, so that other commands that dont require spreadsheet can still execute in the meantime.
-        await self.bot.loop.run_in_executor(None, RefreshList)
-        # finished with updating, can release lock
-        await self.unlock()
-
-        await ctx.send('Refreshed discord ranks & tags on the spreadsheet, and re-colored and sorted it for you :)')
-    
-    @commands.command()
-    async def updatelist(self, ctx):
-        # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('updatelist', ctx.channel.id)) : return
-
-        # check if confirmed
-        if self.confirmed_update:
-            # critical section, editing spreadsheet
-            if not(await self.lock(ctx, f'Memberlist update, should take ~30 minutes')):
-                # cant edit yet, reset and exit.
-                self.confirmed_update = False
-                return
-            await ctx.send('Updating the memberlist! (takes ~30 minutes!)')
-            # run this concurrently, so that other commands that dont require spreadsheet can still execute in the meantime.
-            update_res = await self.bot.loop.run_in_executor(None, UpdateList)
-            # update site ranks
-            zerobot_common.siteops.update_sheet_site_ranks()
-            # Update colors on current members sheet
-            RefreshList()
-
-            leaving_size = len(update_res.leaving)
-            if (leaving_size > 10):
-                await self.bot_channel.send(f"Safety Check: too many members leaving for automatic deranks: {leaving_size}, no discord roles removed or site ranks changed. You will have to update them manually")
-            else:
-                # for leaving members, remove all discord roles, set site rank to retired sheet info is already updated
-                for memb in update_res.leaving:
-                    if (discord_ranks.get(memb.discord_rank, 0) > 7):
-                        await ctx.send(f"Can not do automatic derank for leaving member: {memb.name}, bot isn't allowed to change staff ranks. You will have to update this person manually.")
-                        continue
-                    await self.removeroles(memb)
-                    zerobot_common.siteops.setrank(memb.profile_link, "Retired member")
-            await ctx.send(update_res.summary())
-            await self.unlock()
-            self.confirmed_update = False
-            return
-        # not confirmed yet, ask for confirm
-        await ctx.send((
-            'Fully updating the memberlist spreadsheet takes a long time! (~30 minutes!)\n' +
-            'The spreadsheet can not be edited while the full update is running.\n' +
-            'If you are sure you want to start the full update, type the command again within 30 seconds'
-        ))
-        self.confirmed_update = True
-        await asyncio.sleep(30)
-        self.confirmed_update = False
     
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):

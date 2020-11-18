@@ -54,6 +54,10 @@ auth_file = open(bot_auth_token_filename)
 auth_token = auth_file.read()
 auth_file.close()
 
+current_members_filename = settings.get("current_members_filename")
+old_members_filename = settings.get("old_members_filename")
+banned_members_filename = settings.get("banned_members_filename")
+
 # Google Drive credentials and client to interact with the Google Drive API
 # You should have a service account, with credentials to login to it.
 # Starting point for creating one : https://console.developers.google.com/
@@ -67,8 +71,46 @@ drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
     drive_scope
 )
 drive_client = gspread.authorize(drive_creds)
-drive_doc_name = settings.get('drive_doc_name')
+sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
+drive_doc_name = settings.get("drive_doc_name")
 drive_doc = drive_client.open(drive_doc_name)
+
+class SheetParams:
+    start_col = 'A'
+    end_col = 'S'
+    # number of header rows on the memberlist sheets
+    header_rows = 1
+    # range for header data
+    header_range = f"{start_col}1:{end_col}{header_rows}"
+    # header entries for the memberlist sheets
+    header_entries = [
+            "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
+            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3"]
+    update_header = [
+        "AUTOMATIC", "UPDATE IN", "5 MINUTES", "S T O P", "EDITING!",
+        "! - ! - !", "", "", "", "S T O P", "EDITING!", "! - ! - !", "", "",
+        "", "S T O P", "EDITING!", "! - ! - !", ""
+    ]
+    @staticmethod
+    def range_full(list_length=500):
+        # range string for header+entire memberlist data
+        range_str = (
+            f"{SheetParams.start_col}"
+            f"{1}:"
+            f"{SheetParams.end_col}"
+            f"{1+SheetParams.header_rows+list_length+25}"
+        )
+        return range_str
+    @staticmethod
+    def range_no_header(list_length=500):
+        # range string for entire memberlist data, skipping header rows
+        range_str = (
+            f"{SheetParams.start_col}"
+            f"{1+SheetParams.header_rows}:"
+            f"{SheetParams.end_col}"
+            f"{1+SheetParams.header_rows+list_length+25}"
+        )
+        return range_str
 
 # spreadsheet tabs that are used
 current_members_sheet = drive_doc.worksheet('Current Members')
@@ -77,11 +119,11 @@ banned_members_sheet = drive_doc.worksheet('Banned Members')
 recent_changes_sheet = drive_doc.worksheet('Recent Changes')
 
 # if set, use date and time formats from settings 
-dateformat = settings.get('dateformat', utilities.dateformat)
-timeformat = settings.get('timeformat', utilities.dateformat)
-utilities.dateformat = dateformat
-utilities.timeformat = timeformat
-utilities.datetimeformat = dateformat + ' ' + timeformat
+_df = settings.get('dateformat', utilities.dateformat)
+_tf = settings.get('timeformat', utilities.dateformat)
+utilities.dateformat = _df
+utilities.timeformat = _tf
+utilities.datetimeformat = _df + '_' + _tf
 
 # Check which modules should be enabled.
 enable_applications = settings.get('enable_applications')
@@ -92,7 +134,7 @@ site_login_credentials = load_json(site_login_creds_filename)
 site_base_url = settings.get('site_base_url')
 siteops = SiteOps()
 # disable site? (site rank functions will always have 'full member' as result)
-site_disabled = settings.get('site_disabled')
+site_enabled = settings.get('site_enabled')
 
 # name used to look up members_lite clan memberlist file on official rs api
 rs_api_clan_name = settings.get('rs_api_clan_name')

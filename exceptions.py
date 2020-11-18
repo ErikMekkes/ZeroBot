@@ -9,3 +9,9 @@ class MemberNotFoundError(Exception):
 
 class NotACurrentMemberError(Exception):
     pass
+class NotAMemberList(Exception):
+    pass
+class NotAMember(Exception):
+    pass
+class StaffMemberError(Exception):
+    pass
