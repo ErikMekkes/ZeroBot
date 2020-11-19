@@ -181,6 +181,8 @@ def color_spreadsheet():
         if x.passed_gem and (discord_ranks.get(x.rank_after_gem, 0) > discord_ranks.get(x.discord_rank, 0)):
             passed_gem_ranges.append((f'F{row}', green_fmt))
             rank_after_gem_ranges.append((f'G{row}', green_fmt))
+        row += 1
+    row = SheetParams.header_rows + 1
     for x in memberlist:
         # discord rank color
         if (x.passed_gem or (x.discord_rank in gem_exceptions or x.name in gem_exceptions)):
