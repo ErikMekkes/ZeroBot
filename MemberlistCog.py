@@ -483,11 +483,9 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('todos', ctx.channel.id)) : return
 
-        if self.updating:
-            await ctx.send(self.update_msg)
-            return
+        memberlist = memberlist_from_disk(zerobot_common.current_members_filename)
         await ctx.send("Gathering latest info, takes a minute, ingame ranks only update daily and might be outdated")
-        result = await self.bot.loop.run_in_executor(None, Todos, *args)
+        result = await self.bot.loop.run_in_executor(None, Todos, memberlist, *args)
         await send_multiple(ctx, result)
     
     @commands.command()
