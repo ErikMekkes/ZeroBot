@@ -172,11 +172,10 @@ async def daily_update(self):
     ingame_members = await self.bot.loop.run_in_executor(
         None, get_ingame_memberlist
     )
-    # backup ingame members, nice for testing
+    # backup ingame members right away, nice for testing
     date_str = datetime.utcnow().strftime(utilities.dateformat)
     ing_backup_name = "memberlists/current_members/ingame_membs_" + date_str
-    memberlist_to_disk(self.ingame_members, ing_backup_name)
-
+    memberlist_to_disk(ingame_members, ing_backup_name)
     
     # start posting update warnings on spreadsheet
     await self.bot_channel.send("Daily update starting in 5 minutes")
