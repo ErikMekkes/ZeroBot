@@ -536,7 +536,7 @@ class MemberlistCog(commands.Cog):
         if member is None:
             await self.unlock()
             raise MemberNotFoundError(f"{name} not found on current memberlist.")
-        if discord_ranks.get(member.discord_rank > 8):
+        if discord_ranks.get(member.discord_rank,0) > 8:
             await self.unlock()
             raise StaffMemberError(
                 f"{name} is a staff member, bot is not allowed to"
