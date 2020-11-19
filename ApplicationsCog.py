@@ -30,7 +30,7 @@ from pathlib import Path
 import os
 
 import zerobot_common
-from utilities import load_json
+import utilities
 from logfile import LogFile
 from permissions import Permissions
 from application import Application
@@ -216,9 +216,11 @@ async def setup_app_channel(ctx, channel, app_type):
     await channel.send(msg)
 
     # load the messages that need to be sent for this app.
-    msgs = load_json(f'application_templates/{app_type}_messages.json')
+    msgs = utilities.load_json(
+        f'application_templates/{app_type}_messages.json'
+    )
     # loop over messages, send as text or image depending on extension.
-    for k,v in msgs.items():
+    for _, v in msgs.items():
         split_ext = os.path.splitext(v)
         if len(split_ext) == 2:
             if split_ext[1] == '.txt':
@@ -243,8 +245,6 @@ class ApplicationsCog(commands.Cog):
             if cat.id == app_category_id:
                 global app_category
                 app_category = cat
-        
-
     
     @commands.command()
     async def rankup(self, ctx, *args):
@@ -307,8 +307,12 @@ class ApplicationsCog(commands.Cog):
             ctx.author.id,
             type = 'rankup',
             rank = discord_rank_name,
-            votes_required=votes_for_rankup
+            votes_required = votes_for_rankup
         )
+        # staff apps can only be handled manually.
+        if rank_name == "staff_member":
+            permissions.disallow('accept', channel.id)
+            join_app.votes_required = 999
         applications.append(join_app)
         # clean the app requests channel for new requests
         await self.clean_app_requests(ctx)
@@ -411,7 +415,7 @@ class ApplicationsCog(commands.Cog):
         messages = []
         async for msg in ctx.channel.history(limit=None):
             message = ''
-            time = msg.created_at.strftime("%Y-%m-%d_%H.%M.%S")
+            time = msg.created_at.strftime(utilities.datetimeformat)
             message +=f'{time}:{msg.author}:{msg.content}'
             for attach in msg.attachments:
                 message += f'\n - {attach.filename} - {attach.url}'
@@ -420,7 +424,7 @@ class ApplicationsCog(commands.Cog):
             # handle embeds too
             #for emb in message.embeds:
             messages.append(message)
-        messages_file = open(filedir + 'messages','w', encoding="utf-8")
+        messages_file = open(filedir + 'messages.txt', 'w', encoding="utf-8")
         for msg in reversed(messages):
             messages_file.write(msg + '\n')
         messages_file.close()
@@ -591,6 +595,19 @@ class ApplicationsCog(commands.Cog):
         await ctx.send(f'Rankup application to {new_role_name} accepted :)\n You can continue to talk in this channel until it is archived.')
         
         staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
+
+        #TODO
+        # Idea: finish making edit with dummy member for changes
+        # create changes dummy, send to edit func, edit func loads changes and
+        # writes them to lists. throw nice exception by edit func if could not
+        # find member or could not make changes (staff rank)
+        # edit func then loads all updated values into dummy where
+        #    should do this loading with very careful deep copying
+        # result = lists updated and we get all other info in a safe way.
+        # if site enabled
+        #if zerobot_common.site_enabled:
+            # need member profile link
+            #zerobot_common.siteops.setrank()
 
         # if memberlist module enabled...
         memblist = self.bot.get_cog('MemberlistCog')

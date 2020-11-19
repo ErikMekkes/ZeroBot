@@ -3,7 +3,6 @@ import requests
 import json
 from logfile import LogFile
 from member import validSiteProfile
-from sheet_ops import read_member_sheet, write_member_sheet
 
 # discord rank name -> site rank id
 _site_rank_ids = {
@@ -81,7 +80,7 @@ class SiteOps:
 
         Requires signing in to make edits. Assumes the site profile link is valid and exists.
         """
-        if (zerobot_common.site_disabled):
+        if not zerobot_common.site_enabled:
             member.site_rank = new_rank
             return
         self.setrank(member.profile_link, new_rank)
@@ -94,7 +93,7 @@ class SiteOps:
 
         Requires signing in to make edits. Assumes the site profile link is valid and exists.
         """
-        if (zerobot_common.site_disabled): return
+        if not zerobot_common.site_enabled: return
         if not(validSiteProfile(profile_link)):
             self.logfile.log(f"invalid site profile : {profile_link}, can't set rank")
             return
@@ -110,7 +109,7 @@ class SiteOps:
         Returns rank string of given site profile link.
         Does not require signing in.
         """
-        if (zerobot_common.site_disabled): return 'Full Member'
+        if not zerobot_common.site_enabled: return 'Full Member'
         if not(validSiteProfile(profile_link)):
             self.logfile.log(f"invalid site profile : {profile_link}, can't get rank")
             return None
@@ -132,7 +131,7 @@ class SiteOps:
                 return self.getRank(profile_link, retries)
             self.logfile.log(f"Failed to get rank from site : {profile_link}")
             return None
-    def updateSiteRanks(self, memberlist):
+    def update_site_info(self, memberlist):
         """
         Updates site rank for all members in memberlist, uses their site profile link.
         Does not require signing in.
@@ -150,19 +149,3 @@ class SiteOps:
                 continue
             # set new site rank
             memb.site_rank = new_rank
-    def update_sheet_site_ranks(self):
-        """
-        Updates site rank for all members. Requires sheet access.
-        Does not require signing in to website.
-        """
-        self.logfile.log(f"site rank update starting")
-
-        # make sure google sheet connection is active and load memberlist.
-        zerobot_common.drive_connect()
-        memberlist = read_member_sheet(zerobot_common.current_members_sheet)
-
-        # update site ranks for memberlist and write to sheet.
-        self.updateSiteRanks(memberlist)
-        write_member_sheet(memberlist, zerobot_common.current_members_sheet)
-
-        self.logfile.log(f"site rank update done")

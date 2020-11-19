@@ -1,64 +1,237 @@
-from member import read_member, memblist_sort
+import time
+from datetime import datetime
+import zerobot_common
+import utilities
+from zerobot_common import SheetParams
+from member import Member, validSiteProfile , validDiscordId
+from memberlist import memberlist_sort_name, memberlist_get
+from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
+from rankchecks import discord_ranks, ingame_ranks, site_ranks, gem_exceptions
 
-class SheetParams:
-    start_col = 'A'
-    end_col = 'BH'
+##TODO modify tosheet
+def memberlist_to_sheet(memberlist, sheet):
+    '''
+    Writes specified memberlist to specified google docs sheet.
+    Clears the sheet and sorts the memberlist before writing.
+    '''
+    zerobot_common.drive_connect()
+    # clear the spreadsheet
+    clear_sheet(sheet)
 
-    # number of header rows on the memberlist spreadsheets
-    header_rows = 4
-    # header entries for the current members spreadsheet
-    header_entries_currmembs = [
-            "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
-            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3","Clan XP","Kills","Runescore",
-            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range","Total Clues","Easy Clues","Medium Clues","Hard Clues","Elite Clues","Master Clues"]
-    # header entries for the old members spreadsheet
-    header_entries_oldmembs = [
-            "Name","Old Ingame Rank","Old Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
-            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3","Clan XP","Kills","Runescore",
-            "Total XP","Attack XP","Defence XP","Strength XP","Constitution XP","Ranged XP","Prayer XP","Magic XP","Cooking XP","Woodcutting XP","Fletching XP","Fishing XP","Firemaking XP","Crafting XP","Smithing XP","Mining XP","Herblore XP","Agility XP","Thieving XP","Slayer XP","Farming XP","Runecrafting XP","Hunter XP","Construction XP","Summoning XP","Dungeoneering XP","Divination XP","Invention XP","Archaeology XP","Highest Mage","Highest Melee","Highest Range","Total Clues","Easy Clues","Medium Clues","Hard Clues","Elite Clues","Master Clues"]
+    # re-sort the memberlist in alphabetical order
+    memberlist_sort_name(memberlist)
+    # transform member objects back into lists of rows for googledocs
+    memb_list_rows = list()
+    for memb in memberlist:
+        memb_list_rows.append(memb.to_sheet())
+
+    sheet.batch_update([{
+        'range' : SheetParams.range_no_header(),
+        'values' : memb_list_rows
+        }], value_input_option = 'USER_ENTERED')
+def memberlist_from_sheet(sheet):
+    '''
+    Reads a memberlist from the specified google docs sheet.
+    '''
+    zerobot_common.drive_connect()
+    memberlist = list()
+    # retrieve memberlist from google docs
+    zerobot_common.drive_connect()
+    member_matrix = sheet.get_all_values()
+    # skip header rows
+    for i in range(SheetParams.header_rows, len(member_matrix)):
+        memberlist.append(Member.from_sheet(member_matrix[i]))
+    return memberlist
+
+def clear_sheet(sheet):
+    zerobot_common.drive_connect()
+    # empty the sheet
+    sheet.clear()
+    # restore the header entries
+    sheet.batch_update([{
+        'range' : SheetParams.header_range,
+        'values' : [SheetParams.header_entries]
+        }], value_input_option = 'USER_ENTERED')
+    # clear background colors for non-header
+    white_fmt = CellFormat(backgroundColor=Color(1,1,1))
+    format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
+def start_update_warnings():
+    zerobot_common.drive_connect()
+    zerobot_common.current_members_sheet.batch_update(
+        [{'range' : SheetParams.header_range,
+        'values' : [SheetParams.update_header]}],
+        value_input_option = 'USER_ENTERED')
+    zerobot_common.old_members_sheet.batch_update(
+        [{'range' : SheetParams.header_range,
+        'values' : [SheetParams.update_header]}],
+        value_input_option = 'USER_ENTERED')
+    time.sleep(60)
+    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
+    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
+    time.sleep(60)
+    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
+    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
+    time.sleep(60)
+    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
+    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
+    time.sleep(60)
+    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
+    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
+    time.sleep(60)
+
+    # insert ongoing update warnings
+    warn1 = ['AUTOMATIC','UPDATE','IN PROGRESS']
+    warn2 = ['STARTED:', datetime.utcnow().strftime(utilities.timeformat)]
+    warn3 = ['Update takes about 30 minutes.']
+    warn4 = ['Anything entered on this sheet will']
+    warn5 = ['be overwritten after the update']
+    warn_list = [warn1, warn2, warn3, warn4, warn5]
+
+    clear_sheet(zerobot_common.current_members_sheet)
+    zerobot_common.current_members_sheet.batch_update(
+        [{'range' : SheetParams.range_no_header(),
+        'values' : warn_list}],
+        value_input_option = 'USER_ENTERED'
+    )
+
+    clear_sheet(zerobot_common.old_members_sheet)
+    zerobot_common.old_members_sheet.batch_update(
+        [{'range' : SheetParams.range_no_header(),
+        'values' : warn_list}],
+        value_input_option = 'USER_ENTERED'
+    )
 
 def UpdateMember(sheet, row, member):
     """
     Replaces the member details in specified row with details from specified member object
     """
-    sheet.update(f'{SheetParams.start_col}{row}:{SheetParams.end_col}{row}', [member.asList()])
+    zerobot_common.drive_connect()
+    sheet.update(f'{SheetParams.start_col}{row}:{SheetParams.end_col}{row}', [member.to_sheet()], value_input_option = 'USER_ENTERED')
 
 def DeleteMember(sheet, row):
     """
     Deletes the row from the sheet.
     """
+    zerobot_common.drive_connect()
     sheet.delete_row(row)
+
 def InsertMember(sheet, row, member):
-    sheet.insert_row(member.asList(), row, value_input_option = 'USER_ENTERED')
+    """
+    Inserts a member on the sheet.
+    """
+    zerobot_common.drive_connect()
+    sheet.insert_row(member.to_sheet(), row, value_input_option = 'USER_ENTERED')
 
-def read_member_sheet(_sheet):
-    '''
-    Reads a memberlist from the specified google docs sheet.
-    '''
-    _memberlist = list()
-    # retrieve memberlist from google docs
-    member_matrix = _sheet.get_all_values()
-    # skip header rows
-    for i in range(SheetParams.header_rows, len(member_matrix)):
-        _memberlist.append(read_member(member_matrix[i]))
-    return _memberlist
+def load_sheet_changes(memberlist, sheet):
+    """
+    Loads changes from sheet to memberlist. Only updates matching names.
+    Changes to members on the sheet for which no matching name can be found
+    in memberlist are NOT loaded.
+    """
+    sheet_list = memberlist_from_sheet(sheet)
+    for x in sheet_list:
+        # try name matching
+        member = memberlist_get(memberlist, x.name)
+        # try profile link matching if no result yet
+        if member is None and x.profile_link != "no site":
+            member = memberlist_get(memberlist, x.profile_link, match_type="profile_link")
+            continue
+        # try discord id matching if no result yet
+        if member is None and x.discord_id != 0:
+            member = memberlist_get(memberlist, x.discord_id, match_type="discord_id")
+            continue
+        # if no match found at all, skip
+        if member is None:
+            continue
+        member.load_sheet_changes(x)
 
-def write_member_sheet(_memberlist, _sheet):
+def color_spreadsheet():
     '''
-    Writes specified memberlist to specified google docs sheet.
+    Checks for mismatches from rank and gem columns and updates the background colors accordingly.
+    Does not make other changes to spreadsheet, updates colors only.
     '''
-    ##### Update the current members sheet #####
-    # re-sort the memberlist in alphabetical order
-    memblist_sort(_memberlist)
-    # transform member objects back into lists of rows for googledocs
-    memb_list_rows = list()
-    for x in _memberlist:
-        memb_list_rows.append(x.asList())
+    zerobot_common.drive_connect()
+    # load the memberlist from google docs
+    memberlist = memberlist_from_sheet(zerobot_common.current_members_sheet)
 
-    # +11 at the end is just extra room for error?
-    range_str = f"{SheetParams.start_col}{SheetParams.header_rows+1}:{SheetParams.end_col}{SheetParams.header_rows+len(memb_list_rows)+11}"
+    #### Add colors for missing gems and required rank changes ####
+    white_fmt = CellFormat(backgroundColor=Color(1,1,1))
+    gray_fmt = CellFormat(backgroundColor=Color(0.8,0.8,0.8))
+    orange_fmt = CellFormat(backgroundColor=Color(1, 0.5, 0))
+    red_fmt = CellFormat(backgroundColor=Color(1, 0.2, 0))
+    green_fmt = CellFormat(backgroundColor=Color(0.25, 0.75, 0.25))
 
-    _sheet.batch_update([{
-        'range' : range_str,
-        'values' : memb_list_rows
-        }], value_input_option = 'USER_ENTERED')
+    ingame_rank_ranges = list()
+    discord_rank_ranges = list()
+    site_rank_ranges = list()
+    passed_gem_ranges = list()
+    rank_after_gem_ranges = list()
+
+    # ingame rank = Col B, clan Rank = Col C, Discord Rank = Col D, Passed Gem = Col F
+    row = SheetParams.header_rows + 1
+    # check passed gem and rank after gem columns
+    for x in memberlist:
+        # orange gem column, for push to do gem : no gem, current rank or rank after gem higher than novice
+        if not(x.passed_gem) and (
+            discord_ranks.get(x.discord_rank, 0) > discord_ranks['Recruit'] or
+            discord_ranks.get(x.rank_after_gem, 0) > discord_ranks.get('Recruit')
+            ):
+            passed_gem_ranges.append((f'F{row}', orange_fmt))
+        # green gem column / rank after gem column, for rankup : passed gem, rank after gem higher than current rank
+        if x.passed_gem and (discord_ranks.get(x.rank_after_gem, 0) > discord_ranks.get(x.discord_rank, 0)):
+            passed_gem_ranges.append((f'F{row}', green_fmt))
+            rank_after_gem_ranges.append((f'G{row}', green_fmt))
+    for x in memberlist:
+        # discord rank color
+        if (x.passed_gem or (x.discord_rank in gem_exceptions or x.name in gem_exceptions)):
+            # check ingame rank for mismatch
+            if discord_ranks.get(x.discord_rank, 0) > ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', green_fmt))
+            if discord_ranks.get(x.discord_rank, 0) < ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', orange_fmt))
+            # check site rank for mismatch
+            if not(validSiteProfile(x.profile_link)):
+                site_rank_ranges.append((f'D{row}', gray_fmt))
+            else:
+                if discord_ranks.get(x.discord_rank, 0) > site_ranks.get(x.site_rank, 0): site_rank_ranges.append((f'D{row}', green_fmt))
+                if discord_ranks.get(x.discord_rank, 0) < site_ranks.get(x.site_rank, 0): site_rank_ranges.append((f'D{row}', orange_fmt))
+            # colour discord rank if missing or not auto updating
+            if discord_ranks.get(x.discord_rank, 0) == 0:
+                # no discord rank = red for missing
+                discord_rank_ranges.append((f'C{row}', red_fmt))
+            elif not(validDiscordId(x.discord_id)):
+                # discord rank fine but not autoupdating = grey
+                discord_rank_ranges.append((f'C{row}', gray_fmt))
+        else:   
+            # ingame rank above novice = should get derank
+            if ingame_ranks.get(x.rank, 0) > ingame_ranks['Recruit']: ingame_rank_ranges.append((f'B{row}', orange_fmt))
+            if not(validSiteProfile(x.profile_link)):
+                site_rank_ranges.append((f'D{row}', gray_fmt))
+            else:
+                # above novice = should get derank
+                if site_ranks.get(x.site_rank, 0) > site_ranks['Recruit']: site_rank_ranges.append((f'D{row}', orange_fmt))
+                # below novice = should get rankup
+                if site_ranks.get(x.site_rank, 0) < site_ranks['Recruit']: site_rank_ranges.append((f'D{row}', green_fmt))
+            # discord rank
+            if discord_ranks.get(x.discord_rank, 0) == 0:
+                # no discord rank = red for missing
+                discord_rank_ranges.append((f'C{row}', red_fmt))
+            elif discord_ranks.get(x.discord_rank, 0) > discord_ranks.get('Recruit'):
+                # discord rank but too high
+                discord_rank_ranges.append((f'C{row}', orange_fmt))
+            elif not(validDiscordId(x.discord_id)):
+                # discord rank fine but not autoupdating = grey
+                discord_rank_ranges.append((f'C{row}', gray_fmt))
+        row += 1
+
+    # clear all previous formatting
+    format_cell_range(zerobot_common.current_members_sheet,'B5:G510', white_fmt)
+    # sheets api errors with empty list of changes, only try if a change is needed.
+    if (len(ingame_rank_ranges) > 0):
+        format_cell_ranges(zerobot_common.current_members_sheet,ingame_rank_ranges)
+    if (len(discord_rank_ranges) > 0):
+        format_cell_ranges(zerobot_common.current_members_sheet,discord_rank_ranges)
+    if (len(site_rank_ranges) > 0):
+        format_cell_ranges(zerobot_common.current_members_sheet,site_rank_ranges)
+    if (len(passed_gem_ranges) > 0):
+        format_cell_ranges(zerobot_common.current_members_sheet,passed_gem_ranges)
+    if (len(rank_after_gem_ranges) > 0):
+        format_cell_ranges(zerobot_common.current_members_sheet,rank_after_gem_ranges)

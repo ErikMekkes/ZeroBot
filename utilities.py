@@ -6,7 +6,7 @@ dateformat = '%Y-%m-%d'
 timeformat = '%H.%M.%S'
 datetimeformat = '%Y-%m-%d_%H.%M.%S'
 
-def read_file(filename):
+def read_file(filename, type=None):
     """
     A safe wrapper for reading a file from disk as string.
     Creates parent directories and empty file if filepath does not exist.
@@ -17,13 +17,13 @@ def read_file(filename):
     dirname = os.path.dirname(filename)
     if (dirname != ''):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-    # if file does not exist create and return as empty dictionary.
+    # if file does not exist create it.
     if (not os.path.exists(filename)):
-        file = open(filename, 'w')
-        file.write('{}')
+        file = open(filename, 'w', encoding="utf-8")
+        if type == "json":
+            file.write('{}')
         file.close()
-        return {}
-    file = open(filename, 'r')
+    file = open(filename, 'r', encoding="utf-8")
     result = file.read()
     file.close()
     return result
@@ -38,7 +38,7 @@ def write_file(object, filename):
     dirname = os.path.dirname(filename)
     if (dirname != ''):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
-    file = open(filename, 'w')
+    file = open(filename, 'w', encoding="utf-8")
     file.write(str(object))
     file.close()
 def delete_file(filename):
@@ -55,7 +55,7 @@ def load_json(filename):
     Wrapper function to load json from filename. Creates file and loads a blank json dictionary if it does not exist.
     Used for all config files. Startup may still fail if file is missing certain required settings.
     '''
-    return json.loads(read_file(filename))
+    return json.loads(read_file(filename, type="json"))
 
 def dump_json(dictionary, filename):
     '''

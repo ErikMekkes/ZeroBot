@@ -1,33 +1,36 @@
-'''
-Almost entirely self contained, need to work out:
-- code that calls updatelist (timer and command)    make new cog for tracking?
-- zerobot_common.rs_api_clan_name       only used here but ok as setting, move retrieve here
-- zerobot_common.logfile                make one here? in cog? both should work its append?
-- zerobot_common.drive_connect()        not bad, maybe utility but needs drive stuff?
-- zerobot_common.current_members_sheet  ok common use
-- zerobot_common.old_members_sheet      ok common use
-- zerobot_common.recent_changes_sheet   ok common use
-'''
+"""
+For fetching ingame data from the api and comparing the old memberlist with
+the new data from the api.
+"""
 import zerobot_common
+import utilities
+from logfile import LogFile
+from member import Member, int_0, number_of_skills, score_labels
+from exceptions import NotAMember, NotAMemberList
+# external imports
 import requests
-# for date strings
-import time
-import os
 from datetime import datetime
-# to store data as member objects
-from member import Member, read_member, int_0
-from gspread_formatting import format_cell_range, CellFormat, Color
-from sheet_ops import SheetParams, read_member_sheet, write_member_sheet
+import copy
 
 # links to jagex API
-_memberlist_base_url = 'http://services.runescape.com/m=clan-hiscores/members_lite.ws?clanName='
-_member_base_url = 'https://secure.runescape.com/m=hiscore/index_lite.ws?player='
+_memberlist_base_url = (
+    "http://services.runescape.com/"
+    + "m=clan-hiscores/members_lite.ws?clanName="
+)
+_member_base_url = (
+    "https://secure.runescape.com/"
+    + "m=hiscore/index_lite.ws?player="
+)
 
-class UpdateResult():
+# logfile for clantrack
+clantrack_log = LogFile("logs/clantrack")
+
+class CompareResult():
     """
-    UpdateResult(joining, leaving, renamed).
+    CompareResult(staying, joining, leaving, renamed).
     """
-    def __init__(self, joining, leaving, renamed):
+    def __init__(self, staying, joining, leaving, renamed):
+        self.staying = staying
         self.joining = joining
         self.leaving = leaving
         self.renamed = renamed
@@ -36,18 +39,21 @@ class UpdateResult():
         Gives a spreadsheet rows representation of memberlist changes
         """
         summary = list()
-        summary.append(["Memberlist changes from automatic update on " + datetime.utcnow().strftime("%Y-%m-%d")])
+        summary.append([(
+            "Memberlist changes from automatic update on "
+            + datetime.utcnow().strftime(utilities.dateformat)
+        )])
         summary.append(["\nRenamed Clan Members:"])
         for memb in self.renamed:
             old_name = memb.old_names[len(memb.old_names)-1]
-            summary.append([f'{old_name} -> {memb.name}'])
+            summary.append([f"{old_name} -> {memb.name}"])
         summary.append(["\nLeft Clan:"])
         for memb in self.leaving:
             summary.append([memb.name])
         summary.append(["\nJoined Clan:"])
         for memb in self.joining:
             summary.append([memb.name])
-        summary.append(["- - - - - - - - - - - - - - - - - - - - - - - - - - -"])
+        summary.append(["- - - - - - - - - - - - - - - - - - - - - - - - -"])
 
         return summary
     def summary(self):
@@ -55,232 +61,101 @@ class UpdateResult():
         Gives a text representation of memberlist changes
         """
         rows = self.summary_rows()
-        summary = ''
+        summary = ""
         for line in rows:
-            summary += (line[0] + '\n')
+            summary += (line[0] + "\n")
         return summary
 
+def compare_lists(ingame_members, current_members):
+    """
+    Makes no changes to the lists, just returns an accuracte comparison.
+    The comparison result is split in staying, joining, renamed and leaving 
+    member lists. All members in them are updated with most recent stats.
 
-# Update member skills and runescore from RS API
-def _updateUserData(memb, session):
-    if not isinstance(memb, Member): return False
-    try:
-        memb_req_res = session.get(_member_base_url+memb.name, timeout=10)
-    except requests.exceptions.Timeout:
-        return _updateUserData(memb, session)
-
-    if (memb_req_res.status_code == requests.codes['ok']):
-        #TODO process result into proper array rather than use splits?
-        #TODO create function in member to update from api result
-        memb_info = memb_req_res.text.splitlines()
-
-        # name, rank, clan_xp, kills, already updated by clan data
-        # first 28 are skills, 3 columns : rank, lvl, xp
-        for num, x in enumerate(memb_info) :
-            if num > 28 : break
-            memb.skills[num] = int_0(x.split(',')[2])
-
-        # runescore = 53, 2 columns : rank, score
-        memb.runescore = int_0(memb_info[53].split(',')[1])
-        # clues = next 5 after runescore
-        memb.easy_clues = int_0(memb_info[54].split(',')[1])
-        memb.medium_clues = int_0(memb_info[55].split(',')[1])
-        memb.hard_clues = int_0(memb_info[56].split(',')[1])
-        memb.elite_clues = int_0(memb_info[57].split(',')[1])
-        memb.master_clues = int_0(memb_info[58].split(',')[1])
-        memb.total_clues = (
-            memb.easy_clues
-            + memb.medium_clues
-            + memb.hard_clues
-            + memb.elite_clues
-            + memb.master_clues
-        )
-        return True
-    else:
-        zerobot_common.logfile.log(f"Failed to get member data : {memb.name}")
-        return False
-
-# function to retrieve todays member list from RS API
-def _getMemberlistUpdate(session, ingame_members_list):
-    try:
-        memb_list_api_result = session.get(_memberlist_base_url+zerobot_common.rs_api_clan_name, timeout=10)
-    except requests.exceptions.Timeout:
-        zerobot_common.logfile.log(f'Retrying clan memberlist retrieval...')
-        time.sleep(30)
-        return _getMemberlistUpdate(session, ingame_members_list)
-
-    # got a response, need to check if good response
-    if (memb_list_api_result.status_code == requests.codes['ok']):
-        # split per line, remove first junk description line
-        members_strings = memb_list_api_result.text.splitlines()
-        members_strings.pop(0)
-
-        # go through lines of member info
-        for memb_str in members_strings:
-            # replace jagex's non breaking spaces (char 160) with normal ones (char 32)
-            memb_str = memb_str.replace(' ',' ')
-            memb_info = memb_str.split(',')
-            ingame_members_list.append(Member(memb_info[0], memb_info[1], int_0(memb_info[2]), int_0(memb_info[3])))
-    else:
-        # exit if failed to retrieve new data
-        zerobot_common.logfile.log("Failed to retrieve clan member list.")
-        exit()
-
-def _startUpdateWarnings(current_members_sheet, old_members_sheet):
-    update_warning = [[
-            "AUTOMATIC","UPDATE IN","5 MINUTES","S T O P","EDITING!","! - ! - !","","",
-            "","","S T O P","EDITING!","! - ! - !","","","S T O P",
-            "EDITING!","! - ! - !","","","","","","","S T O P","EDITING!","! - ! - !","","","","","","S T O P","EDITING!","! - ! - !","","","","","","","","","S T O P","EDITING!","! - ! - !"]]
-    current_members_sheet.batch_update([{'range' : 'A4:' + SheetParams.end_col + '4','values' : update_warning}], value_input_option = 'USER_ENTERED')
-    old_members_sheet.batch_update([{'range' : 'A4:' + SheetParams.end_col + '4','values' : update_warning}], value_input_option = 'USER_ENTERED')
-    time.sleep(60)
-    current_members_sheet.update_cell(4,3,'4 MINUTES')
-    old_members_sheet.update_cell(4,3,'4 MINUTES')
-    time.sleep(60)
-    current_members_sheet.update_cell(4,3,'3 MINUTES')
-    old_members_sheet.update_cell(4,3,'3 MINUTES')
-    time.sleep(60)
-    current_members_sheet.update_cell(4,3,'2 MINUTES')
-    old_members_sheet.update_cell(4,3,'2 MINUTES')
-    time.sleep(60)
-    current_members_sheet.update_cell(4,3,'1 MINUTE')
-    old_members_sheet.update_cell(4,3,'1 MINUTE')
-    time.sleep(60)
-
-def _printUpdateInProgressWarnings(current_members_sheet, old_members_sheet):
-    # empty the current members sheet
-    current_members_sheet.clear()
-    # clear old colors, list order will change, so need clear even if no color update
-    white_fmt = CellFormat(backgroundColor=Color(1,1,1))
-    format_cell_range(current_members_sheet,'B5:G510',white_fmt)
-    # reset header rows and insert ongoing update warnings for current members sheet
-    row1 = [
-        "Current clan members and their stats are updated here automatically. Update sorts the list and takes care of joins/leaves/renames.",
-        "","","","","","","","Hover here for background Color Explanation","",""]
-    row2 = [
-        "Blue titled rows = can update by hand. Other rows are auto-updated daily (= overwritten)",
-        "","","","","","","","","",""]
-    row3 = [
-        "You should use the discord bot commands to add (re)joining members. You can try to do it by hand but you'll probably miss things or do unnecessary work",
-        "","","","","","","","","","",""]
-    warn1 = ['AUTOMATIC','UPDATE','IN PROGRESS']
-    warn2 = ['STARTED:', datetime.utcnow().strftime("%H:%M:%S")]
-    warn3 = ['Update takes about 30 minutes.']
-    warn4 = ['Anything entered on this sheet will']
-    warn5 = ['be overwritten after the update']
-    current_members_sheet.batch_update([{'range' : 'A1:' + SheetParams.end_col + '9','values' : [row1, row2, row3, SheetParams.header_entries_currmembs,warn1,warn2,warn3,warn4,warn5]}], value_input_option = 'USER_ENTERED')
-
-    # empty the old members sheet
-    old_members_sheet.clear()
-    # reset header rows and insert ongoing update warnings for old members sheet
-    row1 = [
-        "People who retired from clan are moved here, either by friendly leave or as inactive kick, meaning they can reapply to join.",
-        "","","","","","","","","",""]
-    row2 = [
-        "People are no longer tracked after leaving clan, but their info is kept here. Name, ranks, notes, etc. will be from the day they left unless you update them by hand.",
-        "","","","","","","","","",""]
-    row3 = [
-        "If you want to track someone's namechanges after they leave the clan you need to add them ingame (friend, ignore or clan banlist",
-        "","","","","","","","","",""]
-    old_members_sheet.batch_update([{'range' : 'A1:' + SheetParams.end_col + '9','values' : [row1, row2, row3, SheetParams.header_entries_oldmembs,warn1,warn2,warn3,warn4,warn5]}], value_input_option = 'USER_ENTERED')
-
-def _compareMembers(session, current_members_list, ingame_members_list, joining_members, leaving_members, renamed_members):
+    The new memberlist can be constructed as staying + joining + renamed.
+    """
+    clantrack_log.log(f"Comparing memberlist in memory with ingame one...")
+    ingame_membs = copy.deepcopy(ingame_members)
+    current_membs = copy.deepcopy(current_members)
+    # create lists to compare members
+    staying_members = list()
+    joining_members = list()
+    leaving_members = list()
+    renamed_members = list()
+    ## PART 1: find possible joining members, load new data if stayed in clan
     # loop through ingame members list, try to find in current members list
-    for ingame_memb in ingame_members_list:
-        on_hiscores = _updateUserData(ingame_memb, session)
+    for ingame_memb in ingame_membs:
         try:
-            index = current_members_list.index(ingame_memb)
+            index = current_membs.index(ingame_memb)
         except ValueError:
             # not found = new ingame member or someone renamed to this
-
-            # check if new ingame member on hiscores
-            if not(on_hiscores):
-                # shouldnt really be possible for a new ingame member to not be on hiscores, log if it happens
-                zerobot_common.logfile.log(f'\n-!-\n thing A you worried about happened\n-!-\n')
-            
-            ingame_memb.join_date = datetime.utcnow().strftime("%Y-%m-%d")
+            ingame_memb.join_date = datetime.utcnow().strftime(
+                utilities.dateformat
+            )
             ingame_memb.last_active = datetime.utcnow()
             joining_members.append(ingame_memb)
         else:
-            ##-------------------------------------------------------------------------##
-            ##------------ IMPORTANT UPDATE PART : MEMBER STAYED IN CLAN --------------##
-            ##-------------------------------------------------------------------------##
-            # found = existing member
-            existing_member = current_members_list[index]
-
-            # needs invite as rank = they were added to sheet, but still needed an invite.
-            # means they just joined, add to joining members later so they show up daily update summary
+            # found = just joined today or stayed in clan
+            existing_member = current_membs[index]
+            # if the rank was needs invite, they joined the clan ingame today.
             if (existing_member.rank == "needs invite"):
                 just_joined = True
             else:
                 just_joined = False
-
-            # dropped from hiscores = keep old last active, and stats
-            if not(on_hiscores):
-                continue
-
-            # check if member was active, if so update last active date, need to do before skills update
-            # if last active not set in future, update with today
-            if (existing_member.last_active == None or existing_member.last_active < datetime.utcnow()):
-                if (existing_member.wasActive(ingame_memb)):
-                    existing_member.last_active = datetime.utcnow()
-            # update member in current list with new ingame data
-            existing_member.rank = ingame_memb.rank
-            existing_member.clan_xp = ingame_memb.clan_xp
-            existing_member.kills = ingame_memb.kills
-            existing_member.runescore = ingame_memb.runescore
-            existing_member.skills = ingame_memb.skills
-            existing_member.easy_clues = ingame_memb.easy_clues
-            existing_member.medium_clues = ingame_memb.medium_clues
-            existing_member.hard_clues = ingame_memb.hard_clues
-            existing_member.elite_clues = ingame_memb.elite_clues
-            existing_member.master_clues = ingame_memb.master_clues
-            existing_member.total_clues = ingame_memb.total_clues
             
+            # load old data from last memberlist
+            ingame_memb.loadFromOldName(existing_member)
+
+            # if last active is not set in future...
+            if (
+                ingame_memb.last_active == None 
+                or ingame_memb.last_active < datetime.utcnow()
+            ):
+                # and they have been active, update last_active to today
+                if (existing_member.wasActive(ingame_memb)):
+                    ingame_memb.last_active = datetime.utcnow()
+            # if they just joined, assign them as joining.
             if (just_joined):
-                current_members_list.remove(existing_member)
-                joining_members.append(existing_member)
+                joining_members.append(ingame_memb)
+            else:
+                staying_members.append(ingame_memb)
+            
 
-
+    ## PART 2: find possible leaving members
     # loop through current members list, try to find in ingame members list
-    for current_memb in current_members_list:
+    for current_memb in current_membs:
         try:
-            index = ingame_members_list.index(current_memb)
+            index = ingame_membs.index(current_memb)
         except ValueError:
             # not found = member left or renamed to one in joining
             leaving_members.append(current_memb)
-        # found = still in clan, already updated with new stats.
+        # found = stayed in clan, already markes as staying with new data.
 
+    ## PART 3: Compare leaving and joining to find renames
     # lower than this is a decent chance of a match
     chance_threshold = 2
-
     for leave in leaving_members:
-        #TODO: this check could be a bit more robust instead of on runescore alone, 
-        if leave.runescore == 0:
-            # check if player with same name in joining = stayed but didnt have data before / data was accidentally removed.
-            for join in joining_members:
-                if leave == join: 
-                    #TODO: this part may be completely redundant, if name stayed the same they won't be put in leaving members?
-                    ##-------------------------------------------------------------------------------------##
-                    ##------ IMPORTANT UPDATE PART : MEMBER STAYED IN CLAN BUT HAD NO DATA BEFORE ---------##
-                    ##-------------------------------------------------------------------------------------##
-                    zerobot_common.logfile.log(f'\n-!-\n thing B you worried about happened\n-!-\n')
-                    join.loadFromOldName(leave)
-                    # Member was active, or skills would not have updated.
-                    # if last active not set in future, update with today
-                    if (join.last_active == None or join.last_active < datetime.utcnow()):
-                        join.last_active = datetime.utcnow()
-            # already know nobody stayed in clan with same name
-            # no data to compare, leave member in to remove and continue with next.
-            zerobot_common.logfile.log(f"Missing data for leaving member : {leave.name}. Can not check for renames")
+        #TODO: check if no runescore = no data found? nothing else to use?
+        if leave.activities["runescore"][1] == 0:
+            # already know nobody stayed in clan with same name, they wouldnt
+            # be in leaving members if there was. no data to compare, so they
+            # stay assigned to leaving members.
+            clantrack_log.log(
+                f"Missing data for leaving member : {leave.name}. "
+                "Can not check for renames, assigned as leaving member."
+            )
             continue
         # calculate match chances
         best_match = 0
         best_chance = 1000
         non_matches = 0
         for join in joining_members:
-            if join.runescore == 0:
-                zerobot_common.logfile.log(f'Missing data for {join.name}. Can not check if this is new name of {leave.name}, skipping comparison')
+            #TODO: again check if no runescore = no data?
+            if join.activities["runescore"][1] == 0:
+                clantrack_log.log(
+                    f"Missing data for {join.name}. Can not check if this is"
+                    f" new name of {leave.name}, skipping this comparison"
+                )
                 non_matches += 1
                 continue
             chance = leave.match(join)
@@ -294,142 +169,161 @@ def _compareMembers(session, current_members_list, ingame_members_list, joining_
                 non_matches += 1
         
         if non_matches == len(joining_members):
-            # if all joining are ruled out immediately by lower stats, skip straight to removal
-            zerobot_common.logfile.log(f'{leave.name} left the clan, no possible match in joiners')
+            # all joining are ruled out immediately by lower stats or no data,
+            # they stay assigned as leaving members.
+            clantrack_log.log(
+                f"{leave.name} left the clan, no possible match in joiners"
+            )
         else:
-            zerobot_common.logfile.log(f'{leave.name} rename to {best_match.name} with {best_chance} chance?')
+            msg = (
+                f"{leave.name} renamed to {best_match.name} "
+                f"with {best_chance} chance?"
+            )
             if (best_chance < chance_threshold):
-                zerobot_common.logfile.log(f'--likely, considering as renamed')
+                # good enough rename chance, should have updated stats and 
+                # and assigned to renamed.
+                clantrack_log.log(f"{msg} -- likely, considering as renamed")
                 # == Update old names ==
-                # see if new name was used before
                 try:
+                    # see if new name was used before
                     leave.old_names.index(best_match.name)
                 except ValueError:
-                    # not used before, add current to list of prev names
-                    leave.old_names.append(leave.name)
+                    pass
                 else:
-                    # used before, remove from list of pre
+                    # new name was used before, re-move it as old name
                     leave.old_names.remove(best_match.name)
-                    leave.old_names.append(leave.name)
-                ##----------------------------------------------------------------------------##
-                ##-------- IMPORTANT UPDATE PART : MEMBER STAYED IN CLAN BUT RENAMED ---------##
-                ##----------------------------------------------------------------------------##
+                # add leave name to list of prev names
+                leave.old_names.append(leave.name)
+
+                # load all the old info for new name
                 best_match.loadFromOldName(leave)
-                # Member was active, they renamed. if last active not set in future, update with today
-                if (best_match.last_active == None or best_match.last_active < datetime.utcnow()):
+                # Member was active, they renamed. update last active with 
+                # today if it was not set in the future.
+                if (
+                    best_match.last_active == None 
+                    or best_match.last_active < datetime.utcnow()
+                ):
                     best_match.last_active = datetime.utcnow()
                 
-                # Final step, mark as renamed
+                # Final step, mark as renamed. MUST also be removed from 
+                # leaving and joining, is done below, cant do while iterating.
                 renamed_members.append(best_match)
             else:
-                zerobot_common.logfile.log(f'--unlikely, removing from clan')
-
-def _updateLists(current_members_list, old_members_list, joining_members, leaving_members, renamed_members):
-    # sort out renamed and members who still needed invites in leaving/joining/renamed lists.
+                # not a good enough rename chance, stays assigned as leaving
+                clantrack_log.log(f"{msg} -- unlikely, removing from clan")
+    
+    ## PART 4: sort out renamed and members who still needed invites in lists.
     for memb in renamed_members:
-        # renamed = should not be in joining or leaving
+        # renamed should be taken out of joining and leaving
         joining_members.remove(memb)
         old_name = memb.old_names[len(memb.old_names)-1]
         leaving_members.remove(old_name)
+    # anyone with needs invite rank should be assigned as staying, not leaving
     leaving = leaving_members.copy()
     for memb in leaving:
-        # needs invite rank in leavers = still needs invite, not joined yet, should not be in leaving.
         if (memb.rank == "needs invite"):
             leaving_members.remove(memb)
+            staying_members.append(memb)
             continue
-    # joining members is already correct by now, no changes needed, also see compare members function on how
-    # members who were already added to sheet (with 'needs invite' as rank) are handled.
+    # joining members is already correct by now, no further changes needed
 
-    update_res = UpdateResult(joining_members, leaving_members, renamed_members)
-    
-    # could move this processing elsewhere now, update res is accurate
-    for memb in update_res.renamed:
-        old_name = memb.old_names[len(memb.old_names)-1]
-        current_members_list.remove(old_name)
-        current_members_list.append(memb)
-    for memb in update_res.leaving:
-        if (memb.leave_date == ""):
-            memb.leave_date = datetime.utcnow().strftime("%Y-%m-%d")
-        if (memb.leave_reason == ""):
-            memb.leave_reason = "left or inactive kick"
-        memb.site_rank = "Retired member"
-        memb.discord_rank = ""
-        current_members_list.remove(memb)
-        old_members_list.append(memb)
-    for memb in update_res.joining:
-        current_members_list.append(memb)
-    
-    return update_res
+    clantrack_log.log(f"Finished comparing memberlists.")
+    return CompareResult(
+        staying_members, joining_members, leaving_members, renamed_members
+    )
 
-def _printRecentChanges(recent_changes_sheet, update_res):
-    summary = update_res.summary_rows()
-    print(update_res.summary())
-    for i in range(len(summary)-1,-1,-1):
-        recent_changes_sheet.insert_row(summary[i],1,value_input_option = 'USER_ENTERED')
+def _get_member_data(member, session=None, attempts=0):
+    if not isinstance(member, Member):
+        raise NotAMember("Object to fetch ingame data for is not of Member")
+    try:
+        if session is None:
+            req_resp = requests.get(_member_base_url+member.name, timeout=10)
+        else:
+            req_resp = session.get(_member_base_url+member.name, timeout=10)
+    except requests.exceptions.Timeout:
+        if attempts > 5:
+            clantrack_log.log(f"Failed to get member data : {member.name}")
+            return
+        return _get_member_data(member, session, attempts=attempts+1)
+    except Exception:
+        if attempts > 5:
+            clantrack_log.log(f"Failed to get member data : {member.name}")
+            return
+        return _get_member_data(member, session, attempts=attempts+1)
 
-def _writeMemberlistCopyToDisk(memberlist, filename):
-    '''
-    Writes a copy of the memberlist to the specified file, overwriting it if it existed already.
-    '''
-    # ensure directory for file exists if not creating in current directory
-    dirname = os.path.dirname(filename)
-    if (dirname != ''):
-        os.makedirs(os.path.dirname(filename), exist_ok=True)
-    # write a copy with todays date to disk as backup
-    memberlist_file = open(filename, "w", encoding="utf-8")
-    for x in memberlist:
-        memberlist_file.write(str(x) + '\n')
-    memberlist_file.close()
+    if (req_resp.status_code == requests.codes["ok"]):
+        member_info = req_resp.text.splitlines()
+        for i in range(0, number_of_skills):
+            # skills: [rank,level,xp]
+            skills = member_info[i].split(",")
+            # re-order to match activities index, and replace -1's with 0
+            skill_array = [
+                int_0(skills[0]),
+                int_0(skills[2]),
+                int_0(skills[1])
+            ]
+            member.skills[score_labels[i]] = skill_array
+        for i in range(number_of_skills, len(member_info)):
+            # stat: [rank, score]
+            activivity_arr = member_info[i].split(",")
+            activity = [
+                int_0(activivity_arr[0]), 
+                int_0(activivity_arr[1])
+            ]
+            member.activities[score_labels[i]] = activity
+        member.on_hiscores = True
+    else:
+        clantrack_log.log(f"Failed to get member data : {member.name}")
 
-def UpdateList():
-    '''
-    Goes through the entire memberlist.
-    - Compares it with ingame clan memberlist, adds people who joined, removes people who left.
-    - Updates every member's ingame stats, discord rank status and site rank status.
-    - returns a changelog and stores a local copy of the updated list for backups / future comparison.
+def _get_clanmembers(session, ingame_members_list):
+    clantrack_log.log(f"Starting clan memberlist retrieval...")
+    if not isinstance(ingame_members_list, list):
+        text = (
+            "Object to fetch ingame data for is not of list[Member]."
+        )
+        raise NotAMemberList(text)
+    try:
+        memb_list_api_result = session.get(
+            _memberlist_base_url+zerobot_common.rs_api_clan_name, timeout=10
+        )
+    except requests.exceptions.Timeout:
+        clantrack_log.log(f"Retrying clan memberlist retrieval...")
+        return _get_clanmembers(session, ingame_members_list)
 
-    The spreadsheets / memberlists are cleared during this process and overwritten afterwards, changes inbetween are lost.
-    '''
-    zerobot_common.logfile.log("Starting clantrack update")
+    # got a response, need to check if good response
+    if (memb_list_api_result.status_code == requests.codes["ok"]):
+        # split per line, remove first junk description line
+        members_strings = memb_list_api_result.text.splitlines()
+        members_strings.pop(0)
+
+        # go through lines of member info
+        for memb_str in members_strings:
+            # replace jagex's non breaking spaces (char 160) with 
+            # (char 32) normal spaces
+            memb_str = memb_str.replace(" "," ")
+            memb_info = memb_str.split(",")
+            ingame_members_list.append(
+                Member(
+                    memb_info[0], 
+                    memb_info[1], 
+                    int_0(memb_info[2]), 
+                    int_0(memb_info[3]))
+            )
+        clantrack_log.log(f"Retrieved clan memberlist.")
+    else:
+        clantrack_log.log("Failed to retrieve clan member list.")
+
+def get_ingame_memberlist():
     zerobot_common.drive_connect()
-
-    # Safe to load these from common for easier reference, Very certain they won't be reassigned in either place.
-    current_members_sheet = zerobot_common.current_members_sheet
-    old_members_sheet = zerobot_common.old_members_sheet
-
-    # 5 minute heads up for editors to stop working on the sheet before update
-    _startUpdateWarnings(current_members_sheet, old_members_sheet)
-    # retrieve must recent current and previous members from spreadsheet
-    current_members_list = read_member_sheet(current_members_sheet)
-    old_members_list = read_member_sheet(old_members_sheet)
-    # Clear the spreadsheets and write down update in progress notification on them.
-    _printUpdateInProgressWarnings(current_members_sheet, old_members_sheet)
-    
     # start session to try to speed up rs api requests
     session = requests.session()
-    # retrieve todays member list from RS API
     ingame_members_list = list()
-    _getMemberlistUpdate(session, ingame_members_list)
-
-    # create lists to compare members and compare current members with ingame members
-    joining_members = list()
-    leaving_members = list()
-    renamed_members = list()
-    _compareMembers(session, current_members_list, ingame_members_list, joining_members, leaving_members, renamed_members)
-    # update the member lists with the results from comparing members
-    update_res = _updateLists(current_members_list, old_members_list, joining_members, leaving_members, renamed_members)
-
-    # previous actions can take a while, make sure google drive connection is active and write changes
-    zerobot_common.drive_connect()
-    # write the summary of changes to the recent changes sheet
-    _printRecentChanges(zerobot_common.recent_changes_sheet, update_res)
-    write_member_sheet(current_members_list, current_members_sheet)
-    write_member_sheet(old_members_list, old_members_sheet)
-
-    zerobot_common.logfile.log("Writing backup copy to disk...")
-    # create local copies of the memberlists
-    _writeMemberlistCopyToDisk(current_members_list, ("backup_memberlists/current_members/current_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
-    _writeMemberlistCopyToDisk(old_members_list, ("backup_memberlists/old_members/old_membs_" + datetime.utcnow().strftime("%Y-%m-%d")))
-
-    zerobot_common.logfile.log("clantrack update done")
-    return update_res
+    _get_clanmembers(session, ingame_members_list)
+    
+    # get updated stats for each member
+    clantrack_log.log(f"Retrieving individual stats for members in clan...")
+    for ingame_memb in ingame_members_list:
+        _get_member_data(ingame_memb, session=session)
+    clantrack_log.log(f"Finished retrieving individual clan members stats.")
+    
+    return ingame_members_list

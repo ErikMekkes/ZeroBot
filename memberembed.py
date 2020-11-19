@@ -41,7 +41,11 @@ def member_embed(member):
         note3 = f"**Note 3 :** {member.note3}\n"
     
     if (member.passed_gem):
-        gem_str = f"{member.highest_mage.replace(' DPM', '')}\u2002{member.highest_melee.replace(' DPM', '')}\u2002{member.highest_range.replace(' DPM', '')}"
+        gem_str = (
+            f"{member.misc['highest_mage'].replace(' DPM', '')}\u2002"
+            f"{member.misc['highest_melee'].replace(' DPM', '')}\u2002"
+            f"{member.misc['highest_range'].replace(' DPM', '')}"
+        )
     else:
         gem_str = "None"
     if (member.rank_after_gem != ""):
