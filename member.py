@@ -362,9 +362,10 @@ class Member:
         return member_str
     def load_sheet_changes(self, other):
         """
-        Load all the sheet data except name.
+        Load all the sheet data.
+        Assumes there was a match on name, profile link or discord_id.
         """
-        #self.name = name               # skip, must be unchanged
+        self.name = other.name
         self.rank = other.rank
         self.discord_rank = other.discord_rank
         self.site_rank = other.site_rank

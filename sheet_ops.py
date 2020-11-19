@@ -55,6 +55,10 @@ def clear_sheet(sheet):
     # clear background colors for non-header
     white_fmt = CellFormat(backgroundColor=Color(1,1,1))
     format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
+def clear_sheets():
+    clear_sheet(zerobot_common.current_members_sheet)
+    clear_sheet(zerobot_common.old_members_sheet)
+    clear_sheet(zerobot_common.banned_members_sheet)
 def start_update_warnings():
     zerobot_common.drive_connect()
     zerobot_common.current_members_sheet.batch_update(
@@ -65,20 +69,32 @@ def start_update_warnings():
         [{'range' : SheetParams.header_range,
         'values' : [SheetParams.update_header]}],
         value_input_option = 'USER_ENTERED')
+    zerobot_common.banned_members_sheet.batch_update(
+        [{'range' : SheetParams.header_range,
+        'values' : [SheetParams.update_header]}],
+        value_input_option = 'USER_ENTERED')
     time.sleep(60)
     zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
+    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
     zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
     time.sleep(60)
     zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
     zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
+    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
     time.sleep(60)
     zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
     zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
+    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
     time.sleep(60)
     zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
     zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
+    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTES')
     time.sleep(60)
-
+def print_update_in_progress_warnings():
+    print_update_in_progress_warning(zerobot_common.current_members_sheet)
+    print_update_in_progress_warning(zerobot_common.old_members_sheet)
+    print_update_in_progress_warning(zerobot_common.banned_members_sheet)
+def print_update_in_progress_warning(sheet):
     # insert ongoing update warnings
     warn1 = ['AUTOMATIC','UPDATE','IN PROGRESS']
     warn2 = ['STARTED:', datetime.utcnow().strftime(utilities.timeformat)]
@@ -87,15 +103,7 @@ def start_update_warnings():
     warn5 = ['be overwritten after the update']
     warn_list = [warn1, warn2, warn3, warn4, warn5]
 
-    clear_sheet(zerobot_common.current_members_sheet)
-    zerobot_common.current_members_sheet.batch_update(
-        [{'range' : SheetParams.range_no_header(),
-        'values' : warn_list}],
-        value_input_option = 'USER_ENTERED'
-    )
-
-    clear_sheet(zerobot_common.old_members_sheet)
-    zerobot_common.old_members_sheet.batch_update(
+    sheet.batch_update(
         [{'range' : SheetParams.range_no_header(),
         'values' : warn_list}],
         value_input_option = 'USER_ENTERED'

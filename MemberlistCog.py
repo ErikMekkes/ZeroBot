@@ -12,7 +12,7 @@ import asyncio
 # custom modules
 import zerobot_common
 import utilities
-from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
+from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, clear_sheets, print_update_in_progress_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
 from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
@@ -172,6 +172,10 @@ async def daily_update(self):
     ingame_members = await self.bot.loop.run_in_executor(
         None, get_ingame_memberlist
     )
+    # backup ingame members right away, nice for testing
+    date_str = datetime.utcnow().strftime(utilities.dateformat)
+    ing_backup_name = "memberlists/current_members/ingame_membs_" + date_str
+    memberlist_to_disk(ingame_members, ing_backup_name)
     
     # start posting update warnings on spreadsheet
     await self.bot_channel.send("Daily update starting in 5 minutes")
@@ -179,6 +183,8 @@ async def daily_update(self):
 
     #=== try to obtain editing lock, loads sheet changes ===
     await self.lock()
+    clear_sheets()
+    print_update_in_progress_warnings()
     # compare against new ingame data to find joins, leaves, renames
     comp_res = compare_lists(ingame_members, self.current_members)
     # use result to update our list of current members
@@ -194,8 +200,7 @@ async def daily_update(self):
     memberlist_sort_name(self.old_members)
     memberlist_sort_name(self.banned_members)
 
-    # write backup memberlists to disk
-    date_str = datetime.utcnow().strftime(utilities.dateformat)
+    # write updated memberlists to disk as backup
     cur_backup_name = "memberlists/current_members/current_membs_" + date_str
     old_backup_name = "memberlists/old_members/old_membs_" + date_str
     ban_backup_name = "memberlists/banned_members/banned_membs_" + date_str
