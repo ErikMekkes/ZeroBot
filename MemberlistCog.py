@@ -146,7 +146,7 @@ async def daily_update_scheduler(self):
     memberlist_log.log(f'auto_upd in {wait_time.seconds/3600}h')
     # async sleep to be able to do other stuff until update time
     await asyncio.sleep(wait_time.seconds)
-    daily_update(self)
+    await daily_update(self)
 
 async def daily_update(self):
     """
