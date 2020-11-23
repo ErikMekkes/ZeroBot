@@ -43,13 +43,13 @@ from site_ops import SiteOps
 from permissions import Permissions
 
 # load bot settings from json file
-settings_file = 'settings.json'
+settings_file = "settings.json"
 settings = load_json(settings_file)
 
 # load authentication token for starting bot, you should have made your own 
 # discord bot. Create a discord application, then make a bot for it. Starting
 # point to do that is here: https://discord.com/developers/applications
-bot_auth_token_filename = settings.get('bot_auth_token_filename')
+bot_auth_token_filename = settings.get("bot_auth_token_filename")
 auth_file = open(bot_auth_token_filename)
 auth_token = auth_file.read()
 auth_file.close()
@@ -63,9 +63,9 @@ banned_members_filename = settings.get("banned_members_filename")
 # Starting point for creating one : https://console.developers.google.com/
 # You should also have given your service account access to your drive sheet:
 # Invite it using the share button on the doc, use the service account's email.
-drive_scope = ['https://spreadsheets.google.com/feeds',
-        'https://www.googleapis.com/auth/drive']
-drive_creds_keyfile_name = settings.get('drive_creds_keyfile_name')
+drive_scope = ["https://spreadsheets.google.com/feeds",
+        "https://www.googleapis.com/auth/drive"]
+drive_creds_keyfile_name = settings.get("drive_creds_keyfile_name")
 drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
     drive_creds_keyfile_name,
     drive_scope
@@ -76,8 +76,8 @@ drive_doc_name = settings.get("drive_doc_name")
 drive_doc = drive_client.open(drive_doc_name)
 
 class SheetParams:
-    start_col = 'A'
-    end_col = 'S'
+    start_col = "A"
+    end_col = "S"
     # number of header rows on the memberlist sheets
     header_rows = 1
     # range for header data
@@ -113,57 +113,57 @@ class SheetParams:
         return range_str
 
 # spreadsheet tabs that are used
-current_members_sheet = drive_doc.worksheet('Current Members')
-old_members_sheet = drive_doc.worksheet('Old Members')
-banned_members_sheet = drive_doc.worksheet('Banned Members')
-recent_changes_sheet = drive_doc.worksheet('Recent Changes')
+current_members_sheet = drive_doc.worksheet("Current Members")
+old_members_sheet = drive_doc.worksheet("Old Members")
+banned_members_sheet = drive_doc.worksheet("Banned Members")
+recent_changes_sheet = drive_doc.worksheet("Recent Changes")
 
 # if set, use date and time formats from settings 
-_df = settings.get('dateformat', utilities.dateformat)
-_tf = settings.get('timeformat', utilities.dateformat)
+_df = settings.get("dateformat", utilities.dateformat)
+_tf = settings.get("timeformat", utilities.dateformat)
 utilities.dateformat = _df
 utilities.timeformat = _tf
-utilities.datetimeformat = _df + '_' + _tf
+utilities.datetimeformat = _df + "_" + _tf
 
 # Check which modules should be enabled.
-enable_applications = settings.get('enable_applications')
+enable_applications = settings.get("enable_applications")
 
 # Manager for operations to clan site, hosted by shivtr (https://shivtr.com/)
-site_login_creds_filename = settings.get('site_login_credentials_filename')
+site_login_creds_filename = settings.get("site_login_credentials_filename")
 site_login_credentials = load_json(site_login_creds_filename)
-site_base_url = settings.get('site_base_url')
+site_base_url = settings.get("site_base_url")
 siteops = SiteOps()
-# disable site? (site rank functions will always have 'full member' as result)
-site_enabled = settings.get('site_enabled')
+# disable site? (site rank functions will always have "full member" as result)
+site_enabled = settings.get("site_enabled")
 
 # name used to look up members_lite clan memberlist file on official rs api
-rs_api_clan_name = settings.get('rs_api_clan_name')
-# guild = the clan discord 'server' object, loaded on bot start using it's id.
-clan_server_id = settings.get('clan_server_id')
+rs_api_clan_name = settings.get("rs_api_clan_name")
+# guild = the clan discord "server" object, loaded on bot start using it's id.
+clan_server_id = settings.get("clan_server_id")
 guild = None
 
 # channel names and their ids, loaded on bot startup from guild.
 discord_channels = None
 
 # default channel where bot can post status and error messages
-default_bot_channel_id = settings.get('default_bot_channel_id')
+default_bot_channel_id = settings.get("default_bot_channel_id")
 
 # logfiles
-logfile = LogFile('logs/logfile')
-reactionlog = LogFile('logs/reactionroles')
+logfile = LogFile("logs/logfile")
+reactionlog = LogFile("logs/reactionroles")
 
 # load known messages that should give a role for a reaction from disk
-reaction_messages_filename = settings.get('reaction_messages_filename')
+reaction_messages_filename = settings.get("reaction_messages_filename")
 reaction_messages = load_json(reaction_messages_filename)
 
 # load permissions for use of commands in channels from disk
-permissions_filename = settings.get('permissions_filename')
+permissions_filename = settings.get("permissions_filename")
 permissions = Permissions(permissions_filename)
 
 # people that wont be shown on the inactives list
-inactive_exceptions_filename = settings.get('inactive_exceptions_filename')
+inactive_exceptions_filename = settings.get("inactive_exceptions_filename")
 json_dictionary = load_json(inactive_exceptions_filename)
-inactive_exceptions = json_dictionary.get('inactive_exceptions')
+inactive_exceptions = json_dictionary.get("inactive_exceptions")
 
 # Discord roles and their ranks, because you might have discord roles that are
 # not used for ranks, and because the bot needs to know the rank order.
@@ -173,17 +173,17 @@ inactive_exceptions = json_dictionary.get('inactive_exceptions')
 # Required for these modules:
 #  - Applications : tells it which roles are the ranks to give and their order
 discord_ranks = {
-	'Leaders' : 10,
-	'Staff Member' : 9,
-	'MasterClass PvMer' : 8,
-	'Supreme PvMer' : 7,
-	'PvM Specialists' : 6,
-	'Veteran Member' : 5,
-	'Advanced Member' : 4,
-	'Full Member' : 3,
-	'Recruit' : 2,
-    'Guest' : 1,
-    'Waiting Approval' : 0
+	"Leaders" : 10,
+	"Staff Member" : 9,
+	"MasterClass PvMer" : 8,
+	"Supreme PvMer" : 7,
+	"PvM Specialists" : 6,
+	"Veteran Member" : 5,
+	"Advanced Member" : 4,
+	"Full Member" : 3,
+	"Recruit" : 2,
+    "Guest" : 1,
+    "Waiting Approval" : 0
 }
 
 
@@ -193,13 +193,13 @@ discord_ranks = {
 # recommended not to modify the functions below
 
 def drive_connect():
-    '''
+    """
     Reconnects to the google drive API if not used recently.
-    '''
+    """
     if (drive_creds.access_token_expired): drive_client.login()
 
 def get_named_channel(channel_name):
-    '''
+    """
     Searches the guild for the channel name, returns the channel if found.
     CAUTION: channel names are NOT unique, this returns the first result if
     there are duplicate names.
@@ -207,14 +207,14 @@ def get_named_channel(channel_name):
 
     Intended to find pre-defined, unique channels by name. Operates on the
     common guild object.
-    '''
+    """
     for chann in guild.channels:
         if (chann.name == channel_name):
             return chann
     return None
 
 def get_named_role(role_name):
-    '''
+    """
     Searches the guild for the role name, returns the role if found. 
     CAUTION: role names are NOT unique, this returns the first result if
     there are duplicate names.
@@ -222,7 +222,7 @@ def get_named_role(role_name):
 
     Intended to find pre-defined, unique role by name. Operates on the
     common guild object.
-    '''
+    """
     for role in guild.roles:
         if (role.name == role_name):
             return role
