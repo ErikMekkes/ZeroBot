@@ -56,15 +56,15 @@ def read_guides_sheet(sheetname):
         text = row[0]
         post = Post(text, num)
         # if text has a image tag to be posted
-        if "[img]" in text and "[\\img]" in text:
+        if "[img]" in text and "[/img]" in text:
             # find first [img][\img] tag in text
             url_start = text.index("[img]") + len("[img]")
-            url_end = text.index("[\\img]")
+            url_end = text.index("[/img]")
             # store the url and remove the tagged url from the text
             post.img_url = text[url_start:url_end]
             post.text = (
                 text[0:url_start-len("[img]")]
-                + text[url_end+len("[\\img]"):len(text)]
+                + text[url_end+len("[/img]"):len(text)]
             )
         posts.append(post)
         num += 1
