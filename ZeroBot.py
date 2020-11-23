@@ -1,4 +1,6 @@
 import zerobot_common
+import discord
+import traceback
 from discord import Intents
 from discord.ext import commands
 from MemberlistCog import MemberlistCog
@@ -47,6 +49,20 @@ async def on_ready():
             bot.add_cog(ApplicationsCog(bot))
     if (bot.get_cog('GuidesCog') == None):
         bot.add_cog(GuidesCog(bot))
+
+@bot.event
+async def on_command_error(ctx, error):
+    '''
+    This event executes whenever a command encounters an error that isn't handled.
+    '''
+    # send simple message to location the error came from.
+    if isinstance(error, discord.ext.commands.errors.CommandNotFound):
+        await ctx.send(error)
+    else:
+        await ctx.send('An error occured.')
+    # write down full error trace in log files on disk.
+    zerobot_common.logfile.log(f'Error in command : {ctx.command}')
+    zerobot_common.logfile.log(traceback.format_exception(type(error), error, error.__traceback__))
 
 # actually start the bot
 bot.run(zerobot_common.auth_token)

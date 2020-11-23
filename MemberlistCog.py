@@ -4,7 +4,6 @@ scheduled daily update.
 """
 from discord.ext import tasks, commands
 import discord
-import traceback
 import time
 from datetime import datetime
 from logfile import LogFile
@@ -1033,14 +1032,3 @@ class MemberlistCog(commands.Cog):
 
         await ctx.send('Hello!')
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
-    
-    @commands.Cog.listener()
-    async def on_command_error(self, ctx, error):
-        '''
-        This event executes whenever a command encounters an error that isn't handled.
-        '''
-        # send simple message to location the error came from.
-        await ctx.send('An error occured.')
-        # write down full error trace in log files on disk.
-        self.logfile.log(f'Error in command : {ctx.command}')
-        self.logfile.log(traceback.format_exception(type(error), error, error.__traceback__))
