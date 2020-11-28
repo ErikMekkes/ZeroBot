@@ -78,7 +78,6 @@ class Member:
         self.site_rank = ""
         self.join_date = ""
         self.passed_gem = False
-        self.rank_after_gem = ""
         self.profile_link = ""
         self.leave_date = ""
         self.leave_reason = ""
@@ -138,7 +137,7 @@ class Member:
         user_str = (
             f"{self.name}\t{self.rank}\t{self.discord_rank}\t{self.site_rank}"
             f"\t{self.join_date}\t{_boolstr[self.passed_gem]}"
-            f"\t{self.rank_after_gem}\t{self.profile_link}\t{self.leave_date}"
+            f"\t{self.profile_link}\t{self.leave_date}"
             f"\t{self.leave_reason}\t{self.referral}\t{str(self.discord_id)}"
             f"\t{self.discord_name}\t{old_names}"
             f"\t{_dateToStr(self.last_active)}\t{str(self.event_points)}"
@@ -167,7 +166,6 @@ class Member:
         self.site_rank = other.site_rank
         self.join_date = other.join_date
         self.passed_gem = other.passed_gem
-        self.rank_after_gem = other.rank_after_gem
         self.profile_link = other.profile_link
         self.leave_date = other.leave_date
         self.leave_reason = other.leave_reason
@@ -245,8 +243,6 @@ class Member:
         if (self.site_rank == ""):
             site_rank = "Unknown"
         message = f"{self.name} - ingame: {self.rank}, discord : {discord_rank}, site: {site_rank}, passed gem: {self.passed_gem}"
-        if (self.rank_after_gem != ""):
-            message += f", rank after gem: {self.rank_after_gem}"
         message += "\n"
         return message
     def bannedInfo(self):
@@ -320,35 +316,34 @@ class Member:
         output: A Member object.
         """
         memb_info = member_str.split('\t')
-        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[19]), int_0(memb_info[20]))
+        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[18]), int_0(memb_info[19]))
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
         memb.join_date = memb_info[4]
         memb.passed_gem = (memb_info[5] == 'TRUE')
-        memb.rank_after_gem = memb_info[6]
-        memb.profile_link = memb_info[7]
-        memb.leave_date = memb_info[8]
-        memb.leave_reason = memb_info[9]
-        memb.referral = memb_info[10]
-        memb.discord_id = int_0(memb_info[11])
-        memb.discord_name = memb_info[12]
+        memb.profile_link = memb_info[6]
+        memb.leave_date = memb_info[7]
+        memb.leave_reason = memb_info[8]
+        memb.referral = memb_info[9]
+        memb.discord_id = int_0(memb_info[10])
+        memb.discord_name = memb_info[11]
         # weird case, split empty string = list containing empty string instead of empty list
-        if (len(memb_info[13]) == 0) :
+        if (len(memb_info[12]) == 0) :
             memb.old_names = list()
         else :
-            memb.old_names = memb_info[13].split(',')
-        memb.last_active = _strToDate(memb_info[14])
-        memb.event_points = int_0(memb_info[15])
-        memb.note1 = memb_info[16]
-        memb.note2 = memb_info[17]
-        memb.note3 = memb_info[18]
-        for num,x in enumerate(ast.literal_eval(memb_info[21])):
+            memb.old_names = memb_info[12].split(',')
+        memb.last_active = _strToDate(memb_info[13])
+        memb.event_points = int_0(memb_info[14])
+        memb.note1 = memb_info[15]
+        memb.note2 = memb_info[16]
+        memb.note3 = memb_info[17]
+        for num,x in enumerate(ast.literal_eval(memb_info[20])):
             memb.skills[score_labels[num]] = x
-        for num,x in enumerate(ast.literal_eval(memb_info[22])):
+        for num,x in enumerate(ast.literal_eval(memb_info[21])):
             memb.activities[score_labels[number_of_skills + num]] = x
         # remaining entries are stored in misc with matching label.
-        for i in range(23, len(memb_info)):
-            memb.misc[misc_labels[i-23]] = memb_info[i]
+        for i in range(22, len(memb_info)):
+            memb.misc[misc_labels[i-22]] = memb_info[i]
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         return memb
     def to_string(self):
@@ -371,7 +366,6 @@ class Member:
         self.site_rank = other.site_rank
         self.join_date = other.join_date
         self.passed_gem = other.passed_gem
-        self.rank_after_gem = other.rank_after_gem
         self.profile_link = other.profile_link
         self.leave_date = other.leave_date
         self.leave_reason = other.leave_reason
@@ -395,24 +389,23 @@ class Member:
         memb.site_rank = memb_info[3]
         memb.join_date = memb_info[4]
         memb.passed_gem = (memb_info[5] == "TRUE")
-        memb.rank_after_gem = memb_info[6]
-        memb.profile_link = memb_info[7]
-        memb.leave_date = memb_info[8]
-        memb.leave_reason = memb_info[9]
-        memb.referral = memb_info[10]
-        memb.discord_id = int_0(memb_info[11])
-        memb.discord_name = memb_info[12]
+        memb.profile_link = memb_info[6]
+        memb.leave_date = memb_info[7]
+        memb.leave_reason = memb_info[8]
+        memb.referral = memb_info[9]
+        memb.discord_id = int_0(memb_info[10])
+        memb.discord_name = memb_info[11]
         # prevent empty string case, splitting an empty string gives a list
         # containing empty string instead of the empty list we want.
-        if (len(memb_info[13]) == 0) :
+        if (len(memb_info[12]) == 0) :
             memb.old_names = list()
         else :
-            memb.old_names = memb_info[13].split(',')
-        memb.last_active = _strToDate(memb_info[14])
-        memb.event_points = int_0(memb_info[15])
-        memb.note1 = memb_info[16]
-        memb.note2 = memb_info[17]
-        memb.note3 = memb_info[18]
+            memb.old_names = memb_info[12].split(',')
+        memb.last_active = _strToDate(memb_info[13])
+        memb.event_points = int_0(memb_info[14])
+        memb.note1 = memb_info[15]
+        memb.note2 = memb_info[16]
+        memb.note3 = memb_info[17]
         return memb
     def to_sheet(self):
         """
@@ -433,7 +426,6 @@ class Member:
             self.site_rank,
             self.join_date,
             _boolstr[self.passed_gem],
-            self.rank_after_gem,
             self.profile_link,
             self.leave_date,
             self.leave_reason,

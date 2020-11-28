@@ -171,22 +171,16 @@ def color_spreadsheet():
     discord_rank_ranges = list()
     site_rank_ranges = list()
     passed_gem_ranges = list()
-    rank_after_gem_ranges = list()
 
     # ingame rank = Col B, clan Rank = Col C, Discord Rank = Col D, Passed Gem = Col F
     row = SheetParams.header_rows + 1
     # check passed gem and rank after gem columns
     for x in memberlist:
-        # orange gem column, for push to do gem : no gem, current rank or rank after gem higher than novice
+        # orange gem column, for push to do gem : no gem, current rank higher than novice
         if not(x.passed_gem) and (
-            discord_ranks.get(x.discord_rank, 0) > discord_ranks['Recruit'] or
-            discord_ranks.get(x.rank_after_gem, 0) > discord_ranks.get('Recruit')
+            discord_ranks.get(x.discord_rank, 0) > discord_ranks['Recruit']
             ):
             passed_gem_ranges.append((f'F{row}', orange_fmt))
-        # green gem column / rank after gem column, for rankup : passed gem, rank after gem higher than current rank
-        if x.passed_gem and (discord_ranks.get(x.rank_after_gem, 0) > discord_ranks.get(x.discord_rank, 0)):
-            passed_gem_ranges.append((f'F{row}', green_fmt))
-            rank_after_gem_ranges.append((f'G{row}', green_fmt))
         row += 1
     row = SheetParams.header_rows + 1
     for x in memberlist:
@@ -241,5 +235,3 @@ def color_spreadsheet():
         format_cell_ranges(zerobot_common.current_members_sheet,site_rank_ranges)
     if (len(passed_gem_ranges) > 0):
         format_cell_ranges(zerobot_common.current_members_sheet,passed_gem_ranges)
-    if (len(rank_after_gem_ranges) > 0):
-        format_cell_ranges(zerobot_common.current_members_sheet,rank_after_gem_ranges)

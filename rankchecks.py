@@ -1,7 +1,7 @@
 import zerobot_common
 from member import validDiscordId, validSiteProfile
 
-gem_exceptions = ["Alexanderke","Veteran Member","PvM Specialists"]
+gem_exceptions = ["Alexanderke","Veteran Member","Elite Member","PvM Specialists"]
 
 # used to find a member's highest dps tag
 dps_tags = {
@@ -197,13 +197,7 @@ def TodosUpdateRanks(memberlist):
         ingame_rank_name = memb.rank
         ingame_rank = ingame_ranks.get(ingame_rank_name, 0)
         passed_gem = memb.passed_gem
-        rank_after_gem_name = memb.rank_after_gem
-        rank_after_gem = discord_ranks.get(rank_after_gem_name, 0)
         discord_recruit_rank = discord_ranks['Recruit']
-        # passed gem, and listed to get rankup with gem = need rank update
-        if passed_gem and (rank_after_gem > discord_rank):
-            _need_rank_update.append(memb)
-            continue
         # no gem, rank higher than recruit, rank or name not in gem exceptions.
         if not passed_gem and discord_rank > discord_recruit_rank:
             if not(discord_rank_name in gem_exceptions or memb.name in gem_exceptions):
@@ -249,7 +243,7 @@ def Todos(_memberlist, *args):
         if not(validDiscordId(memb.discord_id)) or memb.discord_name == "Left discord":
             _no_discord.append(memb)
         # not passed gem, and listed to get rankup with gem = need gem
-        if not(memb.passed_gem) and (discord_ranks.get(memb.rank_after_gem, 0) > discord_ranks.get('Recruit')):
+        if not memb.passed_gem:
             _no_gem.append(memb)
     response = list()
     if (len(args) != 1):
@@ -277,7 +271,7 @@ def Todos(_memberlist, *args):
         if (args[0] == "nogem"):
             response.append("\n\nThese still need to pass a gem:\n")
             for memb in _no_gem:
-                response.append(f"{memb.name} for {memb.rank_after_gem}\n")
+                response.append(f"{memb.name}\n")
             return response
         response.append("\n\nNeeds to `-zbot todos ` plus one of : `nodiscord`, `nosite`, `nogem`")
         return response
