@@ -253,7 +253,7 @@ def Todos(_memberlist, *args):
         response += TodosUpdateRanks(_memberlist)
         message = f"\n- not on discord: {len(_no_discord)}\n"
         message += f"- not on clan site: {len(_no_site)}\n"
-        message += f"- need gem for rankup: {len(_no_gem)}\n"
+        message += f"- no gem : {len(_no_gem)}\n"
         message += f"\nYou can add one of these after `-zbot todos ` to get more details: `nodiscord`, `nosite`, `nogem`"
         response.append(message)
         return response
