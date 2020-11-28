@@ -48,10 +48,6 @@ def member_embed(member):
         )
     else:
         gem_str = "None"
-    if (member.rank_after_gem != ""):
-        gem_rank_str = f"**Rank after gem :** {member.rank_after_gem}"
-    else:
-        gem_rank_str = ""
     # consistent length clan xp format
     numb_str = str(member.clan_xp)
     dotted_xp = ""
@@ -110,8 +106,7 @@ def member_embed(member):
 
         f"**{rank_prefix}Ingame Rank :** {ingame_rank_str}\u2001\u2005"
         f"**Site Rank :** {member.site_rank}\n"
-        f"**Discord Rank :** {discord_rank_str}\u2001\u2001"
-        f"{gem_rank_str}\n"
+        f"**Discord Rank :** {discord_rank_str}\u2001\u2001\n"
         f"{old_names}"
         f"{leave_str}"
         f"{note1}"

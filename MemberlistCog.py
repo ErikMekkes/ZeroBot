@@ -639,8 +639,6 @@ class MemberlistCog(commands.Cog):
             new_sheet = zerobot_common.banned_members_sheet
         else:
             new_sheet = zerobot_common.current_members_sheet
-            # updated rank, rank after gem no longer relevant.
-            member.rank_after_gem = ""
         DeleteMember(member.sheet, member.row)
         InsertMember(new_sheet, member.row, member)
         await self.unlock()
