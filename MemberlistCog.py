@@ -549,10 +549,10 @@ class MemberlistCog(commands.Cog):
         
         # update discord rank on memberlist.
         member.discord_rank = discord_rank
-        await self.unlock()
         # update site rank if site module enabled TODO move to separate module
         if zerobot_common.site_enabled:
             zerobot_common.siteops.setrank_member(member, discord_rank)
+        await self.unlock()
     
     @commands.command()
     async def setrank(self, ctx, *args):
