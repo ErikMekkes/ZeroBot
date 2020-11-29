@@ -463,6 +463,13 @@ class ApplicationsCog(commands.Cog):
         if (app.fields_dict['requester_id'] == ctx.author.id):
             await ctx.send(f'You cant accept your own application!')
             return
+        status = app.fields_dict['status']
+        if (status != 'open'):
+            await ctx.send(
+                f"This application is already {status}. If you want to make "
+                f"a change you will have to edit the member manually."
+            )
+            return
         
         num_votes = len(app.fields_dict['voters'])
         votes_required = app.fields_dict['votes_required']
@@ -639,6 +646,13 @@ class ApplicationsCog(commands.Cog):
             return
         if (app.fields_dict['requester_id'] == ctx.author.id):
             await ctx.send(f'You cant reject your own application!')
+            return
+        status = app.fields_dict['status']
+        if (status != 'open'):
+            await ctx.send(
+                f"This application is already {status}. If you want to make "
+                f"a change you will have to edit the member manually."
+            )
             return
 
         reason = ''
