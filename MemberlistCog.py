@@ -606,6 +606,12 @@ class MemberlistCog(commands.Cog):
         if memb is not None:
             old_value = getattr(memb, attribute)
             setattr(memb, attribute, new_value)
+            # also update old names if changing name
+            if attribute == "name":
+                if new_value in memb.old_names:
+                    memb.old_names.remove(new_value)
+                if not old_value in memb.old_names:
+                    memb.old_names.append(old_value)
         await self.unlock()
 
         if memb is None:
