@@ -77,14 +77,14 @@ drive_doc = drive_client.open(drive_doc_name)
 
 class SheetParams:
     start_col = "A"
-    end_col = "S"
+    end_col = "R"
     # number of header rows on the memberlist sheets
     header_rows = 1
     # range for header data
     header_range = f"{start_col}1:{end_col}{header_rows}"
     # header entries for the memberlist sheets
     header_entries = [
-            "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Rank After Gem","Site Profile","Leave Date",
+            "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Site Profile","Leave Date",
             "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3"]
     update_header = [
         "AUTOMATIC", "UPDATE IN", "5 MINUTES", "S T O P", "EDITING!",
