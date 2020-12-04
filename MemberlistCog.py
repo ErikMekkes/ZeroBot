@@ -16,7 +16,7 @@ from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRa
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
-from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get
+from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move
 from member import Member, validDiscordId, validSiteProfile
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError
 
@@ -480,6 +480,138 @@ class MemberlistCog(commands.Cog):
             link_results = _FindMembers(profile_link, 'profile_link')
         await self.unlock()
         return name_results + id_results + link_results
+    @commands.command()
+    async def removemember(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('removemember', ctx.channel.id)) : return
+
+        use_msg = (
+            'Needs to be : -zbot removemember list_name member_id\n'
+            ' - list_name: current_members, old_members or banned_members'
+            ' - member_id: name, profile_link or discord_id'
+        )
+        if len(args) != 2:
+            await ctx.send(use_msg)
+            return
+        list_names = ["current_members", "old_members", "banned_members"]
+        if not args[0] in list_names:
+            await ctx.send(use_msg)
+            return
+        
+        list_access = await self.lock()
+        memb = memberlist_remove(list_access[args[0]], args[1])
+        await self.unlock()
+
+        if memb is None:
+            await ctx.send(f"No member found for {args[1]} in {args[0]}.")
+            return
+        await ctx.send(f"Removed {memb.name} from {args[0]}.")
+    @commands.command()
+    async def movemember(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('movemember', ctx.channel.id)) : return
+
+        use_msg = (
+            'Needs to be : -zbot removemember from_list to_list member_id\n'
+            ' - from_list / to_list: current_members, old_members or banned_members'
+            ' - member_id: name, profile_link or discord_id'
+        )
+        if len(args) != 3:
+            await ctx.send(use_msg)
+            return
+        list_names = ["current_members", "old_members", "banned_members"]
+        if not args[0] in list_names:
+            await ctx.send(use_msg)
+            return
+        if not args[1] in list_names:
+            await ctx.send(use_msg)
+            return
+        
+        list_access = await self.lock()
+        memb = memberlist_move(list_access[args[0]], list_access[args[1]], args[2])
+        await self.unlock()
+
+        if memb is None:
+            await ctx.send(f"No member found for {args[2]} in {args[0]}.")
+            return
+        await ctx.send(f"Moved {memb.name} from {args[0]} to {args[1]}.")
+    @commands.command()
+    async def editmember(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('editmember', ctx.channel.id)) : return
+
+        use_msg = (
+            'Needs to be : -zbot editmember list_name member_id attribute = value\n'
+            ' - list_name: current_members, old_members or banned_members'
+            ' - member_id: a valid name, profile_link or discord_id'
+            ' - attribute: name, profile_link, discord_id'
+        )
+
+        # check if command uses the correct form
+        if len(args) != 5 :
+            await ctx.send(use_msg)
+            return
+        list_names = ["current_members", "old_members", "banned_members"]
+        if not args[0] in list_names:
+            await ctx.send(use_msg)
+            return
+        if (args[3] != "="):
+            await ctx.send(use_msg)
+            return
+        # check if attribute to edit is valid. ugly but effective, I want to 
+        # do this before I spend time finding the member, without keeping a 
+        # separate list of valid attributes, so the goal is to check if a 
+        # class instance will be given an attribute when made. afaik there is 
+        # no python model that lets me predefine / check the existence of a 
+        # class instance's attributes but this works the same.
+        attribute = args[2]
+        dummy_member = Member("","",0,0)
+        try:
+            getattr(dummy_member, attribute)
+        except AttributeError:
+            await ctx.send(use_msg)
+            return
+        
+        # check if new value for attribute is valid
+        new_value = args[4]
+
+        if (attribute == "discord_id"):
+            # should be an 18 length number, or "0" as explicit exception
+            if (new_value == "0"):
+                new_value = 0
+            elif (not(validDiscordId(new_value))):
+                await ctx.send(f"{new_value} is not a valid discord_id")
+                return
+            else:
+                # valid, still need to to parse as int
+                new_value = int(new_value)
+        if (attribute == "profile_link"):
+            # force https entries
+            new_value = new_value[3].replace("http:", "https:")
+            # should be a valid profilelink or "no site" as explicit exception
+            if (new_value.lower() == "no site"):
+                new_value = "no site"
+            elif (not(validSiteProfile(new_value))):
+                await ctx.send(f"{new_value} is not a valid profile_link.")
+                return
+            else:
+                # valid, no further action needed.
+                pass
+
+        list_access = await self.lock()
+        memb = memberlist_get(list_access[args[0]], args[1])
+        if memb is not None:
+            old_value = getattr(memb, attribute)
+            setattr(memb, attribute, new_value)
+        await self.unlock()
+
+        if memb is None:
+            await ctx.send(f"No member found for {args[1]} in {args[0]}.")
+            return
+        await ctx.send(f"Edited {attribute} of {memb.name} from {old_value} to {new_value}.")
 
     @commands.command()
     async def todos(self, ctx, *args):
@@ -870,85 +1002,6 @@ class MemberlistCog(commands.Cog):
         )
         await ctx.send(message)
         await self.post_inactives(ctx, 30, 6)
-    
-    @commands.command()
-    async def edit(self, ctx, *args):
-        # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('edit', ctx.channel.id)) : return
-
-        # check if command has correct number of arguments
-        if len(args) < 4 :
-            await ctx.send(('Not enough! Needs to be: `-zbot edit <name> <attribute> = <value>`\n example: `-zbot edit Zezima discord_id = 123456789012345678`\npossible attributes: `discord_id`, `profile_link`'))
-            return
-        if (len(args) > 4):
-            await ctx.send(('Too many! Needs to be: `-zbot edit <name> <attribute> = <value>`\n use \"\" around things with spaces: `-zbot edit "Ze zima" discord_id = 123456789012345678`\npossible attributes: `discord_id`, `profile_link`'))
-            return
-        # check if command uses the form a = b
-        if (args[2] != "="):
-            await ctx.send(('To edit a member use: `-zbot edit <name> <attribute> = <value>`\n example: `-zbot edit Zezima discord_id = 123456789012345678`\npossible attributes: `discord_id`, `profile_link`'))
-            return
-        # check if attribute to edit is valid
-        # ugly but effective, I want to do this before I spend time finding the member, without keeping a separate list of valid attributes, 
-        # so the goal is to check if a class instance will be given an attribute when made.
-        # afaik there's no python model that lets me predefine / check the existence of a class instance's attributes.
-        attribute = args[1]
-        dummy_member = Member("","",0,0)
-        try:
-            getattr(dummy_member, attribute)
-        except AttributeError:
-            await ctx.send(('Not an existing attribute, possible attributes: `discord_id`, `profile_link`'))
-            return
-
-        # check if value for attribute is valid
-        if (attribute == "discord_id"):
-            new_value = args[3]
-            # should be an 18 length number, or "0" as explicit 'doesnt have discord' case
-            if (new_value == "0"):
-                new_value = 0
-            elif (not(validDiscordId(new_value))):
-                await ctx.send(f"{new_value} is not a valid discord_id\ncheck their id again, should be 18 numbers example: 123456789012345678)")
-                return
-            else:
-                # safe to parse int
-                new_value = int(new_value)
-        if (attribute == "profile_link"):
-            new_value = args[3].replace("http:", "https:")
-            #should be a valid site profile link, or "no site" as explicit 'doesnt have site' case
-            if (new_value.lower() == "no site"):
-                new_value = "no site"
-            elif (not(validSiteProfile(new_value))):
-                await ctx.send(f"{new_value} is not a valid profile_link. Check if the address and number are correct, example: https://zer0pvm.com/members/1234567")
-                return
-        else:
-            new_value = args[3]
-
-        name = args[0]
-
-        # critical section, editing spreadsheet
-        await self.lock()
-        results = _FindMembers(name, "name")
-        # member not found, cant edit
-        if (not(results.has_exact())):
-            await ctx.send(f"{name} not found as current member.\nMaybe they renamed, try searching with `-zbot findmember {name}`")
-            await self.unlock()
-            return
-        member = results.get_exact()
-        
-        # store old value for update message
-        old_value = getattr(member, attribute)
-        # update member with new value
-        setattr(member, attribute, new_value)
-
-        # get most up to date info of member for sheet update
-        update_discord_info([member])
-        zerobot_common.siteops.update_site_info([member])
-        # update sheet with new info
-        UpdateMember(member.sheet, member.row, member)
-        await self.unlock()
-
-        message = f"Edited `{name}`, changed {attribute} from ` {old_value}` to ` {new_value}`"
-        await ctx.send(message)
     
     async def changerank(self, member, new_rank):
         discord_id = member.discord_id

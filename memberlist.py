@@ -1,17 +1,60 @@
 from utilities import read_file, write_file
-from member import Member
+from member import Member, validDiscordId, validSiteProfile
 from exceptions import NotAMember, NotAMemberList
 
-def memberlist_get(memberlist, id, match_type="name"):
+def memberlist_get(
+    memberlist,
+    id,
+    match_type = "any"
+):
     """
-    Finds member in the memberlist that can be identified by id
-    Assumes unique ids, returns first result only, Default match is by name.
-     - match_type: name (default), profile_link, discord_id (integer)
+    Finds member in the memberlist that can be identified by id.
+    Assumes unique ids, returns first result only, Default match is any.
+     - match_type: any (default), name, profile_link, discord_id (integer)
+    
+    In case of match type "any", checks id and:
+    - if id is of int, search as discord_id
+    - if id is an url scheme, search as profile_link
+    - else search as name.
     """
+    if match_type == "any":
+        if validDiscordId(id):
+            return memberlist_get(memberlist, id, match_type="discord_id")
+        if validSiteProfile(id):
+            return memberlist_get(memberlist, id, match_type="profile_link")
+        return memberlist_get(memberlist, id, match_type="name")
+
     for memb in memberlist:
         if getattr(memb, match_type) == id:
             return memb
     return None
+def memberlist_add(memberlist, member):
+    if not isinstance(member, Member):
+        text = "Object to append to memberlist is not of Member."
+        raise NotAMemberList(text)
+    memberlist.append(member)
+def memberlist_remove(memberlist, member):
+    """
+    Searches memberlist for member, if found removes it from memberlist and 
+    returns the member that was removed.
+    - member: Can be an actual member object or an id that identifies one.
+
+    If member is not of type Member it is treated as id, searches memberlist
+    for member with matching id using memberlist_get and removes that member.
+    """
+    if not isinstance(member, Member):
+        member = memberlist_get(memberlist, member)
+    if member is not None:
+        memberlist.remove(member)
+    return member
+def memberlist_move(from_list, to_list, member):
+    """
+    Moves a member from one memberlist to another. Does nothing if not found.
+    - member: Can be an actual member object or an id that identifies one.
+    """
+    member = memberlist_remove(from_list, member)
+    memberlist_add(to_list, member)
+    return member
 def memberlist_to_disk(memberlist, filename):
     """
     Writes a memberlist to disk.
@@ -117,48 +160,3 @@ def memberlist_sort_clan_xp(mlist):
             mlist[j+1] = mlist[j]
             j -= 1
         mlist[j+1] = key
-
-##### No longer needed #######
-
-def memberlist_append(memberlist, member):
-    "Adds member object to the memberlist"
-    if not isinstance(member, Member):
-        text = "Object to append to memberlist is not of Member"
-        raise NotAMember(text)
-    if not isinstance(memberlist, list):
-        text = "Object to be appended to is not of list[Member]."
-        raise NotAMemberList(text)
-    memberlist.append(member)
-
-class Memberlist(object):
-    """
-    Memberlist representation. Provides operations for:
-    - reading / writing to disk
-    - reading / writing to sheet
-    - adding / removing / editing members
-    """
-    def __init__(self):
-        self.list = []
-    def __contains__(self, key):
-        return key in self.list
-    def __iter__(self):
-        return self.list.__iter__()
-    def __len__(self):
-        return len(self.list)
-    def get(self,member,alt=None):
-        for x in self.list:
-            if x == member:
-                return x
-        if alt is not None:
-            return alt
-        return None
-    @staticmethod
-    def from_disk(filename):
-        return memberlist_from_disk(filename)
-    def to_disk(self, filename):
-        return memberlist_to_disk(self, filename)
-    @staticmethod
-    def from_string(memberlist_string):
-        return memberlist_from_string(memberlist_string)
-    def to_string(self):
-        return memberlist_to_string(self)

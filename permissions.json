@@ -5,9 +5,6 @@
     "updatelist": [
         "staff_bot_command"
     ],
-    "edit": [
-        "staff_bot_command"
-    ],
     "setrank": [
         "staff_bot_command"
     ],
@@ -29,9 +26,13 @@
     "welcome": [
         "staff_bot_command"
     ],
-    "archive": [],
-    "accept": [],
-    "reject": [],
-    "cancel": [],
-    "sitelink": []
+    "movemember": [
+        "staff_bot_command"
+    ],
+    "removemember": [
+        "staff_bot_command"
+    ],
+    "editmember": [
+        "staff_bot_command"
+    ]
 }
