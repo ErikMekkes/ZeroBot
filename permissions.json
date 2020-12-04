@@ -1,38 +1,38 @@
 {
     "addmember": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "updatelist": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "setrank": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "todos": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "findmember": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "inactives": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "restart": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "banlist": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "welcome": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "movemember": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "removemember": [
-        "staff_bot_command"
+        "staff-bot-command"
     ],
     "editmember": [
-        "staff_bot_command"
+        "staff-bot-command"
     ]
 }

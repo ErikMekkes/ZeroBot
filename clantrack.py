@@ -183,19 +183,13 @@ def compare_lists(ingame_members, current_members):
                 # good enough rename chance, should have updated stats and 
                 # and assigned to renamed.
                 clantrack_log.log(f"{msg} -- likely, considering as renamed")
-                # == Update old names ==
-                try:
-                    # see if new name was used before
-                    leave.old_names.index(best_match.name)
-                except ValueError:
-                    pass
-                else:
-                    # new name was used before, re-move it as old name
+                # if new name was a previous name, remove from old names.
+                if best_match.name in leave.old_names:
                     leave.old_names.remove(best_match.name)
-                # add leave name to list of prev names
+                # add previous name to old names
                 leave.old_names.append(leave.name)
 
-                # load all the old info for new name
+                # load all the old info into the new name object
                 best_match.loadFromOldName(leave)
                 # Member was active, they renamed. update last active with 
                 # today if it was not set in the future.

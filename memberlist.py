@@ -1,6 +1,7 @@
 from utilities import read_file, write_file
 from member import Member, validDiscordId, validSiteProfile
 from exceptions import NotAMember, NotAMemberList
+import copy
 
 def memberlist_get(
     memberlist,
@@ -8,11 +9,14 @@ def memberlist_get(
     match_type = "any"
 ):
     """
-    Finds member in the memberlist that can be identified by id.
-    Assumes unique ids, returns first result only, Default match is any.
+    Find a member in a memberlist that can be identified by the id.
+    Assumes unique ids, checks what id type to match on by default.
      - match_type: any (default), name, profile_link, discord_id (integer)
     
-    In case of match type "any", checks id and:
+    Returns the found member element from the memberlist by reference, allows 
+    for in place edits.
+    
+    For the default match type "any", checks id and:
     - if id is of int, search as discord_id
     - if id is an url scheme, search as profile_link
     - else search as name.
@@ -29,14 +33,18 @@ def memberlist_get(
             return memb
     return None
 def memberlist_add(memberlist, member):
+    """
+    Appends the member element to the memberlist by reference. The member 
+    element can still be modified after being added.
+    """
     if not isinstance(member, Member):
         text = "Object to append to memberlist is not of Member."
-        raise NotAMemberList(text)
+        raise NotAMember(text)
     memberlist.append(member)
 def memberlist_remove(memberlist, member):
     """
-    Searches memberlist for member, if found removes it from memberlist and 
-    returns the member that was removed.
+    Find a member in a memberlist and remove it from the memberlist. Does 
+    nothing if not found. Returns the member that was removed.
     - member: Can be an actual member object or an id that identifies one.
 
     If member is not of type Member it is treated as id, searches memberlist
@@ -51,6 +59,9 @@ def memberlist_move(from_list, to_list, member):
     """
     Moves a member from one memberlist to another. Does nothing if not found.
     - member: Can be an actual member object or an id that identifies one.
+
+    Returns the member element moved between lists by reference, The member 
+    element can still be modified after being moved.
     """
     member = memberlist_remove(from_list, member)
     memberlist_add(to_list, member)
