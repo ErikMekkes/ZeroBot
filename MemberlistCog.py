@@ -488,7 +488,7 @@ class MemberlistCog(commands.Cog):
 
         use_msg = (
             'Needs to be : -zbot removemember list_name member_id\n'
-            ' - list_name: current_members, old_members or banned_members'
+            ' - list_name: current_members, old_members or banned_members\n'
             ' - member_id: name, profile_link or discord_id'
         )
         if len(args) != 2:
@@ -515,7 +515,7 @@ class MemberlistCog(commands.Cog):
 
         use_msg = (
             'Needs to be : -zbot removemember from_list to_list member_id\n'
-            ' - from_list / to_list: current_members, old_members or banned_members'
+            ' - from_list / to_list: current_members, old_members or banned_members\n'
             ' - member_id: name, profile_link or discord_id'
         )
         if len(args) != 3:
