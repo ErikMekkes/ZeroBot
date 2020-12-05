@@ -89,7 +89,7 @@ class SheetParams:
     update_header = [
         "AUTOMATIC", "UPDATE IN", "5 MINUTES", "S T O P", "EDITING!",
         "! - ! - !", "!", "!", "!", "S T O P", "EDITING!", "! - ! - !", "!", "!",
-        "!", "S T O P", "EDITING!", "! - ! - !", "!"
+        "!", "S T O P", "EDITING!", "! - ! - !"
     ]
     @staticmethod
     def range_full(list_length=500):

@@ -1,6 +1,22 @@
 """
 Bot module for all the memberlist modifying functions. Also includes the 
 scheduled daily update.
+
+How to safely edit the memberlist:
+ - access the instance of this module with bot.get_cog('MemberlistCog')
+ - request edit permission to the list with await membcog.lock()
+ - make your edits through the list_access dictionary given to you by lock().
+   You can use the helper functions in memberlist.py to add, remove or move 
+   members between lists in a convenient way. You can also find a member that 
+   you can then edit by searching for a member with memberlist_get.
+ - once you finished your edits call membcog.unlock()
+   Calling unlock() signals that you wont make more changes and that the next 
+   function can start making its edits, this prevents conflicts. 
+   The lock / unlock steps also handle all the synching to the disk and google
+   drive spreadsheet for you so there's no need to update those.
+   DO NOT keep copies of lists or individual members after unlock or be very 
+   certain you do not edit them in any way. It can cause editing conflicts or 
+   can desync the lists in memory from the ones on the disk / google drive.
 """
 from discord.ext import tasks, commands
 import discord
