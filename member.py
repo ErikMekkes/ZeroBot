@@ -156,6 +156,21 @@ class Member:
             return False
         # Names in RS are unique, case insensitive
         return (self.name.lower() == other.name.lower())
+    def matches_id(self, id):
+        """
+        Returns True iff id matches one of the unique ids of this member.
+        The id must be either:
+        - A valid discord id, integer with 17+ digits (705523860375863427)
+        - A valid profile link, string url (https://zer0pvm.com/members/2790316)
+        - A valid ingame name, string of 1 to 12 characters, case insensitive
+        """
+        if valid_discord_id(id):
+            return self.discord_id == id
+        if valid_profile_link(id):
+            return self.profile_link == id
+        if isinstance(id, str):
+            return (self.name.lower() == id.lower())
+        return False
     def loadFromOldName(self, other):
         """
         Load all the old data except the new ingame stats.

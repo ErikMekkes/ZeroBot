@@ -142,10 +142,10 @@ def load_sheet_changes(memberlist, sheet):
         member = memberlist_get(memberlist, x.name)
         # try profile link matching if no result yet
         if member is None and x.profile_link != "no site":
-            member = memberlist_get(memberlist, x.profile_link, match_type="profile_link")
+            member = memberlist_get(memberlist, x.profile_link)
         # try discord id matching if no result yet
         if member is None and x.discord_id != 0:
-            member = memberlist_get(memberlist, x.discord_id, match_type="discord_id")
+            member = memberlist_get(memberlist, x.discord_id)
         # if no match found at all, skip
         if member is None:
             continue
