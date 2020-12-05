@@ -2,7 +2,7 @@ import zerobot_common
 import requests
 import json
 from logfile import LogFile
-from member import validSiteProfile
+from member import valid_profile_link
 
 # discord rank name -> site rank id
 _site_rank_ids = {
@@ -94,7 +94,7 @@ class SiteOps:
         Requires signing in to make edits. Assumes the site profile link is valid and exists.
         """
         if not zerobot_common.site_enabled: return
-        if not(validSiteProfile(profile_link)):
+        if not valid_profile_link(profile_link):
             self.logfile.log(f"invalid site profile : {profile_link}, can't set rank")
             return
         self._signin()
@@ -110,7 +110,7 @@ class SiteOps:
         Does not require signing in.
         """
         if not zerobot_common.site_enabled: return 'Full Member'
-        if not(validSiteProfile(profile_link)):
+        if not valid_profile_link(profile_link):
             self.logfile.log(f"invalid site profile : {profile_link}, can't get rank")
             return None
         

@@ -504,31 +504,37 @@ def int_0(int_str):
         return 0
     return result
 
-def validSiteProfile(profile_link):
-    # https://zer0pvm.com/members/2790316
+def valid_discord_id(id):
+    """
+    Returns True iff id is a valid discord id.
+    
+    Discord ids are integers with at least 17 digits. They are partially based
+    on the creation date of discord.
+    """
+    if isinstance(id, int):
+        digits = len(str(id))
+        # TODO could also check if under maximum (depends on current date)
+        if digits >= 17:
+            return True
+        return False
+    return False
+
+def valid_profile_link(id):
+    """
+    Returns True iff id is a valid profile link.
+
+    Must be a string in the form https://zer0pvm.com/members/1234567
+    The id number in the profile link is always 7 digits
+    """
+    # check if the base url forms the first part of id
     https_base_url = 'https://zer0pvm.com/members/'
-    if (https_base_url in profile_link):
+    if (https_base_url == id[0:len(https_base_url)]):
+        # check if the last part forms a valid id number
         try:
-            site_id = int(profile_link[len(https_base_url):len(profile_link)])
+            site_id = int(id[len(https_base_url):len(id)])
             if (len(str(site_id)) == 7):
                 return True
             return False
         except ValueError:
             return False
     return False
-
-def validDiscordId(discord_id):
-    # discord ids are based on time of disc creation. At least 17 digits.
-    if isinstance(discord_id, int):
-        if (len(str(discord_id)) >= 17):
-            return True
-        return False
-
-    # not int, assuming str
-    if (len(discord_id) < 17):
-        return False
-    try:
-        int(discord_id)
-        return True
-    except ValueError:
-        return False

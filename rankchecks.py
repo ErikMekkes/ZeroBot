@@ -1,5 +1,5 @@
 import zerobot_common
-from member import validDiscordId, validSiteProfile
+from member import valid_discord_id, valid_profile_link
 
 gem_exceptions = ["Alexanderke","Veteran Member","Elite Member","PvM Specialists"]
 
@@ -237,10 +237,10 @@ def Todos(_memberlist, *args):
     _no_gem = list()
     for memb in _memberlist:
         # no valid site profile
-        if not(validSiteProfile(memb.profile_link)):
+        if not valid_profile_link(memb.profile_link):
             _no_site.append(memb)
         # no valid discord id, or no longer on discord
-        if not(validDiscordId(memb.discord_id)) or memb.discord_name == "Left discord":
+        if not valid_discord_id(memb.discord_id) or memb.discord_name == "Left discord":
             _no_discord.append(memb)
         # not passed gem, and listed to get rankup with gem = need gem
         if not memb.passed_gem:

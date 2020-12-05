@@ -13,5 +13,9 @@ class NotAMemberList(Exception):
     pass
 class NotAMember(Exception):
     pass
+class NotADiscordId(Exception):
+    pass 
+class NotAProfileLink(Exception):
+    pass
 class StaffMemberError(Exception):
     pass
