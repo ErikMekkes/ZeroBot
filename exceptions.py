@@ -19,3 +19,7 @@ class NotAProfileLink(Exception):
     pass
 class StaffMemberError(Exception):
     pass
+class SiteDisabledError(Exception):
+    pass
+class SiteConnectionError(Exception):
+    pass

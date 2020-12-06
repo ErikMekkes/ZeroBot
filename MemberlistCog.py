@@ -230,7 +230,8 @@ async def daily_update(self):
     self.current_members = comp_res.staying + comp_res.joining + comp_res.renamed
     # get site updates, send list to siteops func that updates it
     update_discord_info(self.current_members)
-    zerobot_common.siteops.update_site_info(self.current_members)
+    if zerobot_common.site_enabled:
+        zerobot_common.siteops.update_site_info(self.current_members)
     # for leaving members remove discord roles, set site rank to retired
     await process_leaving(self, comp_res.leaving)
 
@@ -290,7 +291,14 @@ async def process_leaving(self, leaving_list):
         # remove discord roles
         await self.removeroles(memb)
         # set site rank to retired member
-        zerobot_common.siteops.setrank_member(memb, "Retired member")
+        if zerobot_common.site_enabled:
+            if valid_profile_link(memb.profile_link):
+                zerobot_common.siteops.setrank_member(memb, "Retired member")
+            else:
+                await self.bot_channel.send(
+                    f"Could not remove site rank for {memb.name} : "
+                    f"{memb.profile_link}"
+                )
         # update leave date and reason
         if (memb.leave_date == ""):
             today_date = datetime.utcnow()
@@ -694,41 +702,6 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
-    async def set_rank(self, name, discord_rank):
-        """
-        Sets a current member's rank on the memberlist to the specified rank.
-
-        Raises StaffMemberError if trying to make staff rank changes.
-        Raises NotACurrentMemberError if member found but not in clan.
-        Raises MemberNotFoundError if no member could be found for given name.
-        """
-        # find the right person and checks to not make staff changes
-        if discord_ranks.get(discord_rank, 0) > 8:
-            raise StaffMemberError(
-                f"Trying to make {name} a staff member, bot is not allowed to"
-                f"make staff member changes."
-            )
-        
-        list_access = await self.lock()
-
-        member = memberlist_get(list_access["current_members"], name)
-        if member is None:
-            await self.unlock()
-            raise MemberNotFoundError(f"{name} not found on current memberlist.")
-        if discord_ranks.get(member.discord_rank,0) > 8:
-            await self.unlock()
-            raise StaffMemberError(
-                f"{name} is a staff member, bot is not allowed to"
-                f"make staff member changes."
-            )
-        
-        # update discord rank on memberlist.
-        member.discord_rank = discord_rank
-        # update site rank if site module enabled TODO move to separate module
-        if zerobot_common.site_enabled:
-            zerobot_common.siteops.setrank_member(member, discord_rank)
-        await self.unlock()
-    
     @commands.command()
     async def setrank(self, ctx, *args):
         # log command attempt and check if command allowed
@@ -798,14 +771,13 @@ class MemberlistCog(commands.Cog):
         else:
             await self.changerank(member, rank)
 
-        # TODO: make siteops functions post messages related to site rank changes?
-
         # site rank update
-        if (valid_profile_link(member.profile_link)):
-            zerobot_common.siteops.setrank_member(member, rank)
-            message += f"Ranked {name} to {rank} on website. "
-        else:
-            message += f"Could not do site rank change, {name}'s profile link is invalid: {member.profile_link}\n"
+        if zerobot_common.site_enabled:
+            if valid_profile_link(member.profile_link):
+                zerobot_common.siteops.setrank_member(member, rank)
+                message += f"Ranked {name} to {rank} on website. "
+            else:
+                message += f"Could not do site rank change, {name}'s profile link is invalid: {member.profile_link}\n"
         
         # update sheet, delete from sheet found on -> insert on sheet should be on works for all inputs
         if (rank == "Retired member"):

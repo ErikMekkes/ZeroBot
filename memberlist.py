@@ -118,7 +118,7 @@ def memberlist_to_string(memberlist):
             )
             raise NotAMember(text)
         mlist.append(memb.to_string())
-    return '\n'.join(mlist)
+    return "\n".join(mlist)
 
 
 # for sorting memberlist accounting for jagex spaces
