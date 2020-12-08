@@ -4,12 +4,12 @@ import utilities
 from logfile import LogFile
 
 # start log for guides module
-guideslog = LogFile('logs/dropcomplog')
+guideslog = LogFile("logs/dropcomplog")
 # load google sheets document that contains the actual guide sheets (tabs)
-dropcomp_doc_name = "DropCompXMAS2020"
+dropcomp_doc_name = zerobot_common.settings.get("dropcomp_doc_name")
 dropcomp_doc = zerobot_common.drive_client.open(dropcomp_doc_name)
 # load config that describes which channels should contain which guides
-teamchannels_filename = "DropCompXMAS2020_channels.json"
+teamchannels_filename = zerobot_common.settings.get("teamchannels_filename")
 teamchannels = utilities.load_json(teamchannels_filename)
 
 class DropCompCog(commands.Cog):
