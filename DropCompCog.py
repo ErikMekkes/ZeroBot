@@ -36,27 +36,26 @@ class DropCompCog(commands.Cog):
             " if you post the image directly to discord it is not needed to add a link. you can just type `-zbot dropcomp` as comment for the image."
         )
         if len(args) > 1:
-            # 0 or more than 2 arguments, bad use.
+            # more than 1 argument = bad use.
             await ctx.send("You added more than 1 option! Try again.\n" + use_str)
             return
-        drop_name = args[0]
         
         img_url = None
         if len(ctx.message.attachments) > 1:
             await ctx.send("Please only post one image per command. Try again.")
         if len(ctx.message.attachments) == 1:
             img_url = ctx.message.attachments[0].url
-        if len(args) == 1:
+        if len(args) == 0:
             if img_url is None:
                 await ctx.send("You did not attach an image! Try again.\n" + use_str)
                 return
-        if len(args) == 2:
+        if len(args) == 1:
             # get image url from args.
-            img_url = args[1]
-        add_drop_to_sheet(team_number, ctx.message.id, ctx.author.id, ctx.author.display_name, img_url, drop_name)
+            img_url = args[0]
+        add_drop_to_sheet(team_number, ctx.message.id, ctx.author.id, ctx.author.display_name, img_url)
         await ctx.message.add_reaction("👍")
 
-def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url, drop_name):
+def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url):
     zerobot_common.drive_connect()
     sheet = dropcomp_doc.worksheet("Drop Log")
     top_row = 2
@@ -65,7 +64,6 @@ def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url, drop
         str(msg_id),
         str(author_id),
         author_name,
-        img_url,
-        drop_name
+        img_url
     ]
     sheet.insert_row(values, top_row, value_input_option = 'USER_ENTERED')
