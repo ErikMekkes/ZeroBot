@@ -27,6 +27,8 @@ import asyncio
 # custom modules
 import zerobot_common
 import utilities
+
+from utilities import send_messages
 from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, clear_sheets, print_update_in_progress_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
 from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
 from clantrack import get_ingame_memberlist, compare_lists
@@ -63,24 +65,6 @@ def parse_profile_link(id):
     if valid_profile_link(id):
         return id
     raise NotAProfileLink()
-async def message_user(user, message, alt_ctx=None):
-    """
-    Tries to send message to user, sends it to alternative contect if not
-    allowed to message the user directly. (it's possible for discord users
-    to disable direct messaging)
-    """
-    if user is None:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-        return
-    try:
-        await user.send(message)
-    except discord.errors.Forbidden:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-    except discord.ext.commands.CommandInvokeError:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
 
 def _FindMembers(query, query_type):
     """
@@ -306,30 +290,6 @@ async def process_leaving(self, leaving_list):
         if (memb.leave_reason == ""):
             memb.leave_reason = "left or inactive kick"
         self.old_members.append(memb)
-    
-async def send_welcome_messages(user, ctx=None):
-    """
-    Sends the welcome messages to user privately. If user is a name string or 
-    a discord user that does not allow direct messaging without being friends
-    this will try to send the messages to ctx if it is not None.
-    """
-    if isinstance(user, str):
-        name = user
-        user = None
-    else:
-        name = user.display_name
-    # send welcome message on discord
-    welcome_message = (
-        f"Hello {name}, Welcome to Zer0 PvM, your "
-        f"application has been accepted!\n\n"
-    ) + open('welcome_message1.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message2.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message3.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message4.txt').read()
-    await message_user(user, welcome_message, ctx)
 
 class MemberlistCog(commands.Cog):
     '''
@@ -753,12 +713,11 @@ class MemberlistCog(commands.Cog):
             if (discord_user == None):
                 message += f"Can't pm {name} on discord. You should tell them to sign up for notify tags, to use them for their pvm in #ranks-chat, tell them about dps gems and what to work on. "
             else:
-                welcome_message = f"Hello {name}, Welcome back to Zer0!\n\n" + open('welcome_message1.txt').read()
-                await message_user(discord_user, welcome_message)
-                welcome_message = open('welcome_message2.txt').read()
-                await message_user(discord_user, welcome_message)
-                welcome_message = open('welcome_message3.txt').read()
-                await message_user(discord_user, welcome_message)
+                # send welcome messages
+                await send_messages(
+                    discord_user,
+                    f"application_templates/welcome_messages.json"
+                )
                 message += f"I have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. "
 
         # TODO: check site / discord functions further to see if the actual update was successful if given valid input?
@@ -814,9 +773,16 @@ class MemberlistCog(commands.Cog):
         if not(zerobot_common.permissions.is_allowed('welcome', ctx.channel.id)) : return
 
         if len(args) == 1 and args[0] == "me":
-            await send_welcome_messages(ctx.author, None)
+            await send_messages(
+                ctx.author,
+                f"application_templates/welcome_messages.json"
+            )
         else:
-            await send_welcome_messages(ctx.author.name, ctx.channel)
+            await send_messages(
+                None,
+                f"application_templates/welcome_messages.json",
+                alt_ctx=ctx.channel
+            )
 
     @commands.command()
     async def banlist(self, ctx):
@@ -1005,7 +971,11 @@ class MemberlistCog(commands.Cog):
             await discord_user.add_roles(recruit_role, reason='Adding member')
             message += f'Added {recruit_role.name} role on discord. '
 
-            await send_welcome_messages(discord_user)
+            # send welcome messages
+            await send_messages(
+                discord_user,
+                f"application_templates/welcome_messages.json"
+            )
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
         message += (

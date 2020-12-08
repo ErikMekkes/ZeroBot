@@ -6,14 +6,14 @@ Use the category settings in discord to set the permissions for the others who
 may need access to react to applications, the new channels created by the bot 
 will take over those settings from the category to give them access.
 
-Idea of this file is simple, provie commands (guest, join, rankup) to start an
-app in the app request channel, and commands (accept, reject, archive, cancel)
+Idea of this file is simple, provide commands (guest, join, rankup) to start
+apps in the app request channel and commands (accept, reject, archive, cancel)
 to manage applications in each newly created application channel. Each type of
 app that can be started has its own accept_type function, that tells the bot
 what to do to accept them.
 
 On its own, this module will just manage their discord ranks. If you have the
-memberlist module enabled as well, it will also update their status there.
+memberlist or siteops modules enabled it will also update their status there.
 
 Config required for this module:
  - check these settings in settings.json:
@@ -31,6 +31,8 @@ import os
 
 import zerobot_common
 import utilities
+
+from utilities import send_messages, message_ctx
 from logfile import LogFile
 from permissions import Permissions
 from application import Application
@@ -70,10 +72,6 @@ join_rank = zerobot_common.discord_ranks.get(join_role_name)
 join_before_rankup_message = (
     "You have to join the clan first before you can rank up :) "
     "Use `-zbot join` to join the clan"
-)
-channel_creation_message = (
-    "I have a created a channel for your application on the Zer0 Discord "
-    "server, please go to : "
 )
 
 # I do not like adding these... but names can be inconsistent. And people
@@ -148,6 +146,10 @@ app_category_id = zerobot_common.settings.get("applications_category_id")
 app_category = None
 
 app_not_found_msg = "Could not find a related application for this channel."
+channel_creation_message = (
+    "I have a created a channel for your application on the Zer0 Discord "
+    "server, please go to : "
+)
 
 def highest_discord_rank(discord_user):
     """
@@ -175,25 +177,6 @@ def highest_discord_role(discord_user):
             result_role = role
     return result_role
 
-async def message_user(user, message, alt_ctx=None):
-    """
-    Tries to send message to user, send it to alternative contect if not
-    allowed to message the user directly. (it is possible for discord users
-    to disable direct messaging)
-    """
-    if user is None:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-        return
-    try:
-        await user.send(message)
-    except discord.errors.Forbidden:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-    except discord.ext.commands.CommandInvokeError:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-
 async def setup_app_channel(ctx, channel, app_type):
     """
     Set up an application channel. Sets the required permissions and starts it
@@ -220,22 +203,11 @@ async def setup_app_channel(ctx, channel, app_type):
     msg = (f"Hello {ctx.author.mention}! "
         + open("application_templates/app_base_message").read())
     await channel.send(msg)
-
-    # load the messages that need to be sent for this app.
-    msgs = utilities.load_json(
+    # send all the messages belonging to the channel
+    await send_messages(
+        channel,
         f"application_templates/{app_type}_messages.json"
     )
-    # loop over messages, send as text or image depending on extension.
-    for _, v in msgs.items():
-        split_ext = os.path.splitext(v)
-        if len(split_ext) == 2:
-            if split_ext[1] == ".txt":
-                message = open(f"application_templates/{v}").read()
-                await channel.send(message)
-            if split_ext[1] == ".png":
-                img_file = open(f"application_templates/{v}", "rb")
-                img = discord.File(img_file)
-                await channel.send(file=img)
 
 class ApplicationsCog(commands.Cog):
     """
@@ -270,7 +242,7 @@ class ApplicationsCog(commands.Cog):
         # return if already has an open app
         open_app = applications.has_open_app(ctx.author.id)
         if (open_app != None):
-            await message_user(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", ctx)
+            await message_ctx(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", alt_ctx=ctx)
             return
         
         rank_name = "_".join(args).lower()
@@ -306,7 +278,7 @@ class ApplicationsCog(commands.Cog):
             reason="joining"
         )
         await setup_app_channel(ctx, channel, rank_name)
-        await message_user(ctx.author, channel_creation_message + channel.mention)
+        await message_ctx(ctx.author, channel_creation_message + channel.mention)
         # register the application and update copy on disk
         join_app = Application(
             channel.id,
@@ -333,7 +305,7 @@ class ApplicationsCog(commands.Cog):
         # return if already has an open app
         open_app = applications.has_open_app(ctx.author.id)
         if (open_app != None):
-            await ctx.send(f"You already have an open application at <#{open_app.channel_id}>")
+            await message_ctx(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", alt_ctx=ctx)
             return
 
         # actually start making the application
@@ -343,7 +315,7 @@ class ApplicationsCog(commands.Cog):
             reason="joining"
         )
         await setup_app_channel(ctx, channel, "join")
-        await message_user(ctx.author, channel_creation_message + channel.mention)
+        await message_ctx(ctx.author, channel_creation_message + channel.mention)
         # register the application and update copy on disk
         join_app = Application(
             channel.id,
@@ -382,7 +354,7 @@ class ApplicationsCog(commands.Cog):
 
         open_app = applications.has_open_app(ctx.author.id)
         if (open_app != None):
-            await message_user(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", ctx)
+            await message_ctx(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", alt_ctx=ctx)
             return
         
         channel = await zerobot_common.guild.create_text_channel(
@@ -391,7 +363,7 @@ class ApplicationsCog(commands.Cog):
             reason="guesting"
         )
         await setup_app_channel(ctx, channel, "guest")
-        await message_user(ctx.author, channel_creation_message + channel.mention)
+        await message_ctx(ctx.author, channel_creation_message + channel.mention)
 
         # register the application and update copy on disk
         guest_app = Application(channel.id, ctx.author.id)
@@ -515,7 +487,7 @@ class ApplicationsCog(commands.Cog):
         can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
         await discord_user.remove_roles(can_apply_role, reason="Adding guest")
 
-        await message_user(
+        await message_ctx(
             discord_user, 
             f"Your application for Guest in the Zer0 discord was accepted :)"
         )
@@ -587,7 +559,7 @@ class ApplicationsCog(commands.Cog):
         )
 
         # send welcome messages
-        await send_welcome_messages(discord_user, ctx)
+        await send_accepted_messages(discord_user, ctx)
 
         message += (
             f" I have also them info on notify tags, dpm tags, and links to "
@@ -626,7 +598,7 @@ class ApplicationsCog(commands.Cog):
         # remove old rank role
         await discord_user.remove_roles(current_role, reason="member rankup")
 
-        await message_user(discord_user, f"Your application for {new_rank_name} was accepted :)")
+        await message_ctx(discord_user, f"Your application for {new_rank_name} was accepted :)")
         await ctx.send(f"Rankup application to {new_rank_name} accepted :)\n You can continue to talk in this channel until it is archived.")
         
         staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
@@ -704,7 +676,7 @@ class ApplicationsCog(commands.Cog):
         app.set_status("rejected")
         app_type = app.fields_dict["type"]
         discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
-        await message_user(discord_user, f"Your application for {app_type} has been rejected. {reason}")
+        await message_ctx(discord_user, f"Your application for {app_type} has been rejected. {reason}")
         await ctx.send(f"Your application for {app_type} has been rejected. {reason}\n You can continue to talk in this channel until it is archived.")
 
     @commands.command()
@@ -729,7 +701,7 @@ class ApplicationsCog(commands.Cog):
         app.set_status("closed")
         app_type = app.fields_dict["type"]
         discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
-        await message_user(discord_user, f"Your application for {app_type} has been closed. {reason}")
+        await message_ctx(discord_user, f"Your application for {app_type} has been closed. {reason}")
         await self.archive(ctx)
 
 
@@ -758,30 +730,25 @@ class ApplicationsCog(commands.Cog):
         # notify applicant of closing channel
         app_type = app.fields_dict["type"]
         discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
-        await message_user(discord_user, f"Your application for {app_type} has been closed. Reason: The channel was removed.")
+        await message_ctx(discord_user, f"Your application for {app_type} has been closed. Reason: The channel was removed.")
     
-async def send_welcome_messages(discord_user, ctx):
-    name = discord_user.display_name
-    # send welcome message in app channel
+async def send_accepted_messages(discord_user, ctx):
+    # send acception message in app channel
     await ctx.send(
         f"Application to join accepted, ready for an ingame invite? :)\n "
         f"You can continue to talk in this channel until it is archived."
     )
-    # send welcome message on discord
-    welcome_message = (
-        f"Hello {name}, Welcome to Zer0 PvM, your "
-        f"application has been accepted!\n\n"
-    ) + open("welcome_message1.txt").read()
-    await message_user(discord_user, welcome_message, ctx)
-    welcome_message = open("welcome_message2.txt").read()
-    await message_user(discord_user, welcome_message, ctx)
-    welcome_message = open("welcome_message3.txt").read()
-    await message_user(discord_user, welcome_message, ctx)
-    welcome_message = open("welcome_message4.txt").read()
-    await message_user(discord_user, welcome_message, ctx)
-    # send confirmation of sending info to new member in staff bot channel.
-    staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
+    # send customizable welcome messages
+    await send_messages(
+        discord_user,
+        f"application_templates/welcome_messages.json",
+        alt_ctx=ctx
+    )
+    # send confirmation to staff bot channel.
+    staff_bot_channel = zerobot_common.guild.get_channel(
+        zerobot_common.default_bot_channel_id
+    )
     await staff_bot_channel.send(
-        f"\nI have pmed {name} on discord to ask for an invite, sign up "
-        f"for notify tags, and informed them of the full member reqs. \n"
+        f"I have pmed {discord_user.display_name} on discord that their app "
+        f"has been accepted and have sent them the welcome messages."
     )
