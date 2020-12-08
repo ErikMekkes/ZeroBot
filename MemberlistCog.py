@@ -27,36 +27,44 @@ import asyncio
 # custom modules
 import zerobot_common
 import utilities
+
+from utilities import send_messages
 from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, clear_sheets, print_update_in_progress_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
 from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
 from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move
-from member import Member, validDiscordId, validSiteProfile
-from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError
+from member import Member, valid_discord_id, valid_profile_link
+from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
 
 # logfile for clantrack
 memberlist_log = LogFile('logs/memberlist')
 
-async def message_user(user, message, alt_ctx=None):
+def parse_discord_id(id):
     """
-    Tries to send message to user, send it to alternative contect if not
-    allowed to message the user directly. (it's possible for discord users
-    to disable direct messaging)
+    Tries to parse id as a valid discord id.
+    Raises NotADiscordId if id could not be parsed as discord id.
     """
-    if user is None:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-        return
-    try:
-        await user.send(message)
-    except discord.errors.Forbidden:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
-    except discord.ext.commands.CommandInvokeError:
-        if alt_ctx is not None:
-            await alt_ctx.send(message)
+    if isinstance(id, str):
+        try:
+            id = int(id)
+        except ValueError:
+            raise NotADiscordId()
+    if valid_discord_id(id):
+        return id
+    raise NotADiscordId()
+def parse_profile_link(id):
+    """
+    Tries to parse id as a valid profile link.
+    Raises NotADiscordId if id could not be parsed as discord id.
+    """
+    if isinstance(id, str):
+        # force https entries
+        id = id.replace("http:", "https:")
+    if valid_profile_link(id):
+        return id
+    raise NotAProfileLink()
 
 def _FindMembers(query, query_type):
     """
@@ -71,7 +79,7 @@ def _FindMembers(query, query_type):
     return result
 def _FindMember(query, query_type, sheet):
     """
-    Runs search for given query in memberlist. Query can be a name, discord id or site profile link.
+    Runs search for given query in memberlist. Query can be a name, discord id or profile link.
     Result is a list, first list item is the exact match, or None if no exact match found.
     Remainder of the list are results that are similar to the original query.
     """
@@ -98,7 +106,7 @@ def _FindMember(query, query_type, sheet):
             # could try to find partial match in old names
         return results
 
-    # discord id or site profile link can only have one unique match
+    # discord id or profile link can only have one unique match
     for num,memb in enumerate(memberlist):
         # if exact match in attribute, replace exact match result, is unique = end loop
         if (getattr(memb,query_type) == query):
@@ -206,7 +214,8 @@ async def daily_update(self):
     self.current_members = comp_res.staying + comp_res.joining + comp_res.renamed
     # get site updates, send list to siteops func that updates it
     update_discord_info(self.current_members)
-    zerobot_common.siteops.update_site_info(self.current_members)
+    if zerobot_common.site_enabled:
+        zerobot_common.siteops.update_site_info(self.current_members)
     # for leaving members remove discord roles, set site rank to retired
     await process_leaving(self, comp_res.leaving)
 
@@ -266,7 +275,14 @@ async def process_leaving(self, leaving_list):
         # remove discord roles
         await self.removeroles(memb)
         # set site rank to retired member
-        zerobot_common.siteops.setrank_member(memb, "Retired member")
+        if zerobot_common.site_enabled:
+            if valid_profile_link(memb.profile_link):
+                zerobot_common.siteops.setrank_member(memb, "Retired member")
+            else:
+                await self.bot_channel.send(
+                    f"Could not remove site rank for {memb.name} : "
+                    f"{memb.profile_link}"
+                )
         # update leave date and reason
         if (memb.leave_date == ""):
             today_date = datetime.utcnow()
@@ -274,30 +290,6 @@ async def process_leaving(self, leaving_list):
         if (memb.leave_reason == ""):
             memb.leave_reason = "left or inactive kick"
         self.old_members.append(memb)
-    
-async def send_welcome_messages(user, ctx=None):
-    """
-    Sends the welcome messages to user privately. If user is a name string or 
-    a discord user that does not allow direct messaging without being friends
-    this will try to send the messages to ctx if it is not None.
-    """
-    if isinstance(user, str):
-        name = user
-        user = None
-    else:
-        name = user.display_name
-    # send welcome message on discord
-    welcome_message = (
-        f"Hello {name}, Welcome to Zer0 PvM, your "
-        f"application has been accepted!\n\n"
-    ) + open('welcome_message1.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message2.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message3.txt').read()
-    await message_user(user, welcome_message, ctx)
-    welcome_message = open('welcome_message4.txt').read()
-    await message_user(user, welcome_message, ctx)
 
 class MemberlistCog(commands.Cog):
     '''
@@ -593,29 +585,26 @@ class MemberlistCog(commands.Cog):
         
         # check if new value for attribute is valid
         new_value = args[4]
-
         if (attribute == "discord_id"):
-            # should be an 18 length number, or "0" as explicit exception
+            # allow "0" as explicit exception for unknown discord id
             if (new_value == "0"):
                 new_value = 0
-            elif (not(validDiscordId(new_value))):
-                await ctx.send(f"{new_value} is not a valid discord_id")
-                return
             else:
-                # valid, still need to to parse as int
-                new_value = int(new_value)
+                try:
+                    new_value = parse_discord_id(new_value)
+                except NotADiscordId:
+                    await ctx.send(f"{new_value} is not a valid discord id")
+                    return
         if (attribute == "profile_link"):
-            # force https entries
-            new_value = new_value[3].replace("http:", "https:")
-            # should be a valid profilelink or "no site" as explicit exception
+            # allow "no site" as explicit exception for unknown profile link
             if (new_value.lower() == "no site"):
                 new_value = "no site"
-            elif (not(validSiteProfile(new_value))):
-                await ctx.send(f"{new_value} is not a valid profile_link.")
-                return
             else:
-                # valid, no further action needed.
-                pass
+                try:
+                    new_value = parse_profile_link(new_value)
+                except NotAProfileLink:
+                    await ctx.send(f"{new_value} is not a valid profile link")
+                    return
 
         list_access = await self.lock()
         memb = memberlist_get(list_access[args[0]], args[1])
@@ -673,41 +662,6 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
-    async def set_rank(self, name, discord_rank):
-        """
-        Sets a current member's rank on the memberlist to the specified rank.
-
-        Raises StaffMemberError if trying to make staff rank changes.
-        Raises NotACurrentMemberError if member found but not in clan.
-        Raises MemberNotFoundError if no member could be found for given name.
-        """
-        # find the right person and checks to not make staff changes
-        if discord_ranks.get(discord_rank, 0) > 8:
-            raise StaffMemberError(
-                f"Trying to make {name} a staff member, bot is not allowed to"
-                f"make staff member changes."
-            )
-        
-        list_access = await self.lock()
-
-        member = memberlist_get(list_access["current_members"], name)
-        if member is None:
-            await self.unlock()
-            raise MemberNotFoundError(f"{name} not found on current memberlist.")
-        if discord_ranks.get(member.discord_rank,0) > 8:
-            await self.unlock()
-            raise StaffMemberError(
-                f"{name} is a staff member, bot is not allowed to"
-                f"make staff member changes."
-            )
-        
-        # update discord rank on memberlist.
-        member.discord_rank = discord_rank
-        # update site rank if site module enabled TODO move to separate module
-        if zerobot_common.site_enabled:
-            zerobot_common.siteops.setrank_member(member, discord_rank)
-        await self.unlock()
-    
     @commands.command()
     async def setrank(self, ctx, *args):
         # log command attempt and check if command allowed
@@ -759,12 +713,11 @@ class MemberlistCog(commands.Cog):
             if (discord_user == None):
                 message += f"Can't pm {name} on discord. You should tell them to sign up for notify tags, to use them for their pvm in #ranks-chat, tell them about dps gems and what to work on. "
             else:
-                welcome_message = f"Hello {name}, Welcome back to Zer0!\n\n" + open('welcome_message1.txt').read()
-                await message_user(discord_user, welcome_message)
-                welcome_message = open('welcome_message2.txt').read()
-                await message_user(discord_user, welcome_message)
-                welcome_message = open('welcome_message3.txt').read()
-                await message_user(discord_user, welcome_message)
+                # send welcome messages
+                await send_messages(
+                    discord_user,
+                    f"application_templates/welcome_messages.json"
+                )
                 message += f"I have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. "
 
         # TODO: check site / discord functions further to see if the actual update was successful if given valid input?
@@ -777,14 +730,13 @@ class MemberlistCog(commands.Cog):
         else:
             await self.changerank(member, rank)
 
-        # TODO: make siteops functions post messages related to site rank changes?
-
         # site rank update
-        if (validSiteProfile(member.profile_link)):
-            zerobot_common.siteops.setrank_member(member, rank)
-            message += f"Ranked {name} to {rank} on website. "
-        else:
-            message += f"Could not do site rank change, {name}'s site profile link is invalid: {member.profile_link}\n"
+        if zerobot_common.site_enabled:
+            if valid_profile_link(member.profile_link):
+                zerobot_common.siteops.setrank_member(member, rank)
+                message += f"Ranked {name} to {rank} on website. "
+            else:
+                message += f"Could not do site rank change, {name}'s profile link is invalid: {member.profile_link}\n"
         
         # update sheet, delete from sheet found on -> insert on sheet should be on works for all inputs
         if (rank == "Retired member"):
@@ -804,11 +756,9 @@ class MemberlistCog(commands.Cog):
     async def get_discord_user(self, member):
         # check format of member's id
         discord_id = member.discord_id
-        if (not(validDiscordId(discord_id))):
+        if not valid_discord_id(discord_id):
             return None
-        # safe to parse int
-        discord_id = int(discord_id)
-        # can still be None if id is valid but doesnt exist or not a member of discord.
+        # can still be None if id is valid but no member of discord (anymore).
         return zerobot_common.guild.get_member(discord_id)
     
     @commands.command()
@@ -823,9 +773,16 @@ class MemberlistCog(commands.Cog):
         if not(zerobot_common.permissions.is_allowed('welcome', ctx.channel.id)) : return
 
         if len(args) == 1 and args[0] == "me":
-            await send_welcome_messages(ctx.author, None)
+            await send_messages(
+                ctx.author,
+                f"application_templates/welcome_messages.json"
+            )
         else:
-            await send_welcome_messages(ctx.author.name, ctx.channel)
+            await send_messages(
+                None,
+                f"application_templates/welcome_messages.json",
+                alt_ctx=ctx.channel
+            )
 
     @commands.command()
     async def banlist(self, ctx):
@@ -913,11 +870,11 @@ class MemberlistCog(commands.Cog):
         currentDT = datetime.utcnow()
         today_str = currentDT.strftime(utilities.dateformat)
         new_member = Member(name, "needs invite", 0, 0)
-        if validDiscordId(discord_id):
+        if valid_discord_id(discord_id):
             new_member.discord_rank = "Recruit"
         else:
             new_member.discord_rank = ""
-        if validSiteProfile(profile_link):
+        if valid_profile_link(profile_link):
             new_member.site_rank = "Recruit"
         else:
             new_member.site_rank = ""
@@ -933,7 +890,7 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def addmember(self, ctx, *args):
         """
-        Discord bot command to add a member (name, discord id, site link)
+        Discord bot command to add a member (name, discord id, profile link)
         """
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
@@ -941,10 +898,10 @@ class MemberlistCog(commands.Cog):
 
         # check if command has correct number of arguments
         if len(args) < 4 :
-            await ctx.send(('Needs to be: `-zbot addmember <name> <clan rank> <discord id> <site profile link>`\n example: `-zbot addmember Zezima "Full Member" 123456789012345678 https://zer0pvm.com/members/1234567`'))
+            await ctx.send(('Needs to be: `-zbot addmember <name> <clan rank> <discord id> <profile link>`\n example: `-zbot addmember Zezima "Full Member" 123456789012345678 https://zer0pvm.com/members/1234567`'))
             return
         if (len(args) > 4):
-            await ctx.send(('Too many! use \"\" around things with spaces : `-zbot addmember <name> <clan rank> <discord id> <site profile link>`'))
+            await ctx.send(('Too many! use \"\" around things with spaces : `-zbot addmember <name> <clan rank> <discord id> <profile link>`'))
             return
         
         # check if command arguments are valid
@@ -960,24 +917,25 @@ class MemberlistCog(commands.Cog):
         if (discord_ranks.get(rank, 0) > 8):
             await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
-        # should be an 18 length number, or "0" as explicit 'doesnt have discord' case
-        if (discord_id == '0'):
+        # should be an 18 length number, or "0" as explicit 'doesnt use discord' case
+        if (discord_id == "0"):
             discord_id = 0
-        elif (not(validDiscordId(discord_id))):
-            await ctx.send(f"Could not add, {discord_id} is not a valid discord id\ncheck their id again, should be 18 numbers example: 123456789012345678)")
-            return
         else:
-            # safe to parse int-
-            discord_id = int(discord_id)
-            discord_user = zerobot_common.guild.get_member(discord_id)
-            if (discord_user == None):
-                await ctx.send(f"Could not add, {discord_id} does not exist or is not a member of the Zer0 Discord id\ncheck their id again, should be 18 numbers example: 123456789012345678). Use `0` if they really can't join discord.")
+            try:
+                discord_id = parse_discord_id(discord_id)
+            except NotADiscordId:
+                await ctx.send(f"Could not add, {discord_id} is not a valid discord id\ncheck if the discord id is correct, example: 12345678901234567. Use `0` if they really can't join discord.")
                 return
-        #should be a valid site profile link, or "no site" as explicit 'doesnt have site' case
-        if (profile_link.lower() != "no site"):
-            if (not(validSiteProfile(profile_link))):
-                await ctx.send(f"Could not add, {profile_link} is not a correct profile link\ncheck if the site link and number are correct, example: https://zer0pvm.com/members/1234567). Use `no site` if they really can't make a site account.")
+        #should be a valid profile link, or "no site" as explicit 'doesnt use site' case
+        if (profile_link.lower() == "no site"):
+            profile_link = "no site"
+        else:
+            try:
+                profile_link = parse_profile_link(profile_link)
+            except NotAProfileLink:
+                await ctx.send(f"Could not add, {profile_link} is not a correct profile link\ncheck if the profile link is correct, example: https://zer0pvm.com/members/1234567. Use `no site` if they really can't make a site account.")
                 return
+        discord_user = zerobot_common.guild.get_member(discord_id)
         
         # do background check
         try:
@@ -994,9 +952,8 @@ class MemberlistCog(commands.Cog):
             zerobot_common.siteops.setrank(profile_link, 'Recruit')
         
         message = ''
-        if (discord_id == 0):
-            message += f"You used 0 for discord id, use only if they can't join discord. I can't rank them on discord. I also can't send them a welcome message."
-            message += f" You have to tell them to sign up for notify tags and to use them for their pvm in #ranks-chat, and tell them about dps gems. "
+        if (discord_user != None):
+            message += f"Can't find discord user {discord_id}, I can't rank them on discord. I also can't send them the welcome messages."
         else:
             # note: I'm using the name of the actual user and roles removed in the report, not the ones i expect to be removed.
             # This is to make any unexpected results / possible mistakes visible.
@@ -1014,7 +971,11 @@ class MemberlistCog(commands.Cog):
             await discord_user.add_roles(recruit_role, reason='Adding member')
             message += f'Added {recruit_role.name} role on discord. '
 
-            await send_welcome_messages(discord_user)
+            # send welcome messages
+            await send_messages(
+                discord_user,
+                f"application_templates/welcome_messages.json"
+            )
             message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
 
         message += (
@@ -1027,12 +988,9 @@ class MemberlistCog(commands.Cog):
     
     async def changerank(self, member, new_rank):
         discord_id = member.discord_id
-        if (not(validDiscordId(discord_id))):
+        if not valid_discord_id(discord_id):
             await self.bot_channel.send(f"Could not change discord rank of {member.name}, not a valid discord id: {discord_id}")
             return
-        
-        # safe to parse int
-        discord_id = int(discord_id)
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
             await self.bot_channel.send(f"Could not change discord rank of {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
@@ -1068,12 +1026,9 @@ class MemberlistCog(commands.Cog):
     
     async def kickmember(self, member):
         discord_id = member.discord_id
-        if (not(validDiscordId(discord_id))):
+        if not valid_discord_id(discord_id):
             await self.bot_channel.send(f"Could not kick {member.name}, not a valid discord id: {discord_id}")
             return
-        
-        # safe to parse int
-        discord_id = int(discord_id)
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
             await self.bot_channel.send(f"Could not kick {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
@@ -1084,12 +1039,9 @@ class MemberlistCog(commands.Cog):
 
     async def removeroles(self, member):
         discord_id = member.discord_id
-        if (not(validDiscordId(discord_id))):
+        if not valid_discord_id(discord_id):
             await self.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
             return
-        
-        # safe to parse int
-        discord_id = int(discord_id)
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
             await self.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")

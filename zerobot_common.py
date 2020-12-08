@@ -71,6 +71,7 @@ drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
     drive_scope
 )
 drive_client = gspread.authorize(drive_creds)
+memberlist_enabled = True
 sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
 drive_doc_name = settings.get("drive_doc_name")
 drive_doc = drive_client.open(drive_doc_name)
@@ -167,6 +168,7 @@ inactive_exceptions = json_dictionary.get("inactive_exceptions")
 
 # Discord roles and their ranks, because you might have discord roles that are
 # not used for ranks, and because the bot needs to know the rank order.
+# If you use an equal number the highest listed one is still ranked higher.
 # If you want the bot to be able to check if members have the right ranks, you
 # need to give matching ingame / discord / site ranks the same number.
 # THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
@@ -178,6 +180,7 @@ discord_ranks = {
 	"MasterClass PvMer" : 8,
 	"Supreme PvMer" : 7,
 	"PvM Specialists" : 6,
+	"Elite Member" : 6,
 	"Veteran Member" : 5,
 	"Advanced Member" : 4,
 	"Full Member" : 3,

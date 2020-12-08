@@ -3,7 +3,7 @@ from datetime import datetime
 import zerobot_common
 import utilities
 from zerobot_common import SheetParams
-from member import Member, validSiteProfile , validDiscordId
+from member import Member, valid_profile_link , valid_discord_id
 from memberlist import memberlist_sort_name, memberlist_get
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
 from rankchecks import discord_ranks, ingame_ranks, site_ranks, gem_exceptions
@@ -142,10 +142,10 @@ def load_sheet_changes(memberlist, sheet):
         member = memberlist_get(memberlist, x.name)
         # try profile link matching if no result yet
         if member is None and x.profile_link != "no site":
-            member = memberlist_get(memberlist, x.profile_link, match_type="profile_link")
+            member = memberlist_get(memberlist, x.profile_link)
         # try discord id matching if no result yet
         if member is None and x.discord_id != 0:
-            member = memberlist_get(memberlist, x.discord_id, match_type="discord_id")
+            member = memberlist_get(memberlist, x.discord_id)
         # if no match found at all, skip
         if member is None:
             continue
@@ -190,7 +190,7 @@ def color_spreadsheet():
             if discord_ranks.get(x.discord_rank, 0) > ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', green_fmt))
             if discord_ranks.get(x.discord_rank, 0) < ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', orange_fmt))
             # check site rank for mismatch
-            if not(validSiteProfile(x.profile_link)):
+            if not valid_profile_link(x.profile_link):
                 site_rank_ranges.append((f'D{row}', gray_fmt))
             else:
                 if discord_ranks.get(x.discord_rank, 0) > site_ranks.get(x.site_rank, 0): site_rank_ranges.append((f'D{row}', green_fmt))
@@ -199,13 +199,13 @@ def color_spreadsheet():
             if discord_ranks.get(x.discord_rank, 0) == 0:
                 # no discord rank = red for missing
                 discord_rank_ranges.append((f'C{row}', red_fmt))
-            elif not(validDiscordId(x.discord_id)):
+            elif not valid_discord_id(x.discord_id):
                 # discord rank fine but not autoupdating = grey
                 discord_rank_ranges.append((f'C{row}', gray_fmt))
         else:   
             # ingame rank above novice = should get derank
             if ingame_ranks.get(x.rank, 0) > ingame_ranks['Recruit']: ingame_rank_ranges.append((f'B{row}', orange_fmt))
-            if not(validSiteProfile(x.profile_link)):
+            if not valid_profile_link(x.profile_link):
                 site_rank_ranges.append((f'D{row}', gray_fmt))
             else:
                 # above novice = should get derank
@@ -219,7 +219,7 @@ def color_spreadsheet():
             elif discord_ranks.get(x.discord_rank, 0) > discord_ranks.get('Recruit'):
                 # discord rank but too high
                 discord_rank_ranges.append((f'C{row}', orange_fmt))
-            elif not(validDiscordId(x.discord_id)):
+            elif not valid_discord_id(x.discord_id):
                 # discord rank fine but not autoupdating = grey
                 discord_rank_ranges.append((f'C{row}', gray_fmt))
         row += 1

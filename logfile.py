@@ -1,5 +1,6 @@
 from datetime import datetime
 import os
+import traceback
 # uses date and time formats defined in utilities
 import utilities
 
@@ -36,3 +37,14 @@ class LogFile:
         timestamp = datetime.utcnow().strftime(utilities.datetimeformat)
         file.write((timestamp + ' : ' + text + '\n'))
         file.close()
+    def log_exception(self, error, ctx=None):
+        '''
+        Logs an exception with its stacktrace.
+        '''
+        if ctx is not None:
+            self.logfile.log(
+                f"Error in command : {ctx.command} in {ctx.channel.name} by "
+                f"{ctx.author.display_name}"
+            )
+        # write down full error trace in log files on disk.
+        self.logfile.log(traceback.format_exception(type(error), error, error.__traceback__))

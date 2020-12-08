@@ -7,6 +7,7 @@ from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
 from GuidesCog import GuidesCog
+from DropCompCog import DropCompCog
 
 intents = Intents.default()
 intents.members = True
@@ -49,6 +50,7 @@ async def on_ready():
             bot.add_cog(ApplicationsCog(bot))
     if (bot.get_cog('GuidesCog') == None):
         bot.add_cog(GuidesCog(bot))
+    bot.add_cog(DropCompCog(bot))
 
 @bot.event
 async def on_command_error(ctx, error):

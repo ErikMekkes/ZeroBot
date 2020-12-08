@@ -1,35 +1,23 @@
 from utilities import read_file, write_file
-from member import Member, validDiscordId, validSiteProfile
+from member import Member
 from exceptions import NotAMember, NotAMemberList
 import copy
 
 def memberlist_get(
     memberlist,
-    id,
-    match_type = "any"
+    id
 ):
     """
     Find a member in a memberlist that can be identified by the id.
-    Assumes unique ids, checks what id type to match on by default.
-     - match_type: any (default), name, profile_link, discord_id (integer)
+    The id must be either:
+     - A valid discord id, integer with 17+ digits (705523860375863427)
+     - A valid profile link, string url (https://zer0pvm.com/members/2790316)
+     - A valid ingame name, string of 1 to 12 characters, case insensitive
     
-    Returns the found member element from the memberlist by reference, allows 
-    for in place edits.
-    
-    For the default match type "any", checks id and:
-    - if id is of int, search as discord_id
-    - if id is an url scheme, search as profile_link
-    - else search as name.
+    Assumes unique ids, returns the first match found. None if no match found.
     """
-    if match_type == "any":
-        if validDiscordId(id):
-            return memberlist_get(memberlist, id, match_type="discord_id")
-        if validSiteProfile(id):
-            return memberlist_get(memberlist, id, match_type="profile_link")
-        return memberlist_get(memberlist, id, match_type="name")
-
     for memb in memberlist:
-        if getattr(memb, match_type) == id:
+        if memb.matches_id(id):
             return memb
     return None
 def memberlist_add(memberlist, member):
@@ -130,7 +118,7 @@ def memberlist_to_string(memberlist):
             )
             raise NotAMember(text)
         mlist.append(memb.to_string())
-    return '\n'.join(mlist)
+    return "\n".join(mlist)
 
 
 # for sorting memberlist accounting for jagex spaces

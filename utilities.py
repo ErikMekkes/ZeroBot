@@ -1,6 +1,7 @@
 import json
 import os
 import requests
+import discord
 
 dateformat = '%Y-%m-%d'
 timeformat = '%H.%M.%S'
@@ -82,3 +83,41 @@ def download_img(img_url, filename):
         file.write(block)
     file.close()
     return True
+
+async def message_ctx(ctx, message, file=None, alt_ctx=None):
+    """
+    Tries to send message to ctx. Allows specifying an alternative context to
+    send the message to if not able to message primary ctx. Useful for 
+    messsaging users as they are able to disable direct messaging.
+    """
+    if ctx is None:
+        if alt_ctx is not None:
+            await alt_ctx.send(content=message, file=file)
+        return
+    try:
+        await ctx.send(content=message, file=file)
+    except discord.errors.Forbidden:
+        if alt_ctx is not None:
+            await alt_ctx.send(content=message, file=file)
+    except discord.ext.commands.CommandInvokeError:
+        if alt_ctx is not None:
+            await alt_ctx.send(content=message, file=file)
+async def send_messages(ctx, config_filename, alt_ctx=None):
+    """
+    Send messages specified in .json config file to the ctx.
+    It is possible to specify an alt_ctx to try to send messages to if ctx 
+    does not allow sending messages (users can block direct messages).
+    """
+    # load the messages that need to be sent for this app.
+    msgs = load_json(config_filename)
+    # loop over messages, send as text or image depending on extension.
+    for _, v in msgs.items():
+        split_ext = os.path.splitext(v)
+        if len(split_ext) == 2:
+            if split_ext[1] == ".txt":
+                message = open(f"application_templates/{v}").read()
+                await message_ctx(ctx, message, alt_ctx=alt_ctx)
+            if split_ext[1] == ".png":
+                img_file = open(f"application_templates/{v}", "rb")
+                img = discord.File(img_file)
+                await message_ctx(ctx, "", file=img, alt_ctx=alt_ctx)

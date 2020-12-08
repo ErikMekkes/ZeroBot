@@ -1,5 +1,7 @@
-import zerobot_common
+import io
+import discord
 from discord.ext import commands
+import zerobot_common
 from rankchecks import discord_ranks
 
 class ReactionRolesCog(commands.Cog):
@@ -106,3 +108,34 @@ class ReactionRolesCog(commands.Cog):
                 f" from {payload.message_id}"
             )
         )
+    
+    @commands.command()
+    async def listreactions(self, ctx, *args):
+        use_str = (
+            "Usage: -zbot listreactions message_id\n"
+            " message_id: discord id of message that you need a list of people who reacted of.\n"
+            " gives you a textfile with names and discord ids per reaction.\n"
+            " must be used in the same channel as the message."
+        )
+
+        if len(args) != 1:
+            await ctx.send("You did not specify a message id number" + use_str)
+            return
+        
+        try:
+            msg_id = int(args[0])
+        except ValueError:
+            await ctx.send("The option you added is not a message id number.\n" + use_str)
+            return
+        try:
+            msg = await ctx.channel.fetch_message(msg_id)
+        except Exception:
+            await ctx.sendf("unable to find message: {msg_id} not found.")
+        
+        reactions_str = ""
+        for reaction in msg.reactions:
+            for user in await reaction.users().flatten():
+                reactions_str += f"{user.id}\t{user.display_name}\t{reaction.emoji}\n"
+        f = io.StringIO(reactions_str)
+        disc_file = discord.File(f, "reactions.txt")
+        await ctx.send(content="", file=disc_file)
