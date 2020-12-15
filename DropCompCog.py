@@ -57,7 +57,8 @@ class DropCompCog(commands.Cog):
 
 def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url):
     zerobot_common.drive_connect()
-    sheet = dropcomp_doc.worksheet("Drop Log")
+    sheet = dropcomp_doc.worksheet(f"Team {team_number} Drops")
+    #sheet = dropcomp_doc.worksheet("Drop Log")
     top_row = 2
     values = [
         str(team_number),
