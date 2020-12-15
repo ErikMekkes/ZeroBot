@@ -61,10 +61,8 @@ def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url):
     #sheet = dropcomp_doc.worksheet("Drop Log")
     top_row = 2
     values = [
-        str(team_number),
         str(msg_id),
         str(author_id),
-        author_name,
         img_url
     ]
     sheet.insert_row(values, top_row, value_input_option = 'USER_ENTERED')
