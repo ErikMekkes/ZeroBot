@@ -5,7 +5,7 @@ gem_exceptions = ["Alexanderke","Veteran Member","Elite Member","PvM Specialists
 
 # used to find a member's highest dps tag
 dps_tags = {
-    '170k Mage DPM' : 1,
+    '170k Mage DPM (No longer obtainable)' : 1,
     '170k Range DPM' : 1,
     '170k Melee DPM' : 1,
     '180k Mage DPM' : 2,
