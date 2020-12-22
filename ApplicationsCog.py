@@ -257,7 +257,7 @@ class ApplicationsCog(commands.Cog):
             try:
                 possible_rankups.pop(r_name)
             except KeyError as e:
-                app_log.log_exception(e)
+                app_log.log_exception(e, ctx)
                 pass
         # remove ranks that are equal to or lower than the users current rank
         for r_name, rank in zerobot_common.discord_ranks.items():
@@ -265,7 +265,7 @@ class ApplicationsCog(commands.Cog):
                 try:
                     possible_rankups.pop(r_name)
                 except KeyError as e:
-                    app_log.log_exception(e)
+                    app_log.log_exception(e, ctx)
                     pass
         # reverse to list most likely rankup first
         possible_rankups = list(possible_rankups.keys())
