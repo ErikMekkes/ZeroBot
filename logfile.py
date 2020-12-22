@@ -42,9 +42,9 @@ class LogFile:
         Logs an exception with its stacktrace.
         '''
         if ctx is not None:
-            self.logfile.log(
+            self.log(
                 f"Error in command : {ctx.command} in {ctx.channel.name} by "
                 f"{ctx.author.display_name}"
             )
         # write down full error trace in log files on disk.
-        self.logfile.log(traceback.format_exception(type(error), error, error.__traceback__))
+        self.log(traceback.format_exception(type(error), error, error.__traceback__))
