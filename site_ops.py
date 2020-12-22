@@ -161,15 +161,14 @@ class SiteOps:
 
             # try to find current site rank of member
             try:
-                new_rank = self.getRank(memb.profile_link)
+                memb.site_rank = self.getRank(memb.profile_link)
             except SiteDisabledError:
                 memb.site_rank = ""
+                continue
             except SiteConnectionError:
                 # site is down or valid but incorrect / removed profile link.
                 # TODO should split out these two
                 memb.site_rank = ""
                 memb.note3 += f" old site profile: {memb.profile_link}"
                 memb.profile_link = "no site"
-            
-            # found without issues, update new site rank
-            memb.site_rank = new_rank
+                continue

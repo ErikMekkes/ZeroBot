@@ -126,8 +126,8 @@ def update_discord_info(_memberlist):
     '''
     # loop through memberlist
     for memb in _memberlist :
-        # skip if discord id unknown
-        if memb.discord_id == 0: continue
+        # skip if discord id invalid
+        if not valid_discord_id(memb.discord_id): continue
         usr = zerobot_common.guild.get_member(memb.discord_id)
         # skip if usr not found, keep old rank & discord id, set name as left discord to indicate
         # 'Not in clan discord' = exception for old people who never joined / people who cant join

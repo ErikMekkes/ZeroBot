@@ -34,7 +34,7 @@ from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRa
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
-from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move
+from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all
 from member import Member, valid_discord_id, valid_profile_link
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
 
@@ -65,57 +65,6 @@ def parse_profile_link(id):
     if valid_profile_link(id):
         return id
     raise NotAProfileLink()
-
-def _FindMembers(query, query_type):
-    """
-    Searches for given query on all memberlists, results are given as a searchresult object.
-
-    Query type - one of : name, profile_link, discord_id
-    """
-    result = SearchResult()
-    result.current_results = _FindMember(query, query_type, zerobot_common.current_members_sheet)
-    result.old_results = _FindMember(query, query_type, zerobot_common.old_members_sheet)
-    result.banned_results = _FindMember(query, query_type, zerobot_common.banned_members_sheet)
-    return result
-def _FindMember(query, query_type, sheet):
-    """
-    Runs search for given query in memberlist. Query can be a name, discord id or profile link.
-    Result is a list, first list item is the exact match, or None if no exact match found.
-    Remainder of the list are results that are similar to the original query.
-    """
-    memberlist = memberlist_from_sheet(sheet)
-    results = list()
-
-    # name search can have multiple results, is handled slightly differently
-    if (query_type == 'name'):
-        for num, memb in enumerate(memberlist):
-            # save sheet and row in search result to be able to edit later.
-            memb.sheet = sheet
-            memb.row = num + SheetParams.header_rows + 1
-            # if exact match, add as first result
-            if (memb == query):
-                memb.result_type = "exact"
-                results.append(memb)
-            # also try old names as additional results
-            # if exact match in list of old names, add as possible result, not unique = continue loop
-            for old_name in memb.old_names:
-                if (old_name.lower() == query):
-                    memb.result_type = "old name"
-                    results.append(memb)
-            # could try to find partial match in current name
-            # could try to find partial match in old names
-        return results
-
-    # discord id or profile link can only have one unique match
-    for num,memb in enumerate(memberlist):
-        # if exact match in attribute, replace exact match result, is unique = end loop
-        if (getattr(memb,query_type) == query):
-            memb.result_type = "exact"
-            memb.sheet = sheet
-            memb.row = num + SheetParams.header_rows + 1
-            results.append(memb)
-            break
-    return results
 
 def _Inactives(days):
     """
@@ -416,6 +365,50 @@ class MemberlistCog(commands.Cog):
         await asyncio.sleep(30)
         self.confirmed_update = False
     
+    async def search_all(self, id):
+        """
+        Searches the disk version of the 3 memberlists for id.
+        Can not be used to edit members. 
+        Results may have outdated Discord roles / Site ranks / Ingame stats.
+        """
+        result = SearchResult()
+        current_members = memberlist_from_disk(zerobot_common.current_members_filename)
+        old_members = memberlist_from_disk(zerobot_common.old_members_filename)
+        banned_members = memberlist_from_disk(zerobot_common.banned_members_filename)
+        result.current_results = memberlist_get_all(current_members, id)
+        result.old_results = memberlist_get_all(old_members, id)
+        result.banned_results = memberlist_get_all(banned_members, id)
+        for memb in result.current_results:
+            memb.status = "Current Member"
+        for memb in result.old_results:
+            memb.status = "Retired Member"
+        for memb in result.banned_results:
+            memb.status = "\uD83D\uDE21 BANNED Member \U0001F621"
+        return result
+
+    async def search(self, name, discord_id, profile_link):
+        """
+        Tries to find any results in the memberlist and groups the results.
+        Checks for name, discord id and profile link matches on the current,
+        old and banned memberlists. Might include duplicates.
+        """
+        # find results for name matches (non-empty)
+        if name == "" or name is None:
+            name_results = SearchResult()
+        else:
+            name_results = self.search_all(name)
+        # find results for discord id matches (non-empty)
+        if discord_id == 0 or discord_id is None:
+            id_results = SearchResult()
+        else:
+            id_results = self.search_all(discord_id)
+        # find results for profile link matches (non-empty)
+        if profile_link == "" or profile_link is None or profile_link == "no site":
+            link_results = SearchResult()
+        else:
+            link_results = self.search_all(profile_link)
+        return name_results + id_results + link_results
+    
     @commands.command()
     async def find(self, ctx, *args):
         # alias for findmember, no checks needed here.
@@ -427,67 +420,39 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('findmember', ctx.channel.id)) : return
 
-        if self.updating :
-            await ctx.send(self.update_msg)
+        use_msg = (
+            "Needs to be : -zbot findmember id"
+            "id: ingame name, discord_id or profile_link>"
+        )
+        if len(args) == 0:
+            await ctx.send("No enough arguments\n" + use_msg)
             return
-        if len(args) != 1:
-            await ctx.send(('Needs to be : -zbot findmember <name OR discord_id OR profile_link>'))
+        if len(args) > 1:
+            await ctx.send("Too many arguments\n" + use_msg)
             return
+        try:
+            id = parse_discord_id(args[0])
+        except Exception:
+            id = args[0]
         
-        # check kind of search, sanitize input
-        query = args[0]
-        query_type = None
-        if (query.find("://") != -1):
-            query_type = 'profile_link'
-        else:
-            try:
-                if int(query) < 100000000000000000 : raise ValueError('not a discord id')
-                query_type = 'discord_id'
-                query = int(query)
-            except ValueError:
-                query_type = 'name'
-                query = query.lower()
-        
-        # run search
-        results = await self.bot.loop.run_in_executor(None, _FindMembers, query, query_type)
-        
-        # get most up to date info for members in results, no ingame data for now (slow/impractical)
+        results = await self.search_all(id)
+        # get latest information
         update_discord_info(results.combined_list())
         zerobot_common.siteops.update_site_info(results.combined_list())
 
         if (len(results.combined_list()) == 0):
-            await ctx.send('No results found in search.')
+            await ctx.send("No results found in search.")
+            return
+        await ctx.send(
+            "Found these results, Ingame stats may be outdated, "
+            "info for those is from the last daily update:"
+        )
         for memb in results.combined_list():
-            if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
+            if (memb.discord_id == 0 or memb.discord_name == "Left clan discord"):
+                # no role, or did not have / dont know their discord.
                 memb.discord_rank = ""
-            if (memb.profile_link == "no site"):
-                memb.site_rank = ""
             await ctx.send(embed=member_embed(memb))
-
-    async def full_search(self, name, discord_id, profile_link):
-        """
-        Tries to find any results in the memberlist and groups the results.
-        Checks for name, discord id and profile link matches on the current,
-        old and banned memberlists. Might include duplicates.
-        """
-        await self.lock()
-        # find results for name matches (non-empty)
-        if name == "" or name is None:
-            name_results = SearchResult()
-        else:
-            name_results = _FindMembers(name, 'name')
-        # find results for discord id matches (non-empty)
-        if discord_id == 0 or discord_id is None:
-            id_results = SearchResult()
-        else:
-            id_results = _FindMembers(discord_id, 'discord_id')
-        # find results for profile link matches (non-empty)
-        if profile_link == "" or profile_link is None or profile_link == "no site":
-            link_results = SearchResult()
-        else:
-            link_results = _FindMembers(profile_link, 'profile_link')
-        await self.unlock()
-        return name_results + id_results + link_results
+    
     @commands.command()
     async def removemember(self, ctx, *args):
         # log command attempt and check if command allowed
@@ -522,7 +487,7 @@ class MemberlistCog(commands.Cog):
         if not(zerobot_common.permissions.is_allowed('movemember', ctx.channel.id)) : return
 
         use_msg = (
-            'Needs to be : -zbot removemember from_list to_list member_id\n'
+            'Needs to be : -zbot movemember from_list to_list member_id\n'
             ' - from_list / to_list: current_members, old_members or banned_members\n'
             ' - member_id: name, profile_link or discord_id'
         )
@@ -662,97 +627,6 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
-    @commands.command()
-    async def setrank(self, ctx, *args):
-        # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('setrank', ctx.channel.id)) : return
-
-        name = args[0]
-        rank = args[1].lower()
-        rank = parse_discord_rank.get(rank, rank)
-
-        if len(args) != 2:
-            await ctx.send("Should be `-zbot setrank <name> <rank>`\ncheck for spaces, use \"\" around something with a space in it")
-            return
-        if (discord_ranks.get(rank, -1) == -1):
-            await ctx.send(f"{rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
-            return
-        # new rank too high
-        if (discord_ranks.get(rank, -1) > 8):
-            await ctx.send(f"can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
-            return
-
-        # critical section, editing spreadsheet
-        await self.lock()
-        # could make this run concurrently, but it should be fast anyway.
-        result = _FindMembers(name, "name")
-        if (not(result.has_exact())):
-            await ctx.send(f"{name} not found.\nMaybe they renamed, try searching with `-zbot findmember {name}`")
-            await self.unlock()
-            return
-        member = result.get_exact()
-        # old rank too high
-        old_rank = member.discord_rank
-        if (discord_ranks.get(old_rank, -1) > 8):
-            await ctx.send(f"{name}'s old rank is {old_rank}, bot currently isn't allowed to change staff ranks")
-            await self.unlock()
-            return
-        
-        message = ""
-
-        # trying to change rank of someone on banlist = stop, needs manual clearance.
-        if (member.sheet == zerobot_common.banned_members_sheet):
-            await ctx.send(f"You can not change the rank of a \uD83D\uDE21 Banned Member \U0001F621 ({member.name}), clear their banlist status first.")
-            await self.unlock()
-            return
-
-        # comes from old members sheet = rejoining, send welcome and info messages
-        if (member.sheet == zerobot_common.old_members_sheet):
-            discord_user = await self.get_discord_user(member)
-            if (discord_user == None):
-                message += f"Can't pm {name} on discord. You should tell them to sign up for notify tags, to use them for their pvm in #ranks-chat, tell them about dps gems and what to work on. "
-            else:
-                # send welcome messages
-                await send_messages(
-                    discord_user,
-                    f"application_templates/welcome_messages.json"
-                )
-                message += f"I have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. "
-
-        # TODO: check site / discord functions further to see if the actual update was successful if given valid input?
-
-        # discord role update
-        if (rank == "Retired member"):
-            await self.removeroles(member)
-        elif (rank == "Kicked Member"):
-            await self.kickmember(member)
-        else:
-            await self.changerank(member, rank)
-
-        # site rank update
-        if zerobot_common.site_enabled:
-            if valid_profile_link(member.profile_link):
-                zerobot_common.siteops.setrank_member(member, rank)
-                message += f"Ranked {name} to {rank} on website. "
-            else:
-                message += f"Could not do site rank change, {name}'s profile link is invalid: {member.profile_link}\n"
-        
-        # update sheet, delete from sheet found on -> insert on sheet should be on works for all inputs
-        if (rank == "Retired member"):
-            new_sheet = zerobot_common.old_members_sheet
-        elif (rank == "Kicked member"):
-            new_sheet = zerobot_common.banned_members_sheet
-        else:
-            new_sheet = zerobot_common.current_members_sheet
-        DeleteMember(member.sheet, member.row)
-        InsertMember(new_sheet, member.row, member)
-        await self.unlock()
-        
-        message += f"Changed {name}'s rank to {rank} on the spreadsheet.\n You still need to change their ingame rank."
-
-        await ctx.send(message)
-    
     async def get_discord_user(self, member):
         # check format of member's id
         discord_id = member.discord_id
@@ -811,7 +685,7 @@ class MemberlistCog(commands.Cog):
         Raises BannedUserError when there is matching info on the banlist.
         Raises ExistingUserWarning when matches found outside bans.
         """
-        search_result = await self.full_search(
+        search_result = await self.search(
             name, discord_id, profile_link
         )
 
