@@ -20,6 +20,29 @@ def memberlist_get(
         if memb.matches_id(id):
             return memb
     return None
+def memberlist_get_all(
+    memberlist,
+    id
+):
+    """
+    Find members in a memberlist that can be identified by the id. Includes
+    matches in old names of members. Result is a list that may be empty.
+    The id must be either:
+     - A valid discord id, integer with 17+ digits (705523860375863427)
+     - A valid profile link, string url (https://zer0pvm.com/members/2790316)
+     - A valid ingame name, string of 1 to 12 characters, case insensitive
+    """
+    results = list()
+    for memb in memberlist:
+        if memb.matches_id(id):
+            memb.result_type = "exact"
+            results.append(memb)
+        elif isinstance(id, str):
+            for old_name in memb.old_names:
+                if (old_name.lower() == id):
+                    memb.result_type = "old name"
+                    results.append(memb)
+    return results
 def memberlist_add(memberlist, member):
     """
     Appends the member element to the memberlist by reference. The member 

@@ -7,15 +7,9 @@ def member_embed(member):
     that support markup, so they can be used to create a nicely formatted page.
     """
     # check which sheet member was found on -> format into string
-    status = ""
     rank_prefix = ""
-    if (member.sheet == zerobot_common.current_members_sheet):
-        status = "- Current Member"
-    if (member.sheet == zerobot_common.old_members_sheet):
-        status = "- Retired Member"
+    if member.status == "Retired Member":
         rank_prefix = "Old "
-    if (member.sheet == zerobot_common.banned_members_sheet):
-        status = "- \uD83D\uDE21 BANNED Member \U0001F621"
     # check if member has old names, if it has any -> format into string
     if (len(member.old_names) == 0):
         old_names = "**Old Names :** None\n"
@@ -91,7 +85,7 @@ def member_embed(member):
         last_active_str = "Unknown"
 
     embed = discord.Embed()
-    embed.set_author(name = f"{member.name} {status}", icon_url = avatar_url)
+    embed.set_author(name = f"{member.name} - {member.status}", icon_url = avatar_url)
     
     embed.description = (
         f"**Discord :** {mention}\u2001({member.discord_id})\n"
