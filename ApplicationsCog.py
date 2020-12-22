@@ -254,11 +254,19 @@ class ApplicationsCog(commands.Cog):
         possible_rankups = zerobot_common.discord_ranks.copy()
         # remove ranks that can not be applied for
         for r_name in disallowed_rankups:
-            possible_rankups.pop(r_name)
+            try:
+                possible_rankups.pop(r_name)
+            except KeyError as e:
+                app_log.log_exception(e)
+                pass
         # remove ranks that are equal to or lower than the users current rank
         for r_name, rank in zerobot_common.discord_ranks.items():
             if rank <= current_rank:
-                possible_rankups.pop(r_name)
+                try:
+                    possible_rankups.pop(r_name)
+                except KeyError as e:
+                    app_log.log_exception(e)
+                    pass
         # reverse to list most likely rankup first
         possible_rankups = list(possible_rankups.keys())
         possible_rankups.reverse()
