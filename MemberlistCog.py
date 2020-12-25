@@ -396,17 +396,17 @@ class MemberlistCog(commands.Cog):
         if name == "" or name is None:
             name_results = SearchResult()
         else:
-            name_results = self.search_all(name)
+            name_results = await self.search_all(name)
         # find results for discord id matches (non-empty)
         if discord_id == 0 or discord_id is None:
             id_results = SearchResult()
         else:
-            id_results = self.search_all(discord_id)
+            id_results = await self.search_all(discord_id)
         # find results for profile link matches (non-empty)
         if profile_link == "" or profile_link is None or profile_link == "no site":
             link_results = SearchResult()
         else:
-            link_results = self.search_all(profile_link)
+            link_results = await self.search_all(profile_link)
         return name_results + id_results + link_results
     
     @commands.command()
