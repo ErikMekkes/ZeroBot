@@ -2,7 +2,6 @@ import io
 import discord
 from discord.ext import commands
 import zerobot_common
-from rankchecks import discord_ranks
 
 class ReactionRolesCog(commands.Cog):
     '''
@@ -37,17 +36,17 @@ class ReactionRolesCog(commands.Cog):
             return
         # find actual discord role to remove, return if cant be found.
         role_to_add = zerobot_common.guild.get_role(role_id)
-        if (role_to_add == None):
+        if role_to_add == None:
             zerobot_common.reactionlog.log(
                 f"Could not find role : {role_id} on "
                 f"{zerobot_common.guild.name}"
             )
             return
         # specific case for waiting approval role
-        if (role_id == zerobot_common.get_named_role('Waiting Approval').id):
+        if role_id == zerobot_common.get_named_role('Waiting Approval').id:
             # return if user already has a ranked role. Approval not needed.
             for role in discord_user.roles:
-                if (role.name in discord_ranks):
+                if role.name in zerobot_common.discord_ranks:
                     return
             # assign waiting approval role.
             await discord_user.add_roles(

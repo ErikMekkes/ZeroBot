@@ -46,6 +46,13 @@ from permissions import Permissions
 settings_file = "settings.json"
 settings = load_json(settings_file)
 
+# Check which modules should be enabled.
+applications_enabled = settings.get("enable_applications")
+memberlist_enabled = True
+sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
+dropcomp_enabled = settings.get("dropcomp_enabled")
+daily_memberlist_update_enabled = settings.get("daily_memberlist_update_enabled")
+
 # load authentication token for starting bot, you should have made your own 
 # discord bot. Create a discord application, then make a bot for it. Starting
 # point to do that is here: https://discord.com/developers/applications
@@ -71,8 +78,6 @@ drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
     drive_scope
 )
 drive_client = gspread.authorize(drive_creds)
-memberlist_enabled = True
-sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
 drive_doc_name = settings.get("drive_doc_name")
 drive_doc = drive_client.open(drive_doc_name)
 
@@ -126,9 +131,6 @@ utilities.dateformat = _df
 utilities.timeformat = _tf
 utilities.datetimeformat = _df + "_" + _tf
 
-# Check which modules should be enabled.
-enable_applications = settings.get("enable_applications")
-
 # Manager for operations to clan site, hosted by shivtr (https://shivtr.com/)
 site_login_creds_filename = settings.get("site_login_credentials_filename")
 site_login_credentials = load_json(site_login_creds_filename)
@@ -142,12 +144,13 @@ rs_api_clan_name = settings.get("rs_api_clan_name")
 # guild = the clan discord "server" object, loaded on bot start using it's id.
 clan_server_id = settings.get("clan_server_id")
 guild = None
+# default channel where bot can post status and error messages
+bot_channel_id = settings.get("bot_channel_id")
+bot_channel = None
 
 # channel names and their ids, loaded on bot startup from guild.
 discord_channels = None
 
-# default channel where bot can post status and error messages
-default_bot_channel_id = settings.get("default_bot_channel_id")
 
 # logfiles
 logfile = LogFile("logs/logfile")
@@ -172,8 +175,6 @@ inactive_exceptions = json_dictionary.get("inactive_exceptions")
 # If you want the bot to be able to check if members have the right ranks, you
 # need to give matching ingame / discord / site ranks the same number.
 # THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
-# Required for these modules:
-#  - Applications : tells it which roles are the ranks to give and their order
 discord_ranks = {
 	"Leaders" : 10,
 	"Staff Member" : 9,
@@ -185,6 +186,7 @@ discord_ranks = {
 	"Advanced Member" : 4,
 	"Full Member" : 3,
 	"Recruit" : 2,
+    'Clan Friends/Allies' : 1,
     "Guest" : 1,
     "Waiting Approval" : 0
 }
