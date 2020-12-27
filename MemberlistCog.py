@@ -29,8 +29,8 @@ import zerobot_common
 import utilities
 
 from utilities import send_messages
-from sheet_ops import UpdateMember, DeleteMember, InsertMember, SheetParams, start_update_warnings, clear_sheets, print_update_in_progress_warnings, load_sheet_changes, memberlist_to_sheet, color_spreadsheet, memberlist_from_sheet
-from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, discord_ranks, parse_discord_rank, site_ranks
+from sheet_ops import start_update_warnings, clear_sheets, print_update_in_progress_warnings, color_spreadsheet, load_sheet_changes, memberlist_to_sheet
+from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, parse_discord_rank, site_ranks
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
@@ -138,7 +138,7 @@ async def daily_update(self):
      - print todo lists
     """
     # start posting update warnings on spreadsheet
-    await self.bot_channel.send("Starting to collect ingame data for update")
+    await zerobot_common.bot_channel.send("Starting to collect ingame data for update")
 
     # retrieve the latest ingame data as a new concurrent ask
     ingame_members = await self.bot.loop.run_in_executor(
@@ -150,13 +150,15 @@ async def daily_update(self):
     memberlist_to_disk(ingame_members, ing_backup_name)
     
     # start posting update warnings on spreadsheet
-    await self.bot_channel.send("Daily update starting in 5 minutes")
-    await self.bot.loop.run_in_executor(None, start_update_warnings)
+    await zerobot_common.bot_channel.send("Daily update starting in 5 minutes")
+    if zerobot_common.sheet_memberlist_enabled:
+        await self.bot.loop.run_in_executor(None, start_update_warnings)
 
     #=== try to obtain editing lock, loads sheet changes ===
     await self.lock()
-    clear_sheets()
-    print_update_in_progress_warnings()
+    if zerobot_common.sheet_memberlist_enabled:
+        clear_sheets()
+        print_update_in_progress_warnings()
     # compare against new ingame data to find joins, leaves, renames
     comp_res = compare_lists(ingame_members, self.current_members)
     # use result to update our list of current members
@@ -185,17 +187,18 @@ async def daily_update(self):
     await self.unlock()
     
     #update colors on sheet
-    color_spreadsheet()
+    if zerobot_common.sheet_memberlist_enabled:
+        color_spreadsheet()
 
     # post summary of changes
-    await self.bot_channel.send(comp_res.summary())
+    await zerobot_common.bot_channel.send(comp_res.summary())
     #post todo lists,
     to_invite = TodosInviteIngame(self.current_members)
-    await send_multiple(self.bot_channel, to_invite)
+    await send_multiple(zerobot_common.bot_channel, to_invite)
     to_join_discord = TodosJoinDiscord(self.current_members)
-    await send_multiple(self.bot_channel, to_join_discord)
+    await send_multiple(zerobot_common.bot_channel, to_join_discord)
     to_update_rank = TodosUpdateRanks(self.current_members)
-    await send_multiple(self.bot_channel, to_update_rank)
+    await send_multiple(zerobot_common.bot_channel, to_update_rank)
     
 async def process_leaving(self, leaving_list):
     """
@@ -204,7 +207,7 @@ async def process_leaving(self, leaving_list):
     """
     leaving_size = len(leaving_list)
     if (leaving_size > 10):
-        await self.bot_channel.send(
+        await zerobot_common.bot_channel.send(
             f"Safety Check: too many members leaving for automatic site "
             f"rank and discord role removal: {leaving_size}. No discord "
             f"roles or site ranks changed, you will have to update them "
@@ -213,8 +216,8 @@ async def process_leaving(self, leaving_list):
         return
     
     for memb in leaving_list:
-        if (discord_ranks.get(memb.discord_rank, 0) > 7):
-            await self.bot_channel.send(
+        if (zerobot_common.discord_ranks.get(memb.discord_rank, 0) > 7):
+            await zerobot_common.bot_channel.send(
                 f"Can not do automatic deranks for leaving member: "
                 f"{memb.name}, bot isn't allowed to change staff ranks. "
                 f"You will have to update their discord roles and site "
@@ -228,7 +231,7 @@ async def process_leaving(self, leaving_list):
             if valid_profile_link(memb.profile_link):
                 zerobot_common.siteops.setrank_member(memb, "Retired member")
             else:
-                await self.bot_channel.send(
+                await zerobot_common.bot_channel.send(
                     f"Could not remove site rank for {memb.name} : "
                     f"{memb.profile_link}"
                 )
@@ -259,15 +262,13 @@ class MemberlistCog(commands.Cog):
 
         self.list_access = {}
 
-        # direct reference to known channels TODO, move to common?
-        self.bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
-
         # start daily update loop
-        try:
-            daily_update_scheduler.start(self)
-        except RuntimeError:
-            # loop already running, happens when reconnecting.
-            pass
+        if zerobot_common.daily_memberlist_update_enabled:
+            try:
+                daily_update_scheduler.start(self)
+            except RuntimeError:
+                # loop already running, happens when reconnecting.
+                pass
     
     async def lock(self, interval=60, message=None, ctx=None):
         """
@@ -301,12 +302,13 @@ class MemberlistCog(commands.Cog):
                 if ctx is not None:
                     await ctx.send(message)
                 else:
-                    await self.bot_channel.send(message)
+                    await zerobot_common.bot_channel.send(message)
             await asyncio.sleep(interval)
         self.updating = True
-        load_sheet_changes(self.current_members, zerobot_common.current_members_sheet)
-        load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
-        load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
+        if zerobot_common.sheet_memberlist_enabled:
+            load_sheet_changes(self.current_members, zerobot_common.current_members_sheet)
+            load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
+            load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
         self.list_access['current_members'] = self.current_members
         self.list_access['old_members'] = self.old_members
         self.list_access['banned_members'] = self.banned_members
@@ -672,6 +674,13 @@ class MemberlistCog(commands.Cog):
         await send_multiple(ctx, res, codeblock=True)
     
     async def background_check_app(self, ctx, app):
+        """
+        Runs a background check on the application, matches found are posted
+        to the provided context (channel or user).
+
+        Raises BannedUserError when there is matching info on the banlist.
+        Raises ExistingUserWarning when matches found outside bans.
+        """
         name = app.fields_dict["name"]
         discord_id = app.fields_dict['requester_id']
         profile_link = app.fields_dict['profile_link']
@@ -679,7 +688,7 @@ class MemberlistCog(commands.Cog):
 
     async def background_check(self, ctx, name, discord_id, profile_link):
         """
-        Runs a background check on the application, matches found are posted
+        Runs a background check on the user, matches found are posted
         to the provided context (channel or user).
 
         Raises BannedUserError when there is matching info on the banlist.
@@ -785,10 +794,10 @@ class MemberlistCog(commands.Cog):
         discord_id = args[2]
         profile_link = args[3].replace("http:", "https:")
         # should be a valid rank, no staff rank changes allowed
-        if (discord_ranks.get(rank, 0) == 0):
+        if (zerobot_common.discord_ranks.get(rank, 0) == 0):
             await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return
-        if (discord_ranks.get(rank, 0) > 8):
+        if (zerobot_common.discord_ranks.get(rank, 0) > 8):
             await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
         # should be an 18 length number, or "0" as explicit 'doesnt use discord' case
@@ -863,11 +872,11 @@ class MemberlistCog(commands.Cog):
     async def changerank(self, member, new_rank):
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await self.bot_channel.send(f"Could not change discord rank of {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(f"Could not change discord rank of {member.name}, not a valid discord id: {discord_id}")
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await self.bot_channel.send(f"Could not change discord rank of {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(f"Could not change discord rank of {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
         old_rank = member.discord_rank
@@ -895,17 +904,17 @@ class MemberlistCog(commands.Cog):
         new_role = zerobot_common.get_named_role(new_rank)
         await discord_user.add_roles(new_role, reason="rank change command")
         message += f"Added {new_role.name} role on discord. "
-        await self.bot_channel.send(message)
+        await zerobot_common.bot_channel.send(message)
         member.discord_rank = new_rank
     
     async def kickmember(self, member):
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await self.bot_channel.send(f"Could not kick {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(f"Could not kick {member.name}, not a valid discord id: {discord_id}")
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await self.bot_channel.send(f"Could not kick {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(f"Could not kick {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
         await discord_user.kick(reason = "kick")
@@ -914,11 +923,11 @@ class MemberlistCog(commands.Cog):
     async def removeroles(self, member):
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await self.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await self.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
         await discord_user.edit(roles=[], reason="remove roles")

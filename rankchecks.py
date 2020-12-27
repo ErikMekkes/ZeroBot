@@ -19,25 +19,6 @@ dps_tags = {
     'Extreme Melee' : 4,
     'Extreme DPS' : 5
 }
-
-# the rank tables below are used to find a users highest rank
-# they are also used to check if ranks match, a matching rank has an equal value.
-# example: Staff Member on discord, Coordinator ingame, Clan-Coordinator on the site are matching ranks.
-discord_ranks = {
-    'Leaders' : 10,
-    'Staff Member' : 9,
-    'MasterClass PvMer' : 8,
-    'Supreme PvMer' : 7,
-    'PvM Specialists' : 6,
-    'Elite Member' : 6,
-    'Veteran Member' : 5,
-    'Advanced Member' : 4,
-    'Full Member' : 3,
-    'Recruit' : 2,
-    'Clan Friends/Allies' : 1,
-    'Guest' : 1,
-    'Waiting Approval' : 0
-}
 ingame_ranks = {
     'Owner' : 10,
     'Deputy Owner' : 10,
@@ -169,7 +150,7 @@ def update_discord_info(_memberlist):
         # update highest discord rank
         rank = 0
         for r in usr.roles:
-            rank_numb = discord_ranks.get(r.name,-1)
+            rank_numb = zerobot_common.discord_ranks.get(r.name,-1)
             if  rank_numb >= rank:
                 rank = rank_numb
                 memb.discord_rank = r.name
@@ -193,11 +174,11 @@ def TodosUpdateRanks(memberlist):
         site_rank_name = memb.site_rank
         site_rank = site_ranks.get(site_rank_name, None)
         discord_rank_name = memb.discord_rank
-        discord_rank = discord_ranks.get(discord_rank_name, 0)
+        discord_rank = zerobot_common.discord_ranks.get(discord_rank_name, 0)
         ingame_rank_name = memb.rank
         ingame_rank = ingame_ranks.get(ingame_rank_name, 0)
         passed_gem = memb.passed_gem
-        discord_recruit_rank = discord_ranks['Recruit']
+        discord_recruit_rank = zerobot_common.discord_ranks['Recruit']
         # no gem, rank higher than recruit, rank or name not in gem exceptions.
         if not passed_gem and discord_rank > discord_recruit_rank:
             if not(discord_rank_name in gem_exceptions or memb.name in gem_exceptions):

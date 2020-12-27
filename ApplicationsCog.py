@@ -516,13 +516,11 @@ class ApplicationsCog(commands.Cog):
 
         message = f"Accepting {name}: "
 
-        staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
-
         if zerobot_common.memberlist_enabled:
             memblist = self.bot.get_cog("MemberlistCog")
             # do background check
             try:
-                await memblist.background_check_app(staff_bot_channel, app)
+                await memblist.background_check_app(zerobot_common.bot_channel, app)
             except BannedUserError:
                 await ctx.send(f"There was a problem accepting this app, please check the staff bot channel.")
                 message += f"Could not accept, \uD83D\uDE21 Banned Member \U0001F621."
@@ -532,10 +530,10 @@ class ApplicationsCog(commands.Cog):
                 message += f"Found previous member results above for them on the spreadsheet, you may want to check / remove those. "
             message += f"They are not on the banlist. "
             # add member to memberlist
-            await memblist.add_member_app(staff_bot_channel, app)
+            await memblist.add_member_app(zerobot_common.bot_channel, app)
             message += f"I have added them to the memberlist spreadsheet. "
             # post 6 least active people that were not active in last 30 days
-            await memblist.post_inactives(staff_bot_channel, 30, 6)
+            await memblist.post_inactives(zerobot_common.bot_channel, 30, 6)
         else:
             message += f"Failed to check spreadsheet, could not add them to it or check if they are on the banlist."
         
@@ -550,7 +548,7 @@ class ApplicationsCog(commands.Cog):
                     f"{profile_link}, can not set site rank."
                 )
                 app_log.log(txt)
-                await staff_bot_channel.send(txt)
+                await zerobot_common.bot_channel.send(txt)
 
         # add member role
         join_role = zerobot_common.get_named_role(join_role_name)
@@ -574,7 +572,7 @@ class ApplicationsCog(commands.Cog):
             f"all the useful pvm info / discords. \n\nYou still need to "
             f"invite them ingame. I have asked them to look for an invite."
         )
-        await staff_bot_channel.send(message)
+        await zerobot_common.bot_channel.send(message)
     
     async def accept_rankup(self, ctx, app):
         """
@@ -608,8 +606,6 @@ class ApplicationsCog(commands.Cog):
 
         await message_ctx(discord_user, f"Your application for {new_rank_name} was accepted :)")
         await ctx.send(f"Rankup application to {new_rank_name} accepted :)\n You can continue to talk in this channel until it is archived.")
-        
-        staff_bot_channel = zerobot_common.guild.get_channel(zerobot_common.default_bot_channel_id)
 
         # if the site link was set in the app try updating it already
         profile_link = app.fields_dict["profile_link"]
@@ -622,7 +618,7 @@ class ApplicationsCog(commands.Cog):
                     f"{profile_link}, can not set site rank."
                 )
                 app_log.log(txt)
-                await staff_bot_channel.send(txt)
+                await zerobot_common.bot_channel.send(txt)
 
         # try to update rank on memberlist and site if not done yet
         if zerobot_common.memberlist_enabled:
@@ -646,7 +642,7 @@ class ApplicationsCog(commands.Cog):
                             f"rankup: {profile_link}, can not set site rank."
                         )
                         app_log.log(txt)
-                        await staff_bot_channel.send(txt)
+                        await zerobot_common.bot_channel.send(txt)
             else:
                 await ctx.send(
                     f"{discord_id} not found on current memberlist. "
@@ -752,11 +748,7 @@ async def send_accepted_messages(discord_user, ctx):
         f"application_templates/welcome_messages.json",
         alt_ctx=ctx
     )
-    # send confirmation to staff bot channel.
-    staff_bot_channel = zerobot_common.guild.get_channel(
-        zerobot_common.default_bot_channel_id
-    )
-    await staff_bot_channel.send(
+    await zerobot_common.bot_channel.send(
         f"I have pmed {discord_user.display_name} on discord that their app "
         f"has been accepted and have sent them the welcome messages."
     )

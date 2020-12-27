@@ -2,11 +2,11 @@ import time
 from datetime import datetime
 import zerobot_common
 import utilities
-from zerobot_common import SheetParams
+from zerobot_common import SheetParams, discord_ranks
 from member import Member, valid_profile_link , valid_discord_id
 from memberlist import memberlist_sort_name, memberlist_get
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
-from rankchecks import discord_ranks, ingame_ranks, site_ranks, gem_exceptions
+from rankchecks import ingame_ranks, site_ranks, gem_exceptions
 
 ##TODO modify tosheet
 def memberlist_to_sheet(memberlist, sheet):
@@ -35,8 +35,6 @@ def memberlist_from_sheet(sheet):
     '''
     zerobot_common.drive_connect()
     memberlist = list()
-    # retrieve memberlist from google docs
-    zerobot_common.drive_connect()
     member_matrix = sheet.get_all_values()
     # skip header rows
     for i in range(SheetParams.header_rows, len(member_matrix)):
@@ -95,6 +93,7 @@ def print_update_in_progress_warnings():
     print_update_in_progress_warning(zerobot_common.old_members_sheet)
     print_update_in_progress_warning(zerobot_common.banned_members_sheet)
 def print_update_in_progress_warning(sheet):
+    zerobot_common.drive_connect()
     # insert ongoing update warnings
     warn1 = ['AUTOMATIC','UPDATE','IN PROGRESS']
     warn2 = ['STARTED:', datetime.utcnow().strftime(utilities.timeformat)]
