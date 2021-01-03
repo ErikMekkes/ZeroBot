@@ -476,8 +476,11 @@ class ApplicationsCog(commands.Cog):
             app_type = app.fields_dict["type"]
             accept_func = f"accept_{app_type}"
             new_name = f"{ctx.channel.name}-accepted"
+            # run accept func, it can fail which resets the app to open
             await getattr(self, accept_func)(ctx, app)
-            await ctx.channel.edit(name=new_name)
+            # only update channel name if accept func was successful.
+            if app.fields_dict["status"] == "accepted":
+                await ctx.channel.edit(name=new_name)
             return
     
     async def accept_guest(self, ctx, app):
