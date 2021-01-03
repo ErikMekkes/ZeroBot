@@ -523,7 +523,15 @@ class ApplicationsCog(commands.Cog):
                 await memblist.background_check_app(zerobot_common.bot_channel, app)
             except BannedUserError:
                 await ctx.send(f"There was a problem accepting this app, please check the staff bot channel.")
-                message += f"Could not accept, \uD83D\uDE21 Banned Member \U0001F621."
+                app.set_status("open")
+                msg = (
+                    f"Can not accept \uD83D\uDE21 Banned Member \U0001F621. "
+                    f"Remove them from the banlist first. You can use `-zbot "
+                    f"removemember banned_members id`\n"
+                    f"id = name or discord_id or profile_link\n\n"
+                    f"then retry accepting the app."
+                )
+                await zerobot_common.bot_channel.send(message + msg)
                 return
             except ExistingUserWarning:
                 await ctx.send(f"You may have been a previous member, I tried to post info that could help in the staff bot channel.")
