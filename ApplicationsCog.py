@@ -562,6 +562,8 @@ class ApplicationsCog(commands.Cog):
                 await zerobot_common.bot_channel.send(txt)
 
         # add member role
+        in_clan_role = zerobot_common.get_named_role("Clan Member")
+        await discord_user.add_roles(in_clan_role, reason="accepted member")
         join_role = zerobot_common.get_named_role(join_role_name)
         await discord_user.add_roles(join_role, reason="accepted member")
         # remove allowed to make app role if present
