@@ -35,7 +35,7 @@ from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
 from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all
-from member import Member, valid_discord_id, valid_profile_link
+from member import Member, valid_discord_id, valid_profile_link, notify_role_names
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
 
 # logfile for clantrack
@@ -940,3 +940,25 @@ class MemberlistCog(commands.Cog):
 
         await ctx.send('Hello!')
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
+    
+    @commands.Cog.listener()
+    async def on_message(self, message):
+        '''
+        This event is triggered for any message received, including our own.
+        Must keep this efficient, return asap if irrelevant.
+        '''
+        if len(message.role_mentions) == 0 or self.bot.user.id == message.author.id:
+            return
+        
+        for role in message.role_mentions:
+            if role.name in notify_role_names:
+                # find and edit member notify stat in memory
+                # can ignore sheet since it doesnt include these stats.
+                # disk version is updated with the next major memberlist edit.
+                # read/write to disk for each of these is too costly.
+                memb_id = message.author.id
+                member = memberlist_get(self.current_members, memb_id)
+                if member is None:
+                    return
+                new_value = member.notify_stats[role.name] + 1
+                member.notify_stats[role.name] = new_value
