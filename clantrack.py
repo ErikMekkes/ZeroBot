@@ -5,7 +5,7 @@ the new data from the api.
 import zerobot_common
 import utilities
 from logfile import LogFile
-from member import Member, int_0, number_of_skills, score_labels
+from member import Member, int_0, skill_labels, activity_labels
 from exceptions import NotAMember, NotAMemberList
 # external imports
 import requests
@@ -247,7 +247,7 @@ def _get_member_data(member, session=None, attempts=0):
 
     if (req_resp.status_code == requests.codes["ok"]):
         member_info = req_resp.text.splitlines()
-        for i in range(0, number_of_skills):
+        for i in range(0, len(skill_labels)):
             # skills: [rank,level,xp]
             skills = member_info[i].split(",")
             # re-order to match activities index, and replace -1's with 0
@@ -256,15 +256,15 @@ def _get_member_data(member, session=None, attempts=0):
                 int_0(skills[2]),
                 int_0(skills[1])
             ]
-            member.skills[score_labels[i]] = skill_array
-        for i in range(number_of_skills, len(member_info)):
-            # stat: [rank, score]
-            activivity_arr = member_info[i].split(",")
+            member.skills[skill_labels[i]] = skill_array
+        for i in range(0, len(activity_labels)):
+            # stat: [rank, score], starts after skills till end of activities
+            activivity_arr = member_info[len(skill_labels)+i].split(",")
             activity = [
                 int_0(activivity_arr[0]), 
                 int_0(activivity_arr[1])
             ]
-            member.activities[score_labels[i]] = activity
+            member.activities[activity_labels[i]] = activity
         member.on_hiscores = True
     else:
         clantrack_log.log(f"Failed to get member data : {member.name}")
