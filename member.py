@@ -6,14 +6,15 @@ import ast
 
 # key names for skills and activities, matches ingame api result.
 # using some easier lowercase naming for the ones that are used.
-score_labels = [
+skill_labels = [
     "overall", "attack", "defence", "strength", "constitution", "ranged", 
     "prayer", "magic", "cooking", "woodcutting", "fletching", "fishing", 
     "firemaking", "crafting", "smithing", "mining", "herblore", "agility", 
     "thieving", "slayer", "farming", "runecrafting", "hunter", 
     "construction", "summoning", "dungeoneering", "divination", "invention", 
-    "archaeology", 
-    
+    "archaeology"
+]
+activity_labels = [
     "Bounty Hunter", "B.H. Rogues", "Dominion Tower", 
     "The Crucible", "Castle Wars games", "B.A. Attackers", "B.A. Defenders", 
     "B.A. Collectors", "B.A. Healers", "Duel Tournament", 
@@ -32,13 +33,12 @@ misc_labels = [
     "discord_roles"
 ]
 # blank skills and activities to ensure one is always present
-number_of_skills = 28
 blank_skills = {}
-for i in range(0, number_of_skills):
-    blank_skills[score_labels[i]] = [0,0,0]
+for i in range(0, len(skill_labels)):
+    blank_skills[skill_labels[i]] = [0,0,0]
 blank_activities = {}
-for i in range(number_of_skills, len(score_labels)):
-    blank_activities[score_labels[i]] = [0,0]
+for i in range(0, len(activity_labels)):
+    blank_activities[activity_labels[i]] = [0,0]
 blank_misc = {}
 for i in range(0, len(misc_labels)):
     blank_misc[misc_labels[i]] = ""
@@ -103,15 +103,31 @@ class Member:
         self.row = None
         self.sheet = None
         self.on_hiscores = False
-    def total_clues(self):
-        sum = (
-            self.activities["easy_clues"][1]
-            + self.activities["medium_clues"][1]
-            + self.activities["hard_clues"][1]
-            + self.activities["elite_clues"][1]
-            + self.activities["master_clues"][1]
-        )
-        return sum
+    def __eq__(self, other):
+        #TODO: use matches_id instead
+        if isinstance(other, str):
+            # if string, compare to name
+            return (self.name.lower() == other.lower())
+        if not isinstance(other, Member):
+            # don't attempt to compare against other types
+            return False
+        # Names in RS are unique, case insensitive
+        return (self.name.lower() == other.name.lower())
+    def matches_id(self, id):
+        """
+        Returns True iff id matches one of the unique ids of this member.
+        The id must be either:
+        - A valid discord id, integer with 17+ digits (705523860375863427)
+        - A valid profile link, string url (https://zer0pvm.com/members/2790316)
+        - A valid ingame name, string of 1 to 12 characters, case insensitive
+        """
+        if valid_discord_id(id):
+            return self.discord_id == id
+        if valid_profile_link(id):
+            return self.profile_link == id
+        if isinstance(id, str):
+            return (self.name.lower() == id.lower())
+        return False
     def __repr__(self):
         return str(self)
     def __str__(self):
@@ -148,29 +164,53 @@ class Member:
             f"\t{misc}"
         )
         return user_str
-    def __eq__(self, other):
-        if isinstance(other, str):
-            return (self.name.lower() == other.lower())
-        if not isinstance(other, Member):
-            # don't attempt to compare against unrelated types
-            return False
-        # Names in RS are unique, case insensitive
-        return (self.name.lower() == other.name.lower())
-    def matches_id(self, id):
+    def to_string(self):
         """
-        Returns True iff id matches one of the unique ids of this member.
-        The id must be either:
-        - A valid discord id, integer with 17+ digits (705523860375863427)
-        - A valid profile link, string url (https://zer0pvm.com/members/2790316)
-        - A valid ingame name, string of 1 to 12 characters, case insensitive
+        Writes a member to a string. Used for writing to memberlist on disk.
+        member: Member object.
+
+        output: Single line string with member attributes separated by tabs.
         """
-        if valid_discord_id(id):
-            return self.discord_id == id
-        if valid_profile_link(id):
-            return self.profile_link == id
-        if isinstance(id, str):
-            return (self.name.lower() == id.lower())
-        return False
+        return str(self)
+    @staticmethod
+    def from_string(member_str):
+        """
+        Reads a member from a string. Used for reading from memberlist on disk.
+        member_str: Single line string with member attributes separated by tabs.
+
+        output: A Member object.
+        """
+        memb_info = member_str.split('\t')
+        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[18]), int_0(memb_info[19]))
+        memb.discord_rank = memb_info[2]
+        memb.site_rank = memb_info[3]
+        memb.join_date = memb_info[4]
+        memb.passed_gem = (memb_info[5] == 'TRUE')
+        memb.profile_link = memb_info[6]
+        memb.leave_date = memb_info[7]
+        memb.leave_reason = memb_info[8]
+        memb.referral = memb_info[9]
+        memb.discord_id = int_0(memb_info[10])
+        memb.discord_name = memb_info[11]
+        # weird case, split empty string = list containing empty string instead of empty list
+        if (len(memb_info[12]) == 0) :
+            memb.old_names = list()
+        else :
+            memb.old_names = memb_info[12].split(',')
+        memb.last_active = _strToDate(memb_info[13])
+        memb.event_points = int_0(memb_info[14])
+        memb.note1 = memb_info[15]
+        memb.note2 = memb_info[16]
+        memb.note3 = memb_info[17]
+        for num,x in enumerate(ast.literal_eval(memb_info[20])):
+            memb.skills[skill_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[21])):
+            memb.activities[activity_labels[num]] = x
+        # entries stored in misc with matching label.
+        for i in range(22, len(memb_info)):
+            memb.misc[misc_labels[i-22]] = memb_info[i]
+        memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
+        return memb
     def loadFromOldName(self, other):
         """
         Load all the old data except the new ingame stats.
@@ -199,6 +239,100 @@ class Member:
         #self.activities = {}             # already updated
         for k, v in other.misc.items():
             self.misc[k] = v
+    @staticmethod
+    def from_sheet(memb_info):
+        """
+        Read a member from a list of attributes that follows the same format
+        as the rows on the spreadsheet.
+        """
+        memb = Member(memb_info[0],memb_info[1],0,0)
+        memb.discord_rank = memb_info[2]
+        memb.site_rank = memb_info[3]
+        memb.join_date = memb_info[4]
+        memb.passed_gem = (memb_info[5] == "TRUE")
+        memb.profile_link = memb_info[6]
+        memb.leave_date = memb_info[7]
+        memb.leave_reason = memb_info[8]
+        memb.referral = memb_info[9]
+        memb.discord_id = int_0(memb_info[10])
+        memb.discord_name = memb_info[11]
+        # prevent empty string case, splitting an empty string gives a list
+        # containing empty string instead of the empty list we want.
+        if (len(memb_info[12]) == 0) :
+            memb.old_names = list()
+        else :
+            memb.old_names = memb_info[12].split(',')
+        memb.last_active = _strToDate(memb_info[13])
+        memb.event_points = int_0(memb_info[14])
+        memb.note1 = memb_info[15]
+        memb.note2 = memb_info[16]
+        memb.note3 = memb_info[17]
+        return memb
+    def to_sheet(self):
+        """
+        Returns a list of attributes that follows the same format as the rows
+        on the spreadsheet. Only attributes that might need an update.
+        """
+        old_names_str = ''
+        for i in range(0,len(self.old_names)):
+            if (i == 0):
+                old_names_str += self.old_names[i]
+            else:
+                old_names_str += "," + self.old_names[i]
+        
+        memb_info = [
+            self.name,
+            self.rank,
+            self.discord_rank,
+            self.site_rank,
+            self.join_date,
+            _boolstr[self.passed_gem],
+            self.profile_link,
+            self.leave_date,
+            self.leave_reason,
+            self.referral,
+            str(self.discord_id),
+            self.discord_name,
+            old_names_str,
+            _dateToStr(self.last_active),
+            str(self.event_points),
+            self.note1,
+            self.note2,
+            self.note3
+        ]
+        return memb_info
+    def load_sheet_changes(self, other):
+        """
+        Load all the sheet data.
+        Assumes there was a match on name, profile link or discord_id.
+        """
+        self.name = other.name
+        self.rank = other.rank
+        self.discord_rank = other.discord_rank
+        self.site_rank = other.site_rank
+        self.join_date = other.join_date
+        self.passed_gem = other.passed_gem
+        self.profile_link = other.profile_link
+        self.leave_date = other.leave_date
+        self.leave_reason = other.leave_reason
+        self.referral = other.referral
+        self.discord_id = other.discord_id
+        self.discord_name = other.discord_name
+        self.old_names = other.old_names
+        self.last_active = other.last_active
+        self.event_points = other.event_points
+        self.note1 = other.note1
+        self.note2 = other.note2
+        self.note3 = other.note3
+    def total_clues(self):
+        sum = (
+            self.activities["easy_clues"][1]
+            + self.activities["medium_clues"][1]
+            + self.activities["hard_clues"][1]
+            + self.activities["elite_clues"][1]
+            + self.activities["master_clues"][1]
+        )
+        return sum
     def wasActive(self, other):
         # True if made gains in any of the below
         if other.clan_xp > self.clan_xp: return True
@@ -212,6 +346,12 @@ class Member:
         # Did not have gains in any of the above, not active
         return False
     def match(self, other):
+        """
+        Computes a number that indicates the likelyhood of other being the 
+        same person as self. Returns -1 if impossible.
+
+        Anything under 2 can be considered very likely.
+        """
         if not isinstance(other, Member):
             # don't attempt to compare against unrelated types
             return -1
@@ -312,149 +452,6 @@ class Member:
             ' ' + self.discord_name
         )
         return info_str
-    def load_changes(self, memberchanges):
-        """
-        carefully load changes by deep copy, then also reflect result in dummy
-        """
-        pass
-        #a
-        #s
-        #d
-        #4
-        #f
-    @staticmethod
-    def from_string(member_str):
-        """
-        Reads a member from a string. Used for reading from memberlist on disk.
-        member_str: Single line string with member attributes separated by tabs.
-
-        output: A Member object.
-        """
-        memb_info = member_str.split('\t')
-        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[18]), int_0(memb_info[19]))
-        memb.discord_rank = memb_info[2]
-        memb.site_rank = memb_info[3]
-        memb.join_date = memb_info[4]
-        memb.passed_gem = (memb_info[5] == 'TRUE')
-        memb.profile_link = memb_info[6]
-        memb.leave_date = memb_info[7]
-        memb.leave_reason = memb_info[8]
-        memb.referral = memb_info[9]
-        memb.discord_id = int_0(memb_info[10])
-        memb.discord_name = memb_info[11]
-        # weird case, split empty string = list containing empty string instead of empty list
-        if (len(memb_info[12]) == 0) :
-            memb.old_names = list()
-        else :
-            memb.old_names = memb_info[12].split(',')
-        memb.last_active = _strToDate(memb_info[13])
-        memb.event_points = int_0(memb_info[14])
-        memb.note1 = memb_info[15]
-        memb.note2 = memb_info[16]
-        memb.note3 = memb_info[17]
-        for num,x in enumerate(ast.literal_eval(memb_info[20])):
-            memb.skills[score_labels[num]] = x
-        for num,x in enumerate(ast.literal_eval(memb_info[21])):
-            memb.activities[score_labels[number_of_skills + num]] = x
-        # remaining entries are stored in misc with matching label.
-        for i in range(22, len(memb_info)):
-            memb.misc[misc_labels[i-22]] = memb_info[i]
-        memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
-        return memb
-    def to_string(self):
-        """
-        Writes a member to a string. Used for writing to memberlist on disk.
-        member: Member object.
-
-        output: Single line string with member attributes separated by tabs.
-        """
-        member_str = str(self)
-        return member_str
-    def load_sheet_changes(self, other):
-        """
-        Load all the sheet data.
-        Assumes there was a match on name, profile link or discord_id.
-        """
-        self.name = other.name
-        self.rank = other.rank
-        self.discord_rank = other.discord_rank
-        self.site_rank = other.site_rank
-        self.join_date = other.join_date
-        self.passed_gem = other.passed_gem
-        self.profile_link = other.profile_link
-        self.leave_date = other.leave_date
-        self.leave_reason = other.leave_reason
-        self.referral = other.referral
-        self.discord_id = other.discord_id
-        self.discord_name = other.discord_name
-        self.old_names = other.old_names
-        self.last_active = other.last_active
-        self.event_points = other.event_points
-        self.note1 = other.note1
-        self.note2 = other.note2
-        self.note3 = other.note3
-    @staticmethod
-    def from_sheet(memb_info):
-        """
-        Read a member from a list of attributes that follows the same format
-        as the rows on the spreadsheet.
-        """
-        memb = Member(memb_info[0],memb_info[1],0,0)
-        memb.discord_rank = memb_info[2]
-        memb.site_rank = memb_info[3]
-        memb.join_date = memb_info[4]
-        memb.passed_gem = (memb_info[5] == "TRUE")
-        memb.profile_link = memb_info[6]
-        memb.leave_date = memb_info[7]
-        memb.leave_reason = memb_info[8]
-        memb.referral = memb_info[9]
-        memb.discord_id = int_0(memb_info[10])
-        memb.discord_name = memb_info[11]
-        # prevent empty string case, splitting an empty string gives a list
-        # containing empty string instead of the empty list we want.
-        if (len(memb_info[12]) == 0) :
-            memb.old_names = list()
-        else :
-            memb.old_names = memb_info[12].split(',')
-        memb.last_active = _strToDate(memb_info[13])
-        memb.event_points = int_0(memb_info[14])
-        memb.note1 = memb_info[15]
-        memb.note2 = memb_info[16]
-        memb.note3 = memb_info[17]
-        return memb
-    def to_sheet(self):
-        """
-        Returns a list of attributes that follows the same format as the rows
-        on the spreadsheet. Only attributes that might need an update.
-        """
-        old_names_str = ''
-        for i in range(0,len(self.old_names)):
-            if (i == 0):
-                old_names_str += self.old_names[i]
-            else:
-                old_names_str += "," + self.old_names[i]
-        
-        memb_info = [
-            self.name,
-            self.rank,
-            self.discord_rank,
-            self.site_rank,
-            self.join_date,
-            _boolstr[self.passed_gem],
-            self.profile_link,
-            self.leave_date,
-            self.leave_reason,
-            self.referral,
-            str(self.discord_id),
-            self.discord_name,
-            old_names_str,
-            _dateToStr(self.last_active),
-            str(self.event_points),
-            self.note1,
-            self.note2,
-            self.note3
-        ]
-        return memb_info
     def name_before(self, other):
         """
         True iff this name comes before the name of other alphabetically. 
