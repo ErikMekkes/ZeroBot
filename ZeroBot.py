@@ -11,6 +11,7 @@ from DropCompCog import DropCompCog
 
 intents = Intents.default()
 intents.members = True
+intents.messages = True
 
 # set up the basic discord bot object along with some basic settings
 bot = commands.Bot(

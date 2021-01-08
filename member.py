@@ -32,6 +32,26 @@ misc_labels = [
     "highest_range",
     "discord_roles"
 ]
+
+# these should match the names of the notify roles that should be tracked.
+notify_role_names = [
+    "AoD Learner",
+    "Solak Learner",
+    "Vorago Learner",
+    "Raids Learner",
+    "ROTS Learner",
+    "Elite Dungeon Learner",
+    "Nex Learner",
+    "Raksha Learner",
+    "Notify AoD",
+    "Notify Solak",
+    "Notify Vorago",
+    "Notify Raids",
+    "Notify ROTS",
+    "Notify Elite Dungeon (specify ED1, 2 or 3)",
+    "Notify Nex",
+    "Notify Raksha"
+]
 # blank skills and activities to ensure one is always present
 blank_skills = {}
 for i in range(0, len(skill_labels)):
@@ -43,6 +63,9 @@ blank_misc = {}
 for i in range(0, len(misc_labels)):
     blank_misc[misc_labels[i]] = ""
 blank_misc["discord_roles"] = []
+blank_notify_stats = {}
+for i in range(0, len(notify_role_names)):
+    blank_notify_stats[notify_role_names[i]] = 0
 
 _boolstr = {
     True : 'TRUE',
@@ -96,6 +119,7 @@ class Member:
         self.skills = copy.deepcopy(blank_skills)
         self.activities = copy.deepcopy(blank_activities)
         self.misc = copy.deepcopy(blank_misc)
+        self.notify_stats = copy.deepcopy(blank_notify_stats)
         # not stored, based on last active, used for sorting inactives
         self.days_inactive = 0
         # not stored, only set if member originates from a search result to allow editing.
@@ -143,6 +167,10 @@ class Member:
         for v in self.activities.values():
             activities += str(v) + ", "
         activities = activities[:-2] + "]"
+        notify_stats = "["
+        for v in self.notify_stats.values():
+            notify_stats += str(v) + ", "
+        notify_stats = notify_stats[:-2] + "]"
         misc = ""
         for _, v in self.misc.items():
             # if needed can process v to string first
@@ -161,6 +189,7 @@ class Member:
             f"\t{str(self.clan_xp)}\t{str(self.kills)}"
             f"\t{skills}"
             f"\t{activities}"
+            f"\t{notify_stats}"
             f"\t{misc}"
         )
         return user_str
@@ -206,9 +235,11 @@ class Member:
             memb.skills[skill_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[21])):
             memb.activities[activity_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[22])):
+            memb.notify_stats[notify_role_names[num]] = x
         # entries stored in misc with matching label.
-        for i in range(22, len(memb_info)):
-            memb.misc[misc_labels[i-22]] = memb_info[i]
+        for i in range(23, len(memb_info)):
+            memb.misc[misc_labels[i-23]] = memb_info[i]
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         return memb
     def loadFromOldName(self, other):
@@ -239,6 +270,8 @@ class Member:
         #self.activities = {}             # already updated
         for k, v in other.misc.items():
             self.misc[k] = v
+        for k, v in other.notify_stats.items():
+            self.notify_stats[k] = v
     @staticmethod
     def from_sheet(memb_info):
         """
