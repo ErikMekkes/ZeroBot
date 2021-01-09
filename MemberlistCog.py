@@ -941,6 +941,54 @@ class MemberlistCog(commands.Cog):
         await ctx.send('Hello!')
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
     
+    @commands.command()
+    async def active(self, ctx):
+        """
+        Tells you your activity status.
+        """
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('active', ctx.channel.id)) : return
+
+        memb = memberlist_get(self.current_members, ctx.author.id)
+        if memb is None:
+            await ctx.send("Could not find you on the memberlist!")
+
+        today = datetime.utcnow()
+        inactive_date = today - memb.last_active
+        inactive_datestr = memb.last_active.strftime(utilities.dateformat)
+        days_inactive = inactive_date.days
+        inactive = days_inactive > zerobot_common.inactive_days
+        if inactive:
+            status = (
+                "You are on our list of inactive members. "
+                "**! You risk getting kicked !**\n"
+            )
+            resp = (
+                "To be removed from the inactives list: Do any of the skills "
+                "or activities (wildy kills, runescore, etc.) on the "
+                "highscores or ask a staff member.\n"
+            )
+        else:
+            status = "You are not on our list of inactive members. "
+            resp = (
+                f"You have {zerobot_common.inactive_days - days_inactive} "
+                f"days left before you're considered inactive.\n"
+                f"If you think you will be gone for longer than that and you "
+                f"want to avoid inactivity kicks, tell a staff member.\n"
+            )
+
+        res = (
+            f"{status}"
+            f"You were last active ingame {days_inactive} days ago on "
+            f"{inactive_datestr}.\n{resp}\n"
+            f"Anyone inactive for more than {zerobot_common.inactive_days} "
+            f"days may be kicked when we need to make space for new members. "
+            f"Lower ranks / newer members in clan are first up, so stay "
+            f"active or rankup in clan!"
+        )
+        await ctx.send(res)
+    
     @commands.Cog.listener()
     async def on_message(self, message):
         '''

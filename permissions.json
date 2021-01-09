@@ -1,4 +1,8 @@
 {
+    "active": [
+        "staff-bot-command",
+        "bot-commands"
+    ],
     "addmember": [
         "staff-bot-command"
     ],
