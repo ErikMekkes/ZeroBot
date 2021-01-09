@@ -168,6 +168,8 @@ permissions = Permissions(permissions_filename)
 inactive_exceptions_filename = settings.get("inactive_exceptions_filename")
 json_dictionary = load_json(inactive_exceptions_filename)
 inactive_exceptions = json_dictionary.get("inactive_exceptions")
+# how long before someone is considered inactive
+inactive_days = 30
 
 # Discord roles and their ranks, because you might have discord roles that are
 # not used for ranks, and because the bot needs to know the rank order.
