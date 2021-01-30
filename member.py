@@ -506,6 +506,34 @@ class Member:
                 continue
             return c < b[num]
         return True
+    def compare_stats(self, other):
+        """
+        Returns the stat differences from comparing with another member.
+        """
+        memb = Member(
+            self.name,
+            self.rank,
+            self.clan_xp - other.clan_xp,
+            self.kills - other.kills
+        )
+        # copy skills
+        for k, v in self.skills.items():
+            memb.skills[k] = v
+        # subtract v = [rank, level, xp] of other
+        for k, v in other.skills.items():
+            for num,x in enumerate(v):
+                memb.skills[k][num] =  memb.skills[k][num] - x
+        # copy activities
+        for k, v in self.activities.items():
+            memb.activities[k] = v
+        # subtract v = [rank, score] of other
+        for k, v in other.activities.items():
+            for num,x in enumerate(v):
+                memb.activities[k][num] =  memb.activities[k][num] - x
+        # for this the value is just a single int that can be subtracted.
+        for k, v in other.notify_stats.items():
+            memb.notify_stats[k] = self.notify_stats[k] - v
+        return memb
 
 def int_0(int_str):
     """
@@ -556,6 +584,8 @@ def valid_profile_link(id):
     Must be a string in the form https://zer0pvm.com/members/1234567
     The id number in the profile link is always 7 digits
     """
+    if not isinstance(id, str):
+        return False
     # check if the base url forms the first part of id
     https_base_url = 'https://zer0pvm.com/members/'
     if (https_base_url == id[0:len(https_base_url)]):
