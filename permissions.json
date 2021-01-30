@@ -6,17 +6,14 @@
     "addmember": [
         "staff-bot-command"
     ],
+    "banlist": [
+        "staff-bot-command"
+    ],
     "clanstats": [
         "staff-bot-command",
         "bot-commands"
     ],
-    "updatelist": [
-        "staff-bot-command"
-    ],
-    "setrank": [
-        "staff-bot-command"
-    ],
-    "todos": [
+    "editmember": [
         "staff-bot-command"
     ],
     "findmember": [
@@ -25,22 +22,25 @@
     "inactives": [
         "staff-bot-command"
     ],
-    "restart": [
-        "staff-bot-command"
-    ],
-    "banlist": [
-        "staff-bot-command"
-    ],
-    "welcome": [
-        "staff-bot-command"
-    ],
     "movemember": [
         "staff-bot-command"
     ],
     "removemember": [
         "staff-bot-command"
     ],
-    "editmember": [
+    "restart": [
+        "staff-bot-command"
+    ],
+    "setrank": [
+        "staff-bot-command"
+    ],
+    "todos": [
+        "staff-bot-command"
+    ],
+    "updatelist": [
+        "staff-bot-command"
+    ],
+    "welcome": [
         "staff-bot-command"
     ]
 }

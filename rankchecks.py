@@ -164,7 +164,7 @@ def TodosJoinDiscord(memberlist):
     response = list()
     for memb in memberlist:
         # no discord id, and never manually entered name
-        if (memb.discord_id == 0 and memb.discord_name == ""):
+        if (memb.discord_id == 0 or memb.discord_name == "Left clan discord"):
             response.append(f"{memb.name}\n")
     response = [f"**Need to join discord or need a discord id update on sheet:** {len(response)}\n"] + response
     return response
