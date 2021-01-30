@@ -164,7 +164,7 @@ def TodosJoinDiscord(memberlist):
     response = list()
     for memb in memberlist:
         # no discord id, and never manually entered name
-        if (memb.discord_id == 0 or memb.discord_name == "Left clan discord"):
+        if not valid_discord_id(memb.discord_id):
             response.append(f"{memb.name}\n")
     response = [f"**Need to join discord or need a discord id update on sheet:** {len(response)}\n"] + response
     return response
@@ -221,7 +221,7 @@ def Todos(_memberlist, *args):
         if not valid_profile_link(memb.profile_link):
             _no_site.append(memb)
         # no valid discord id, or no longer on discord
-        if not valid_discord_id(memb.discord_id) or memb.discord_name == "Left discord":
+        if not valid_discord_id(memb.discord_id) or memb.discord_name == "Left clan discord":
             _no_discord.append(memb)
         # not passed gem, and listed to get rankup with gem = need gem
         if not memb.passed_gem:
