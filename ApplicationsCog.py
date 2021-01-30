@@ -543,8 +543,8 @@ class ApplicationsCog(commands.Cog):
             # add member to memberlist
             await memblist.add_member_app(zerobot_common.bot_channel, app)
             message += f"I have added them to the memberlist spreadsheet. "
-            # post 6 least active people that were not active in last 30 days
-            await memblist.post_inactives(zerobot_common.bot_channel, 30, 6)
+            # post 10 least active people that were not active in last 30 days
+            await memblist.post_inactives(zerobot_common.bot_channel, 30, 10)
         else:
             message += f"Failed to check spreadsheet, could not add them to it or check if they are on the banlist."
         

@@ -21,7 +21,7 @@ How to safely edit the memberlist:
 from discord.ext import tasks, commands
 import discord
 import time
-from datetime import datetime
+from datetime import datetime, timedelta
 from logfile import LogFile
 import asyncio
 # custom modules
@@ -34,7 +34,8 @@ from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRa
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
-from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all
+import memberlist
+from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all, memberlist_compare_stats
 from member import Member, valid_discord_id, valid_profile_link, notify_role_names
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
 
@@ -146,7 +147,7 @@ async def daily_update(self):
     )
     # backup ingame members right away, nice for testing
     date_str = datetime.utcnow().strftime(utilities.dateformat)
-    ing_backup_name = "memberlists/current_members/ingame_membs_" + date_str
+    ing_backup_name = "memberlists/current_members/ingame_membs_" + date_str + ".txt"
     memberlist_to_disk(ingame_members, ing_backup_name)
     
     # start posting update warnings on spreadsheet
@@ -176,9 +177,9 @@ async def daily_update(self):
     memberlist_sort_name(self.banned_members)
 
     # write updated memberlists to disk as backup
-    cur_backup_name = "memberlists/current_members/current_membs_" + date_str
-    old_backup_name = "memberlists/old_members/old_membs_" + date_str
-    ban_backup_name = "memberlists/banned_members/banned_membs_" + date_str
+    cur_backup_name = "memberlists/current_members/current_membs_" + date_str + ".txt"
+    old_backup_name = "memberlists/old_members/old_membs_" + date_str + ".txt"
+    ban_backup_name = "memberlists/banned_members/banned_membs_" + date_str + ".txt"
     memberlist_to_disk(self.current_members, cur_backup_name)
     memberlist_to_disk(self.old_members, old_backup_name)
     memberlist_to_disk(self.banned_members, ban_backup_name)
@@ -988,6 +989,106 @@ class MemberlistCog(commands.Cog):
             f"active or rankup in clan!"
         )
         await ctx.send(res)
+    
+    @commands.command()
+    async def clanstats(self, ctx, *args):
+        """
+        Shows recent stats of the clan by comparing with old memberlist.
+        """
+        # log command attempt and check if command allowed
+        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        if not(zerobot_common.permissions.is_allowed('clanstats', ctx.channel.id)) : return
+
+        # check if command has correct number of arguments
+        use_msg = (
+            "usage: `-zbot clanstats <date>`"
+            " date = optional date that bot should compare with."
+            "        this can either be a number for x days ago,"
+            "        or a date in yyyy-mm-dd format! (example: 2020-12-28)"
+            "        default is 30 days ago if not specified."
+        )
+
+        if len(args) > 1:
+            await ctx.send("Too many arguments!\n" + use_msg)
+            return
+        if len(args) == 0:
+            date = datetime.utcnow() - timedelta(days=30)
+        if len(args) == 1:
+            try:
+                # try parse as x days ago
+                try:
+                    days = int(args[0])
+                    date = datetime.utcnow() - timedelta(days=days)
+                except ValueError:
+                    # try parse as date instead
+                    date = datetime.strptime(args[0], utilities.dateformat)
+            except ValueError:
+                # neither parsed successfully
+                await ctx.send(f"Incorrect dateformat: {args[0]}\n" + use_msg)
+                return
+        date_string = date.strftime(utilities.dateformat)
+        base_memblist_name = "memberlists/current_members/current_membs_"
+        oldlist_filename = base_memblist_name + date_string + ".txt"
+        # load disk versions to guarantee safe comparison
+        oldlist = memberlist_from_disk(oldlist_filename)
+        if len(oldlist) == 0:
+            await ctx.send(f"No archived memberlist found for {date_string}")
+            return
+        newlist = memberlist_from_disk("memberlists/current_members.txt")
+        current_size = len(newlist)
+        stats = memberlist_compare_stats(newlist, oldlist)
+        stayed = len(stats)
+        new_membs = current_size - stayed
+        # count non-zer0 discord ids, or count 'clan_member' tags
+        clan_member_role = zerobot_common.get_named_role("Clan Member")
+        membs_on_discord = len(clan_member_role.members)
+        total_on_disc = zerobot_common.guild.member_count
+
+        memberlist.memberlist_sort(stats, memberlist.hosts_cond, asc=False)
+        top5hosts = "Most active hosts:\n"
+        for i in range(0,5):
+            total = 0
+            for x in stats[i].notify_stats.values():
+                total += x
+            top5hosts += f"{stats[i].name} : {total}\n"
+
+
+        memberlist.memberlist_sort(stats, memberlist.clan_xp_cond, asc=False)
+        top5xp = "Most xp gained:\n"
+        for i in range(0,5):
+            top5xp += f"{stats[i].name} : {stats[i].clan_xp}\n"
+        
+
+        embed = discord.Embed()
+        embed.set_author(
+            name = f"{zerobot_common.guild.name} stats since {date_string}",
+            icon_url = zerobot_common.guild.icon_url)
+        embed.description = (
+            f"Current Members: {current_size}\n"
+            f"New members since {date_string}: {new_membs}\n"
+            f"Clan members on discord: {membs_on_discord}\n"
+            f"Total users on discord: {total_on_disc}\n"
+            f"\n"
+            f"{top5hosts}\n"
+            f"\n"
+            f"{top5xp}"
+        )
+        await ctx.send(embed=embed)
+
+        inactives = _Inactives(30)
+        top5inactive = (
+            f"Members that are inactive ingame: {len(inactives)}\n"
+            "First ten, if you are on this list it is very likely that you will get "
+            "kicked when we need to make space for new members:\n"
+        )
+        top5inactive += (
+            "```Name         Rank              Join Date  Clan xp    Last "
+            "Active  Site Profile Link                   Discord Name   \n"
+        )
+        for i in range(0,10):
+            top5inactive += f"{inactives[i].inactiveInfo()}\n"
+        top5inactive += "```"
+        await ctx.send(top5inactive)
     
     @commands.Cog.listener()
     async def on_message(self, message):

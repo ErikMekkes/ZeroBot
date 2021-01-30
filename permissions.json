@@ -6,6 +6,10 @@
     "addmember": [
         "staff-bot-command"
     ],
+    "clanstats": [
+        "staff-bot-command",
+        "bot-commands"
+    ],
     "updatelist": [
         "staff-bot-command"
     ],

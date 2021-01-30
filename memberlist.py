@@ -172,13 +172,60 @@ def memberlist_sort_days_inactive(mlist):
 
 # for sorting memberlist accounting for jagex spaces
 def memberlist_sort_clan_xp(mlist):
+    memberlist_sort(mlist, clan_xp_cond)
+
+# for sorting memberlist accounting for jagex spaces
+def memberlist_sort(mlist, sort_cond, asc=True):
     if len(mlist) == 0: return
     if len(mlist) == 1: return
     for i in range(1, len(mlist)):
         key = mlist[i]
 
         j = i-1
-        while j >= 0 and key.clan_xp < mlist[j].clan_xp:
+        while j >= 0 and sort_cond(key, mlist[j], asc):
             mlist[j+1] = mlist[j]
             j -= 1
         mlist[j+1] = key
+
+def clan_xp_cond(memb_1, memb_2, asc=True):
+    if memb_1.clan_xp < memb_2.clan_xp:
+        return asc
+    return not asc
+
+def hosts_cond(memb1, memb2, asc=True):
+    hosts1 = 0
+    for x in memb1.notify_stats.values():
+        hosts1 += x
+    hosts2 = 0
+    for x in memb2.notify_stats.values():
+        hosts2 += x
+    if hosts1 < hosts2:
+        return asc
+    return not asc
+
+def memberlist_compare_stats(newlist, oldlist):
+    """
+    Returns the difference in stats for each member in both lists.
+    """
+    result = []
+    for memb in newlist:
+        # try finding by discord id, most likely
+        old_memb = memberlist_get(oldlist, memb.discord_id)
+        # try site link
+        if old_memb is None:
+            old_memb = memberlist_get(oldlist, memb.profile_link)
+        # try same ingame name
+        if old_memb is None:
+            old_memb = memberlist_get(oldlist, memb.name)
+        # try old names if still not found
+        if old_memb is None:
+            for old_name in memb.old_names:
+                old_memb = memberlist_get(oldlist, old_name)
+                if old_memb is not None: break
+        # still not found = too new member or just not findable
+        if old_memb is None:
+            # Add blank member with no stats or just dont add
+            continue
+
+        result.append(memb.compare_stats(old_memb))
+    return result
