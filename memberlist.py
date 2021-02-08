@@ -26,7 +26,8 @@ def memberlist_get_all(
 ):
     """
     Find members in a memberlist that can be identified by the id. Includes
-    matches in old names of members. Result is a list that may be empty.
+    partial name matches and matches in old names of members. 
+    Result is a list that may be empty or very large if partial name is vague.
     The id must be either:
      - A valid discord id, integer with 17+ digits (705523860375863427)
      - A valid profile link, string url (https://zer0pvm.com/members/2790316)
@@ -35,12 +36,16 @@ def memberlist_get_all(
     results = list()
     for memb in memberlist:
         if memb.matches_id(id):
-            memb.result_type = "exact"
+            memb.result_type = "exactname"
             results.append(memb)
-        elif isinstance(id, str):
+        # include partial name matches
+        elif str(id).lower() in memb.name.lower():
+            memb.result_type = "partialname"
+            results.append(memb)
+        else:
             for old_name in memb.old_names:
                 if (old_name.lower() == id):
-                    memb.result_type = "old name"
+                    memb.result_type = "oldname"
                     results.append(memb)
     return results
 def memberlist_add(memberlist, member):

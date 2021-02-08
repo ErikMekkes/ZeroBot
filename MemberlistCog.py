@@ -439,13 +439,16 @@ class MemberlistCog(commands.Cog):
             id = args[0]
         
         results = await self.search_all(id)
-        # get latest information
-        update_discord_info(results.combined_list())
-        zerobot_common.siteops.update_site_info(results.combined_list())
-
         if (len(results.combined_list()) == 0):
             await ctx.send("No results found in search.")
             return
+        if (len(results.combined_list()) >= 4):
+            await ctx.send("Too many results found in search.")
+            return
+
+        # get latest information
+        update_discord_info(results.combined_list())
+        zerobot_common.siteops.update_site_info(results.combined_list())
         await ctx.send(
             "Found these results, Ingame stats may be outdated, "
             "info for those is from the last daily update:"
