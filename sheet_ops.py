@@ -132,22 +132,22 @@ def InsertMember(sheet, row, member):
 def load_sheet_changes(memberlist, sheet):
     """
     Loads changes from sheet to memberlist. Only updates matching names.
-    Changes to members on the sheet for which no matching name can be found
-    in memberlist are NOT loaded.
+    Members on the sheet for which no existing name can be found are added.
+    Removing members can not be done through the sheet.
     """
     sheet_list = memberlist_from_sheet(sheet)
     for x in sheet_list:
         # try name matching
         member = memberlist_get(memberlist, x.name)
         # try profile link matching if no result yet
-        if member is None and x.profile_link != "no site":
+        if member is None and valid_profile_link(x.profile_link):
             member = memberlist_get(memberlist, x.profile_link)
         # try discord id matching if no result yet
-        if member is None and x.discord_id != 0:
+        if member is None and valid_discord_id(x.discord_id):
             member = memberlist_get(memberlist, x.discord_id)
-        # if no match found at all, skip
+        # if no existing match found at all, add to memberlist
         if member is None:
-            continue
+            memberlist.append(x)
         member.load_sheet_changes(x)
 
 def color_spreadsheet():
