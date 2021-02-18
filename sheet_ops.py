@@ -148,6 +148,7 @@ def load_sheet_changes(memberlist, sheet):
         # if no existing match found at all, add to memberlist
         if member is None:
             memberlist.append(x)
+            continue
         member.load_sheet_changes(x)
 
 def color_spreadsheet():
