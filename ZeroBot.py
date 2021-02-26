@@ -8,6 +8,7 @@ from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
 from GuidesCog import GuidesCog
 from DropCompCog import DropCompCog
+from ForumThreadCog import ForumThreadCog
 
 intents = Intents.default()
 intents.members = True
@@ -68,6 +69,9 @@ async def on_ready():
     if bot.get_cog("DropCompCog") == None:
         if zerobot_common.dropcomp_enabled:
             bot.add_cog(DropCompCog(bot))
+    if bot.get_cog("ForumThreadCog") == None:
+        if zerobot_common.forumthread_enabled:
+            bot.add_cog(ForumThreadCog(bot))
 
 @bot.event
 async def on_command_error(ctx, error):
