@@ -441,7 +441,7 @@ class Member:
         max_name_length = 12
         for _ in range (0, max_name_length - len(self.name)):
             name_str += " "
-        info_str = f"{name_str} | {self.note1}"
+        info_str = f"{name_str} | {self.leave_reason}"
         return info_str
     def inactiveInfo(self):
         """
