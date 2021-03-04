@@ -52,6 +52,6 @@ class FunResponsesCog(commands.Cog):
             return
         if "zbot" in message.content:
             if "ade" in message.content:
-                await nbr(message.channel)
-            if "nbr" in message.content:
                 await ade(message.channel)
+            if "nbr" in message.content:
+                await nbr(message.channel)
