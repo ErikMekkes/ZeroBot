@@ -54,6 +54,7 @@ dropcomp_enabled = settings.get("dropcomp_enabled")
 daily_memberlist_update_enabled = settings.get("daily_memberlist_update_enabled")
 forumthread_enabled = settings.get("forumthread_enabled")
 forumthread = settings.get("forumthread")
+funresponses_enabled = settings.get("funresponses_enabled")
 
 # load authentication token for starting bot, you should have made your own 
 # discord bot. Create a discord application, then make a bot for it. Starting

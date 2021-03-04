@@ -9,6 +9,7 @@ from ReactionRolesCog import ReactionRolesCog
 from GuidesCog import GuidesCog
 from DropCompCog import DropCompCog
 from ForumThreadCog import ForumThreadCog
+from FunResponsesCog import FunResponsesCog
 
 intents = Intents.default()
 intents.members = True
@@ -72,6 +73,9 @@ async def on_ready():
     if bot.get_cog("ForumThreadCog") == None:
         if zerobot_common.forumthread_enabled:
             bot.add_cog(ForumThreadCog(bot))
+    if bot.get_cog("FunResponsesCog") == None:
+        if zerobot_common.funresponses_enabled:
+            bot.add_cog(FunResponsesCog(bot))
 
 @bot.event
 async def on_command_error(ctx, error):
