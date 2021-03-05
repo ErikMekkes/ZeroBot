@@ -121,6 +121,32 @@ async def daily_update_scheduler(self):
     await asyncio.sleep(wait_time.seconds)
     await daily_update(self)
 
+async def warn_duplicates(self):
+    dupes = ["duplicates in memberlists:\n"]
+    for memb in self.current_members:
+        dupe = memberlist_get(self.old_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"current: {memb.name} old: {dupe.name}\n")
+        dupe = memberlist_get(self.banned_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"current: {memb.name} bannned: {dupe.name}\n")
+    for memb in self.old_members:
+        dupe = memberlist_get(self.current_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"old: {memb.name} current: {dupe.name}\n")
+        dupe = memberlist_get(self.banned_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"old: {memb.name} bannned: {dupe.name}\n")
+    for memb in self.banned_members:
+        dupe = memberlist_get(self.current_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"banned: {memb.name} current: {dupe.name}\n")
+        dupe = memberlist_get(self.old_members, memb.discord_id)
+        if dupe is not None:
+            dupes.append(f"banned: {memb.name} old: {dupe.name}\n")
+    await send_multiple(zerobot_common.bot_channel, dupes, codeblock=True)
+
+
 async def daily_update(self):
     """
     The actual daily update process.
@@ -175,6 +201,8 @@ async def daily_update(self):
     memberlist_sort_name(self.current_members)
     memberlist_sort_name(self.old_members)
     memberlist_sort_name(self.banned_members)
+    # check memberlists for duplicate discord ids
+    await warn_duplicates(self)
 
     # write updated memberlists to disk as backup
     cur_backup_name = "memberlists/current_members/current_membs_" + date_str + ".txt"
@@ -458,6 +486,10 @@ class MemberlistCog(commands.Cog):
                 # no role, or did not have / dont know their discord.
                 memb.discord_rank = ""
             await ctx.send(embed=member_embed(memb))
+    
+    @commands.command()
+    async def checkdupes(self, ctx):
+        await warn_duplicates(self)
     
     @commands.command()
     async def removemember(self, ctx, *args):
