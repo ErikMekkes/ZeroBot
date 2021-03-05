@@ -144,6 +144,8 @@ async def warn_duplicates(self):
         dupe = memberlist_get(self.old_members, memb.discord_id)
         if dupe is not None:
             dupes.append(f"banned: {memb.name} old: {dupe.name}\n")
+    if len(dupes) == 1:
+        dupes.appen("No duplicates found.")
     await send_multiple(zerobot_common.bot_channel, dupes, codeblock=True)
 
 
