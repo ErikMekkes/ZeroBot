@@ -551,6 +551,10 @@ class MemberlistCog(commands.Cog):
             await ctx.send(f"No member found for {args[2]} in {args[0]}.")
             return
         await ctx.send(f"Moved {memb.name} from {args[0]} to {args[1]}.")
+    
+    @commands.command()
+    async def edit(self, ctx, *args):
+        await self.editmember(ctx, *args)
     @commands.command()
     async def editmember(self, ctx, *args):
         # log command attempt and check if command allowed
