@@ -392,7 +392,7 @@ class Member:
         # might not be up to date anymore, is updated separately while
         # loading their actual warnings from another sheet.
         self.warning_points = other.warning_points
-        self.warnings - []
+        self.warnings = []
         self.note1 = other.note1
         self.note2 = other.note2
         self.note3 = other.note3
