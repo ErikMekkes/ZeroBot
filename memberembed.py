@@ -93,7 +93,7 @@ def member_embed(member):
 
         f"**Join Date :** {member.join_date}\u2001\u2001"
         f"**Last Active :** {last_active_str}\u2001\u2001"
-        f"**Event Points :** {member.event_points}\n"
+        f"**Warning Points :** {member.warning_points}\n"
 
         f"**Clan xp :** {clan_xp_str}\u2001\u2002"
         f"**dps tags :** {gem_str}\n"

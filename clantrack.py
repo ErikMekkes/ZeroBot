@@ -4,8 +4,9 @@ the new data from the api.
 """
 import zerobot_common
 import utilities
+from utilities import int_0
 from logfile import LogFile
-from member import Member, int_0, skill_labels, activity_labels
+from member import Member, skill_labels, activity_labels
 from exceptions import NotAMember, NotAMemberList
 # external imports
 import requests

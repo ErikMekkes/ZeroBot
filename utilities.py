@@ -2,6 +2,7 @@ import json
 import os
 import requests
 import discord
+from datetime import datetime
 
 dateformat = '%Y-%m-%d'
 timeformat = '%H.%M.%S'
@@ -121,3 +122,96 @@ async def send_messages(ctx, config_filename, alt_ctx=None):
                 img_file = open(f"application_templates/{v}", "rb")
                 img = discord.File(img_file)
                 await message_ctx(ctx, "", file=img, alt_ctx=alt_ctx)
+
+def int_0(int_str):
+    """
+    custom int() function to parse spreadsheet cells and api results.
+    returns 0 for empty strings.
+    returns 0 for a -1 string or int.
+    returns 0 for decimal numbers.
+    """
+    # if its an actual int return 0 if -1, otherwise return the int
+    if isinstance(int_str, int):
+        if int_str == -1:
+            return 0
+        return int_str
+    
+    # not an int, assuming string
+    # filter out empty strings
+    if int_str == '':
+        return 0
+    # filter out decimal number format
+    if '.' in int_str:
+        return 0
+    # finally try to parse as int
+    result = int(int_str)
+    # if the given number string was -1
+    if result == -1:
+        return 0
+    return result
+def _dateToStr(date) :
+    """
+    Returns string representation of datetime, date can be None.
+    Result is either strftime of datetime or "".
+    """
+    if (date == None) : return ""
+    return date.strftime(dateformat)
+
+def _strToDate(str) :
+    """
+    Returns date representation of string.
+    Result is None if string could not be read as date.
+    """
+    try:
+        return datetime.strptime(str, dateformat)
+    except ValueError :
+        return None
+boolstr = {
+    True : 'TRUE',
+    False : 'FALSE'
+}
+
+def bracket_parser(txt):
+    """
+    Parses a nested set of brackets without delimiters into nested list.
+    ex: {{{a}{b}}{c}{{d}}} -> [[a,b],c,[d]]
+    """
+    if txt == "[]": return []
+    depth = 0
+    count = 0
+    firstopen = len(txt)
+    lastclose = 0
+    for i,x in enumerate(txt): 
+        if x == '[':
+            count += 1
+            if i < firstopen:
+                firstopen = i+1
+            if count > depth:
+                depth = count
+        if x == ']':
+            count -= 1
+            if count == 0:
+                lastclose = i
+                break
+    if count != 0:
+        raise ValueError()
+    if depth == 0:
+        return txt
+    if depth == 1:
+        res = []
+        count = 0
+        for i,x in enumerate(txt): 
+            if x == '[':
+                count += 1
+                open = i+1
+            if x == ']':
+                count -= 1
+                close = i
+            if count == 0:
+                res += [(txt[open:close])]
+        return [res]
+    res = bracket_parser(txt[firstopen:lastclose])
+    textrem = txt[lastclose+1:len(txt)]
+    if len(textrem) != 0:
+        return res + bracket_parser(textrem)
+    return res
