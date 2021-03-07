@@ -94,14 +94,14 @@ class SheetParams:
     # header entries for the memberlist sheets
     header_entries = [
             "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Site Profile","Leave Date",
-            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Event Points","Note1","Note2","Note3"]
+            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","Warning Points","Note1","Note2","Note3"]
     update_header = [
         "AUTOMATIC", "UPDATE IN", "5 MINUTES", "S T O P", "EDITING!",
         "! - ! - !", "!", "!", "!", "S T O P", "EDITING!", "! - ! - !", "!", "!",
         "!", "S T O P", "EDITING!", "! - ! - !"
     ]
     @staticmethod
-    def range_full(list_length=500):
+    def range_full(list_length=550):
         # range string for header+entire memberlist data
         range_str = (
             f"{SheetParams.start_col}"
@@ -111,7 +111,7 @@ class SheetParams:
         )
         return range_str
     @staticmethod
-    def range_no_header(list_length=500):
+    def range_no_header(list_length=550):
         # range string for entire memberlist data, skipping header rows
         range_str = (
             f"{SheetParams.start_col}"
@@ -126,6 +126,7 @@ current_members_sheet = drive_doc.worksheet("Current Members")
 old_members_sheet = drive_doc.worksheet("Old Members")
 banned_members_sheet = drive_doc.worksheet("Banned Members")
 recent_changes_sheet = drive_doc.worksheet("Recent Changes")
+warnings_sheet  = drive_doc.worksheet("Warnings")
 
 # if set, use date and time formats from settings 
 _df = settings.get("dateformat", utilities.dateformat)

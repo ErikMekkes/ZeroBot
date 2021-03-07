@@ -3,7 +3,7 @@ from datetime import datetime
 import zerobot_common
 import utilities
 from zerobot_common import SheetParams, discord_ranks
-from member import Member, valid_profile_link , valid_discord_id
+from member import Member, valid_profile_link , valid_discord_id, Warning
 from memberlist import memberlist_sort_name, memberlist_get
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
 from rankchecks import ingame_ranks, site_ranks, gem_exceptions
@@ -150,6 +150,42 @@ def load_sheet_changes(memberlist, sheet):
             memberlist.append(x)
             continue
         member.load_sheet_changes(x)
+
+async def warnings_from_sheet(self):
+    """
+    Checks the warnings on the sheet and adds them to the correct member.
+    """
+    memberlist = list()
+    warnings_matrix = zerobot_common.warnings_sheet.get_all_values()
+    for i in range(1,len(warnings_matrix)):
+        warning = Warning.from_sheet_format(warnings_matrix[i])
+        # try to find member by discord id
+        memb = memberlist_get(self.current_members, warning.discord_id)
+        if memb is None:
+            memb = memberlist_get(self.old_members, warning.discord_id)
+        if memb is None:
+            memb = memberlist_get(self.banned_members, warning.discord_id)
+        # try to find member by name if still not found
+        if memb is None:
+            memb = memberlist_get(self.current_members, warning.name)
+        if memb is None:
+            memb = memberlist_get(self.old_members, warning.name)
+        if memb is None:
+            memb = memberlist_get(self.banned_members, warning.name)
+        # If still None at this point -> warn missed
+        if memb is None:
+            await zerobot_common.bot_channel.send(
+                f"Unable to find player for warning: {warning.to_str()}"
+            )
+            continue
+        # store warning in member
+        memb.warnings.append(warning)
+    # update total warning points
+    for memb in self.current_members:
+        points = 0
+        for warning in memb.warnings:
+            points += warning.points
+        memb.warning_points = points
 
 def color_spreadsheet():
     '''

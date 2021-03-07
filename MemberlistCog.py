@@ -29,7 +29,7 @@ import zerobot_common
 import utilities
 
 from utilities import send_messages
-from sheet_ops import start_update_warnings, clear_sheets, print_update_in_progress_warnings, color_spreadsheet, load_sheet_changes, memberlist_to_sheet
+from sheet_ops import start_update_warnings, clear_sheets, print_update_in_progress_warnings, color_spreadsheet, load_sheet_changes, memberlist_to_sheet, warnings_from_sheet
 from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, parse_discord_rank, site_ranks
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
@@ -340,6 +340,7 @@ class MemberlistCog(commands.Cog):
             load_sheet_changes(self.current_members, zerobot_common.current_members_sheet)
             load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
             load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
+            await warnings_from_sheet(self)
         self.list_access['current_members'] = self.current_members
         self.list_access['old_members'] = self.old_members
         self.list_access['banned_members'] = self.banned_members

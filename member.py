@@ -1,6 +1,5 @@
 from math import sqrt, fabs, pow
-import utilities
-from datetime import datetime
+from utilities import dateformat, int_0, _dateToStr, _strToDate, bracket_parser, boolstr
 import copy
 import ast
 
@@ -67,28 +66,53 @@ blank_notify_stats = {}
 for i in range(0, len(notify_role_names)):
     blank_notify_stats[notify_role_names[i]] = 0
 
-_boolstr = {
-    True : 'TRUE',
-    False : 'FALSE'
-}
+class NotAWarningError(Exception):
+    pass
 
-def _dateToStr(date) :
-    """
-    Returns string representation of datetime, date can be None.
-    Result is either strftime of datetime or "".
-    """
-    if (date == None) : return ""
-    return date.strftime(utilities.dateformat)
-
-def _strToDate(str) :
-    """
-    Returns date representation of string.
-    Result is None if string could not be read as date.
-    """
-    try:
-        return datetime.strptime(str, utilities.dateformat)
-    except ValueError :
-        return None
+class Warning:
+    def __init__(self, name, discord_id, points, reason, date, expiry_date):
+        self.name = name
+        self.discord_id = discord_id
+        self.points = points
+        self.reason = reason
+        self.date = date
+        self.expiry_date = expiry_date
+    @staticmethod
+    def from_sheet_format(list):
+        if len(list) != 6:
+            raise NotAWarningError()
+        return Warning(
+            list[0],
+            int_0(list[1]),
+            int_0(list[2]),
+            list[3],
+            _strToDate(list[4]),
+            _strToDate(list[4])
+        )
+    def to_sheet_format(self):
+        return [
+            self.name,
+            str(self.discord_id),
+            str(self.points),
+            self.reason,
+            _dateToStr(self.date),
+            _dateToStr(self.expiry_date)
+        ]
+    def __repr__(self):
+        return str(self)
+    def __str__(self):
+        strlist = self.to_sheet_format()
+        res = "["
+        for x in strlist:
+            res += f"[{x}]"
+        res += "]"
+        return res
+    def to_str(self):
+        return str(self)
+    @staticmethod
+    def from_str(warning_str):
+        strlist = bracket_parser(warning_str)
+        return Warning.from_sheet_format(strlist)
 
 class Member:
     """
@@ -109,7 +133,8 @@ class Member:
         self.discord_name = ""
         self.old_names = list()
         self.last_active = None
-        self.event_points = 0
+        self.warning_points = 0
+        self.warnings = list()
         self.note1 = ""
         self.note2 = ""
         self.note3 = ""
@@ -159,6 +184,10 @@ class Member:
         for x in self.old_names:
             old_names += x + ","
         old_names = old_names[:-1]
+        warnings = "["
+        for w in self.warnings:
+            warnings += str(w)
+        warnings += "]"
         skills = "["
         for v in self.skills.values():
             skills += str(v) + ", "
@@ -180,11 +209,12 @@ class Member:
 
         user_str = (
             f"{self.name}\t{self.rank}\t{self.discord_rank}\t{self.site_rank}"
-            f"\t{self.join_date}\t{_boolstr[self.passed_gem]}"
+            f"\t{self.join_date}\t{boolstr[self.passed_gem]}"
             f"\t{self.profile_link}\t{self.leave_date}"
             f"\t{self.leave_reason}\t{self.referral}\t{str(self.discord_id)}"
             f"\t{self.discord_name}\t{old_names}"
-            f"\t{_dateToStr(self.last_active)}\t{str(self.event_points)}"
+            f"\t{_dateToStr(self.last_active)}\t{str(self.warning_points)}"
+            f"\t{warnings}"
             f"\t{self.note1}\t{self.note2}\t{self.note3}"
             f"\t{str(self.clan_xp)}\t{str(self.kills)}"
             f"\t{skills}"
@@ -210,7 +240,7 @@ class Member:
         output: A Member object.
         """
         memb_info = member_str.split('\t')
-        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[18]), int_0(memb_info[19]))
+        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[19]), int_0(memb_info[20]))
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
         memb.join_date = memb_info[4]
@@ -227,19 +257,22 @@ class Member:
         else :
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
-        memb.event_points = int_0(memb_info[14])
-        memb.note1 = memb_info[15]
-        memb.note2 = memb_info[16]
-        memb.note3 = memb_info[17]
-        for num,x in enumerate(ast.literal_eval(memb_info[20])):
-            memb.skills[skill_labels[num]] = x
+        memb.warning_points = int_0(memb_info[14])
+        warnings = bracket_parser(memb_info[15])
+        for w in warnings:
+            memb.warnings.append(Warning.from_str(w))
+        memb.note1 = memb_info[16]
+        memb.note2 = memb_info[17]
+        memb.note3 = memb_info[18]
         for num,x in enumerate(ast.literal_eval(memb_info[21])):
-            memb.activities[activity_labels[num]] = x
+            memb.skills[skill_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[22])):
+            memb.activities[activity_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[23])):
             memb.notify_stats[notify_role_names[num]] = x
         # entries stored in misc with matching label.
-        for i in range(23, len(memb_info)):
-            memb.misc[misc_labels[i-23]] = memb_info[i]
+        for i in range(24, len(memb_info)):
+            memb.misc[misc_labels[i-24]] = memb_info[i]
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         return memb
     def loadFromOldName(self, other):
@@ -260,7 +293,8 @@ class Member:
         self.discord_name = other.discord_name
         self.old_names = other.old_names
         self.last_active = other.last_active
-        self.event_points = other.event_points
+        self.warning_points = other.warning_points
+        self.warnings = other.warnings
         self.note1 = other.note1
         self.note2 = other.note2
         self.note3 = other.note3
@@ -296,7 +330,9 @@ class Member:
         else :
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
-        memb.event_points = int_0(memb_info[14])
+        # might not be up to date anymore, is updated separately while
+        # loading their actual warnings from another sheet.
+        memb.warning_points = int_0(memb_info[14])
         memb.note1 = memb_info[15]
         memb.note2 = memb_info[16]
         memb.note3 = memb_info[17]
@@ -319,7 +355,7 @@ class Member:
             self.discord_rank,
             self.site_rank,
             self.join_date,
-            _boolstr[self.passed_gem],
+            boolstr[self.passed_gem],
             self.profile_link,
             self.leave_date,
             self.leave_reason,
@@ -328,7 +364,7 @@ class Member:
             self.discord_name,
             old_names_str,
             _dateToStr(self.last_active),
-            str(self.event_points),
+            str(self.warning_points),
             self.note1,
             self.note2,
             self.note3
@@ -353,7 +389,10 @@ class Member:
         self.discord_name = other.discord_name
         self.old_names = other.old_names
         self.last_active = other.last_active
-        self.event_points = other.event_points
+        # might not be up to date anymore, is updated separately while
+        # loading their actual warnings from another sheet.
+        self.warning_points = other.warning_points
+        self.warnings - []
         self.note1 = other.note1
         self.note2 = other.note2
         self.note3 = other.note3
@@ -534,33 +573,6 @@ class Member:
         for k, v in other.notify_stats.items():
             memb.notify_stats[k] = self.notify_stats[k] - v
         return memb
-
-def int_0(int_str):
-    """
-    custom int() function to parse spreadsheet cells and api results.
-    returns 0 for empty strings.
-    returns 0 for a -1 string or int.
-    returns 0 for decimal numbers.
-    """
-    # if its an actual int return 0 if -1, otherwise return the int
-    if isinstance(int_str, int):
-        if int_str == -1:
-            return 0
-        return int_str
-    
-    # not an int, assuming string
-    # filter out empty strings
-    if int_str == '':
-        return 0
-    # filter out decimal number format
-    if '.' in int_str:
-        return 0
-    # finally try to parse as int
-    result = int(int_str)
-    # if the given number string was -1
-    if result == -1:
-        return 0
-    return result
 
 def valid_discord_id(id):
     """
