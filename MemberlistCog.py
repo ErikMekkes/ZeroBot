@@ -626,7 +626,7 @@ class MemberlistCog(commands.Cog):
             id = args[1]
         
         list_access = await self.lock()
-        memb = memberlist_get(list_access[args[0]], args[1])
+        memb = memberlist_get(list_access[args[0]], id)
         if memb is not None:
             old_value = getattr(memb, attribute)
             setattr(memb, attribute, new_value)
