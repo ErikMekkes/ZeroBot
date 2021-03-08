@@ -590,7 +590,10 @@ class MemberlistCog(commands.Cog):
         try:
             getattr(dummy_member, attribute)
         except AttributeError:
-            await ctx.send(use_msg)
+            await ctx.send(
+                f"{attribute} is not a valid attribute you can change\n"
+                f"{use_msg}"
+            )
             return
         
         # check if new value for attribute is valid
@@ -616,6 +619,12 @@ class MemberlistCog(commands.Cog):
                     await ctx.send(f"{new_value} is not a valid profile link")
                     return
 
+        # see if id is a number for discord id
+        try:
+            id = parse_discord_id(args[1])
+        except Exception:
+            id = args[1]
+        
         list_access = await self.lock()
         memb = memberlist_get(list_access[args[0]], args[1])
         if memb is not None:
