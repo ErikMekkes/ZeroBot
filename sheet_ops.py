@@ -190,6 +190,7 @@ async def warnings_from_sheet(self):
     Checks the warnings on the sheet and adds them to the correct member.
     """
     memberlist = list()
+    today = datetime.utcnow()
     warnings_matrix = zerobot_common.warnings_sheet.get_all_values()
     for i in range(1,len(warnings_matrix)):
         warning = Warning.from_sheet_format(warnings_matrix[i])
@@ -218,7 +219,8 @@ async def warnings_from_sheet(self):
     for memb in self.current_members:
         points = 0
         for warning in memb.warnings:
-            points += warning.points
+            if today <= warning.expiry_date:
+                points += warning.points
         memb.warning_points = points
 
 def color_spreadsheet():
