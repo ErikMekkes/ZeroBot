@@ -182,7 +182,9 @@ inactive_days = 30
 # need to give matching ingame / discord / site ranks the same number.
 # THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
 discord_ranks = {
-	"Leaders" : 10,
+	"Leaders" : 11,
+    "Clan Issues": 10,
+    "PvM Coordinator": 10,
 	"Staff Member" : 9,
 	"MasterClass PvMer" : 8,
 	"Supreme PvMer" : 7,
@@ -197,6 +199,8 @@ discord_ranks = {
     "Waiting Approval" : 0
 }
 
+gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists"]
+gem_req_rank = "Full Member"
 
 
 

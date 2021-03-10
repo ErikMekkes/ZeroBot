@@ -1,7 +1,42 @@
 import zerobot_common
+from zerobot_common import gem_exceptions, gem_req_rank
 from member import valid_discord_id, valid_profile_link
 
-gem_exceptions = ["Alexanderke","Veteran Member","Elite Member","PvM Specialists"]
+match_disc_ingame = {
+    "Leaders" : ["Owner","Deputy Owner","Overseer"],
+    "Clan Issues" : ["Coordinator"],
+    "PvM Coordinator" : ["Coordinator"],
+	"Staff Member" : ["Organiser"],
+	"MasterClass PvMer" : ["Admin"],
+	"Supreme PvMer" : ["General"],
+	"PvM Specialists" : ["Captain"],
+	"Elite Member" : ["Captain"],
+	"Veteran Member" : ["Lieutenant"],
+	"Advanced Member" : ["Sergeant"],
+	"Full Member" : ["Corporal"],
+	"Recruit" : ["Recruit"],
+    'Clan Friends/Allies' : [],
+    "Guest" : [],
+    "Waiting Approval" : []
+}
+# adding "" = not having a site account is allowed as match
+match_disc_site = {
+    "Leaders" : ["Leader","Co-Leader"],
+    "Clan Issues" : ["Clan Issues"],
+    "PvM Coordinator" : ["Clan-Coordinator"],
+	"Staff Member" : ["Staff Member"],
+	"MasterClass PvMer" : ["","MasterClass PvMer"],
+	"Supreme PvMer" : ["","Supreme PvMer"],
+	"PvM Specialists" : ["","PvM Specialists"],
+	"Elite Member" : ["","Elite Member"],
+	"Veteran Member" : ["","Veteran Member"],
+	"Advanced Member" : ["","Advanced Member"],
+	"Full Member" : ["","Full Member"],
+	"Recruit" : ["","Recruit"],
+    'Clan Friends/Allies' : ["","Registered Guest","Retired member"],
+    "Guest" : ["","Registered Guest","Retired member"],
+    "Waiting Approval" : [""]
+}
 
 # used to find a member's highest dps tag
 dps_tags = {
@@ -18,40 +53,6 @@ dps_tags = {
     'Extreme Range' : 4,
     'Extreme Melee' : 4,
     'Extreme DPS' : 5
-}
-ingame_ranks = {
-    'Owner' : 10,
-    'Deputy Owner' : 10,
-    'Overseer' : 10,
-    'Coordinator' : 9,
-    'Organiser' : 9,
-    'Admin' : 8,
-    'General' : 7,
-    'Captain' : 6,
-    'Lieutenant' : 5,
-    'Sergeant' : 4,
-    'Corporal' : 3,
-    'Recruit' : 2
-}
-site_ranks = {
-    'Leader' : 10,
-    'Co-Leader' : 10,
-    'Clan-Coordinator' : 9,
-    'Clan Issues' : 9,
-    'Citadel Co' : 9,
-    'Media Co' : 9,
-    'Staff Member' : 9,
-    'MasterClass PvMer' : 8,
-    'Supreme PvMer' : 7,
-    'PvM Specialists' : 6,
-    'Elite Member' : 6,
-    'Veteran Member' : 5,
-    'Advanced Member' : 4,
-    'Full Member' : 3,
-    'Recruit' : 2,
-    'Registered Guest' : 1,
-    'Retired member' : 1,
-    'Kicked Member' : 0
 }
 
 # This table is used to convert user typed ranks to intended discord rank
@@ -150,8 +151,12 @@ def update_discord_info(_memberlist):
         # update highest discord rank
         rank = 0
         for r in usr.roles:
-            rank_numb = zerobot_common.discord_ranks.get(r.name,-1)
-            if  rank_numb >= rank:
+            try:
+                rank_numb = list(match_disc_ingame.keys()).index(r.name)
+            except ValueError:
+                # this role is not a known rank
+                continue
+            if rank_numb < rank:
                 rank = rank_numb
                 memb.discord_rank = r.name
         # store all current discord role ids.
@@ -171,26 +176,25 @@ def TodosJoinDiscord(memberlist):
 def TodosUpdateRanks(memberlist):
     _need_rank_update = list()
     for memb in memberlist:
-        site_rank_name = memb.site_rank
-        site_rank = site_ranks.get(site_rank_name, None)
-        discord_rank_name = memb.discord_rank
-        discord_rank = zerobot_common.discord_ranks.get(discord_rank_name, 0)
-        ingame_rank_name = memb.rank
-        ingame_rank = ingame_ranks.get(ingame_rank_name, 0)
-        passed_gem = memb.passed_gem
-        discord_recruit_rank = zerobot_common.discord_ranks['Recruit']
-        # no gem, rank higher than recruit, rank or name not in gem exceptions.
-        if not passed_gem and discord_rank > discord_recruit_rank:
-            if not(discord_rank_name in gem_exceptions or memb.name in gem_exceptions):
+        # find minimum rank for gem, can set as -1 for no gem req
+        gem_req_disc_rank = list(match_disc_ingame.keys()).index(gem_req_rank)
+        try:
+            discord_rank = list(match_disc_ingame.keys()).index(memb.discord_rank)
+        except ValueError:
+            # cant find their rank in the list -> needs a rank.
+            _need_rank_update.append(memb)
+            continue
+        # no gem, gem req for their rank, rank or name not in gem exceptions.
+        if not memb.passed_gem and discord_rank <= gem_req_disc_rank:
+            if not(memb.discord_rank in gem_exceptions or memb.name in gem_exceptions):
                 _need_rank_update.append(memb)
                 continue
-        # has a site rank and it's different from discord rank
-        if site_rank is not None:
-            if site_rank is not discord_rank:
-                _need_rank_update.append(memb)
-                continue
-        # different ingame and discord rank
-        if ingame_rank is not discord_rank:
+        # site rank does not match discord rank
+        if not memb.site_rank in match_disc_site[memb.discord_rank]:
+            _need_rank_update.append(memb)
+            continue
+        # ingame rank does not match discord rank
+        if not memb.rank in match_disc_ingame[memb.discord_rank]:
             _need_rank_update.append(memb)
             continue
     # build up response
