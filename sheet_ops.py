@@ -2,11 +2,45 @@ import time
 from datetime import datetime
 import zerobot_common
 import utilities
-from zerobot_common import SheetParams, discord_ranks
+from zerobot_common import SheetParams, discord_ranks, gem_exceptions
 from member import Member, valid_profile_link , valid_discord_id, Warning
 from memberlist import memberlist_sort_name, memberlist_get
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
-from rankchecks import ingame_ranks, site_ranks, gem_exceptions
+
+site_ranks = {
+    'Leader' : 10,
+    'Co-Leader' : 10,
+    'Clan-Coordinator' : 9,
+    'Clan Issues' : 9,
+    'Citadel Co' : 9,
+    'Media Co' : 9,
+    'Staff Member' : 9,
+    'MasterClass PvMer' : 8,
+    'Supreme PvMer' : 7,
+    'PvM Specialists' : 6,
+    'Elite Member' : 6,
+    'Veteran Member' : 5,
+    'Advanced Member' : 4,
+    'Full Member' : 3,
+    'Recruit' : 2,
+    'Registered Guest' : 1,
+    'Retired member' : 1,
+    'Kicked Member' : 0
+}
+ingame_ranks = {
+    'Owner' : 10,
+    'Deputy Owner' : 10,
+    'Overseer' : 10,
+    'Coordinator' : 9,
+    'Organiser' : 9,
+    'Admin' : 8,
+    'General' : 7,
+    'Captain' : 6,
+    'Lieutenant' : 5,
+    'Sergeant' : 4,
+    'Corporal' : 3,
+    'Recruit' : 2
+}
 
 ##TODO modify tosheet
 def memberlist_to_sheet(memberlist, sheet):

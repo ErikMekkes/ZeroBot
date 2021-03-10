@@ -30,7 +30,7 @@ import utilities
 
 from utilities import send_messages
 from sheet_ops import start_update_warnings, clear_sheets, print_update_in_progress_warnings, color_spreadsheet, load_sheet_changes, memberlist_to_sheet, warnings_from_sheet
-from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, parse_discord_rank, site_ranks
+from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, parse_discord_rank
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
