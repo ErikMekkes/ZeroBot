@@ -491,6 +491,7 @@ class ApplicationsCog(commands.Cog):
         discord_id = app.fields_dict["requester_id"]
         discord_user = zerobot_common.guild.get_member(discord_id)
         name = discord_user.display_name
+        app.fields_dict["name"] = name
 
         message = f"Accepting {name} as guest: "
         if zerobot_common.memberlist_enabled:
