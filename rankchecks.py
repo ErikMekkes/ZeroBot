@@ -149,7 +149,7 @@ def update_discord_info(_memberlist):
                         memb.misc["highest_range"] = r.name
 
         # update highest discord rank
-        rank = -1
+        rank = len(match_disc_ingame)
         for r in usr.roles:
             try:
                 rank_numb = list(match_disc_ingame.keys()).index(r.name)
