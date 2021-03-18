@@ -76,7 +76,7 @@ def _Inactives(days):
     today = datetime.utcnow()
     results = list()
     for memb in memberlist:
-        if (memb.name in zerobot_common.inactive_exceptions):
+        if (memb.name in zerobot_common.inactive_exceptions.keys()):
             continue
         if (memb.last_active == None):
             days_inactive = today - datetime.strptime("2020-04-14", utilities.dateformat)
@@ -681,6 +681,20 @@ class MemberlistCog(commands.Cog):
             message += '```'
             await ctx.send(message)
     
+    @commands.command()
+    async def exceptions(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("exceptions", ctx.channel.id)) : return
+
+        msg = "```Ingame name - Reason"
+        for k,v in zerobot_common.inactive_exceptions.items():
+            msg += (
+                f"{k} - {v}"
+            )
+        msg += "```"
+        await ctx.seend(msg)
+    
     async def get_discord_user(self, member):
         # check format of member's id
         discord_id = member.discord_id
@@ -697,8 +711,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def welcome(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('welcome', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("welcome", ctx.channel.id)) : return
 
         if len(args) == 1 and args[0] == "me":
             await send_messages(
@@ -715,8 +729,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def banlist(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('banlist', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("banlist", ctx.channel.id)) : return
 
         memberlist = memberlist_from_disk(zerobot_common.banned_members_filename)
 
