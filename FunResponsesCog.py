@@ -8,10 +8,10 @@ def nbr(channel):
         mlist = memberlist_from_disk(zerobot_common.current_members_filename)
     name = random.choice(mlist).name
     val = random.random()
-    if val <= 0.35:
+    if val <= 0.25:
         return "No! YOU are nbr!"
     if val <= 0.7:
-        choice = random.choice(["A urora","Wuhanian Bat","Super Fr00b","Zero Errors","Yathsou",name])
+        choice = random.choice(["A urora","Wuhanian Bat","Super Fr00b","Zero Errors","Yathsou","Duker J","African Herb",name])
         return f"{choice} is nbr!"
     if val <= 0.8:
         return "Ade ade"
