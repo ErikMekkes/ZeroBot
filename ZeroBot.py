@@ -10,6 +10,7 @@ from GuidesCog import GuidesCog
 from DropCompCog import DropCompCog
 from ForumThreadCog import ForumThreadCog
 from FunResponsesCog import FunResponsesCog
+from EventsCog import EventsCog
 
 intents = Intents.default()
 intents.members = True
@@ -67,6 +68,9 @@ async def on_ready():
             bot.add_cog(ApplicationsCog(bot))
     if bot.get_cog("GuidesCog") == None:
         bot.add_cog(GuidesCog(bot))
+    if bot.get_cog("EventsCog") == None:
+        if zerobot_common.events_enabled:
+            bot.add_cog(EventsCog(bot))
     if bot.get_cog("DropCompCog") == None:
         if zerobot_common.dropcomp_enabled:
             bot.add_cog(DropCompCog(bot))

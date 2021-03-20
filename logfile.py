@@ -42,7 +42,7 @@ class LogFile:
         file.write((timestamp + ' : ' + text + '\n'))
         file.close()
         if self.parent is not None:
-            parent.log(text)
+            self.parent.log(text)
     def log_exception(self, error, ctx=None):
         '''
         Logs an exception with its stacktrace.

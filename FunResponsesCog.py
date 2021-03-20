@@ -4,11 +4,14 @@ import zerobot_common
 from memberlist import memberlist_from_disk
 
 def nbr(channel):
+    if zerobot_common.memberlist_enabled:
+        mlist = memberlist_from_disk(zerobot_common.current_members_filename)
+    name = random.choice(mlist).name
     val = random.random()
-    if val <= 0.4:
+    if val <= 0.25:
         return "No! YOU are nbr!"
     if val <= 0.7:
-        choice = random.choice(["A urora","Wuhanian Bat","Super Fr00b","Zero Errors","Yathsou"])
+        choice = random.choice(["A urora","Wuhanian Bat","Super Fr00b","Zero Errors","Yathsou","Duker J","African Herb",name])
         return f"{choice} is nbr!"
     if val <= 0.8:
         return "Ade ade"
@@ -32,6 +35,8 @@ def ade(channel):
         return f"Proooooooo!"
 def ask(channel, name):
     val = random.random()
+    if val <= 0.1:
+        return f"{name} pet when?"
     if val <= 0.3:
         return f"{name} specialist when?"
     if val <= 0.6:
@@ -42,6 +47,8 @@ def ask(channel, name):
         return f"{name} tags done when?"
 def retaliate(channel, name):
     val = random.random()
+    if val <= 0.1:
+        return f"I will remember this {name}"
     if val <= 0.3:
         return f"I like you {name}"
     if val <= 0.6:
@@ -54,7 +61,7 @@ def who(self, channel):
     if zerobot_common.memberlist_enabled:
         mlist = memberlist_from_disk(zerobot_common.current_members_filename)
     name = random.choice(mlist).name
-    val = random.choice(["zbot!","zbot!","zbot!","Yathsou!","A urora!","Wuhanian Bat!","Super Fr00b!","Zero Errors!","Ectarax!", f"{name}!"])
+    val = random.choice(["zbot!","Pepelicious!","Yathsou!","A urora!","Wuhanian Bat!","Super Fr00b!","Zero Errors!","Ectarax!", f"{name}!"])
     return val
 
 
@@ -74,23 +81,24 @@ class FunResponsesCog(commands.Cog):
         if self.bot.user.id == message.author.id:
             return
         name = message.author.display_name
+        text = message.content.lower()
         channel = message.channel
-        if "zbot" in message.content:
-            if "ade" in message.content:
+        if "zbot" in text:
+            if " ade" in text or "ade " in text:
                 await channel.send(ade(message.channel))
                 return
-            if "nbr" in message.content:
+            if " nbr" in text:
                 await channel.send(nbr(message.channel))
                 return
-            if " who" in message.content:
+            if " who" in text:
                 await channel.send(who(self,channel))
                 return
-            if " you" in message.content:
+            if " you" in text:
                 await channel.send(retaliate(channel, name))
                 return
             if (
-                " are " in message.content or 
-                " is " in message.content
+                " are " in text or 
+                " is " in text
             ):
                 await channel.send(ask(channel, name))
                 return

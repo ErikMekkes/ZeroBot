@@ -87,7 +87,7 @@ class Warning:
             int_0(list[2]),
             list[3],
             _strToDate(list[4]),
-            _strToDate(list[4])
+            _strToDate(list[5])
         )
     def to_sheet_format(self):
         return [

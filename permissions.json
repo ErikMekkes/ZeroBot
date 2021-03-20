@@ -16,6 +16,10 @@
     "editmember": [
         "staff-bot-command"
     ],
+    "event": [
+        "staff-bot-command",
+        "event-room"
+    ],
     "findmember": [
         "staff-bot-command"
     ],

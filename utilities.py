@@ -149,20 +149,24 @@ def int_0(int_str):
     if result == -1:
         return 0
     return result
-def _dateToStr(date) :
+def _dateToStr(date, df=None) :
     """
     Returns string representation of datetime, date can be None.
     Result is either strftime of datetime or "".
     """
     if (date == None) : return ""
+    if df is not None:
+        return date.strftime(df)
     return date.strftime(dateformat)
 
-def _strToDate(str) :
+def _strToDate(str, df=None) :
     """
     Returns date representation of string.
     Result is None if string could not be read as date.
     """
     try:
+        if df is not None:
+            return datetime.strptime(str, df)
         return datetime.strptime(str, dateformat)
     except ValueError :
         return None
