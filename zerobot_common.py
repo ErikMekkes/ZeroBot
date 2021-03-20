@@ -52,6 +52,7 @@ memberlist_enabled = True
 sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
 dropcomp_enabled = settings.get("dropcomp_enabled")
 daily_memberlist_update_enabled = settings.get("daily_memberlist_update_enabled")
+events_enabled = settings.get("events_enabled")
 forumthread_enabled = settings.get("forumthread_enabled")
 forumthread = settings.get("forumthread")
 funresponses_enabled = settings.get("funresponses_enabled")
@@ -170,8 +171,7 @@ permissions = Permissions(permissions_filename)
 
 # people that wont be shown on the inactives list
 inactive_exceptions_filename = settings.get("inactive_exceptions_filename")
-json_dictionary = load_json(inactive_exceptions_filename)
-inactive_exceptions = json_dictionary.get("inactive_exceptions")
+inactive_exceptions = load_json(inactive_exceptions_filename)
 # how long before someone is considered inactive
 inactive_days = 30
 
@@ -198,7 +198,7 @@ discord_ranks = {
     "Guest" : 1,
     "Waiting Approval" : 0
 }
-
+clan_member_role_id = settings.get("clan_member_role_id")
 gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists"]
 gem_req_rank = "Full Member"
 
