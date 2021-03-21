@@ -67,6 +67,10 @@ class TimeException(Exception):
     pass
 
 def parsedate(daystr, timestr):
+    # find today's date starting at 00:00
+    now = datetime.utcnow()
+    t = datetime.combine(datetime.min, now.time()) - datetime.min
+    today = now - t
     day = -1
     daystr = daystr.lower()
     if daystr in "monday":
@@ -83,12 +87,10 @@ def parsedate(daystr, timestr):
         day = 5
     elif daystr in "sunday":
         day = 6
+    elif daystr in "today":
+        day = today.weekday()
     else:
         raise DateException(f"Unable to convert {daystr} to date.")
-    # find today's date starting at 00:00
-    now = datetime.utcnow()
-    t = datetime.combine(datetime.min, now.time()) - datetime.min
-    today = now - t
     # todays day number
     d = today.weekday()
     # number of days ahead
@@ -232,7 +234,7 @@ class EventsCog(commands.Cog):
 
         use_str = (
             "Use: `-zbot event <day> <time> name of event`\n"
-            "day: mon, tue, wed, fri, sat, sun, \n"
+            "day: mon, tue, wed, fri, sat, sun, today\n"
             "time: 1300, 13:00, 13h00 formats all work\n"
             "example: `-zbot event mon 2200 raids learner`"
         )
