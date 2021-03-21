@@ -219,6 +219,9 @@ async def warnings_from_sheet(self):
     for memb in self.current_members:
         points = 0
         for warning in memb.warnings:
+            if warning.expiry_date is None:
+                points += warning.points
+                continue
             if today <= warning.expiry_date:
                 points += warning.points
         memb.warning_points = points
