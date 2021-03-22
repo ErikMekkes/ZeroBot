@@ -155,14 +155,14 @@ class FunResponsesCog(commands.Cog):
             if " nbr" in text:
                 await channel.send(nbr(message.channel))
                 return
+            if " who" in text:
+                await channel.send(who(self,channel))
+                return
             if " when" in text:
                 await channel.send(when(message.channel))
                 return
-            if " will" in text:
+            if " will" in text or "should" in text:
                 await channel.send(will(message.channel))
-                return
-            if " who" in text:
-                await channel.send(who(self,channel))
                 return
             if " you" in text:
                 await channel.send(retaliate(channel, name))
