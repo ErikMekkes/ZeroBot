@@ -31,9 +31,9 @@ class DropCompCog(commands.Cog):
             return
     
         use_str = (
-            "Usage: -zbot dropcomp <image_link>\n"
+            "Usage: -zbot drop <image_link>\n"
             " image_link: link to the image that shows your drop, imgur, gyazo etc.\n"
-            " if you post the image directly to discord it is not needed to add a link. you can just type `-zbot dropcomp` as comment for the image."
+            " if you post the image directly to discord it is not needed to add a link. you can just type `-zbot drop` as the text for the image."
         )
         if len(args) > 1:
             # more than 1 argument = bad use.
