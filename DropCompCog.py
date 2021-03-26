@@ -20,13 +20,13 @@ class DropCompCog(commands.Cog):
         self.bot = bot
 
     @commands.command()
-    async def dropcomp(self, ctx, *args):
+    async def drop(self, ctx, *args):
         """
         Submit a drop for the drop comp. Only works in team channel
         """
         channel_id = ctx.channel.id
-        team_number = teamchannels.get(str(channel_id), None)
-        if team_number is None:
+        team_name = teamchannels.get(str(channel_id), None)
+        if team_name is None:
             # not a drop comp team channel
             return
     
@@ -52,7 +52,7 @@ class DropCompCog(commands.Cog):
         if len(args) == 1:
             # get image url from args.
             img_url = args[0]
-        add_drop_to_sheet(team_number, ctx.message.id, ctx.author.id, ctx.author.display_name, img_url)
+        add_drop_to_sheet(team_name, ctx.message.id, ctx.author.id, ctx.author.display_name, img_url)
         await ctx.message.add_reaction("👍")
 
 def add_drop_to_sheet(team_number, msg_id, author_id, author_name, img_url):
