@@ -276,3 +276,11 @@ class EventsCog(commands.Cog):
         # track event, not used for anything yet, for future use
         event = Event(channel.id, ctx.author.id, date, event_name)
         self.events.append(event)
+    
+    @commands.command()
+    async def _c_list(self, ctx, *args):
+        msg = "```\nchannel_name : position\n"
+        for c in events_category.channels:
+            msg += f"{c.name} : {c.position}\n"
+        msg += "```"
+        await ctx.send(msg)
