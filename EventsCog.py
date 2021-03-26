@@ -259,6 +259,7 @@ class EventsCog(commands.Cog):
         # move the other channels down to prepare for inserting a new one
         for c in events_category.channels:
             if c.position >= position:
+                print(f"moving {c.name} from index {position} to {c.position + 1}")
                 await c.edit(position = c.position + 1)
         # actually start making the channel
         channel = await events_category.create_text_channel(
@@ -266,7 +267,6 @@ class EventsCog(commands.Cog):
             position=position,
             reason="zbot host event"
         )
-        print(position,channel.position)
         await setup_event_channel(ctx, channel)
         await ctx.send(
             f"I have created the {channel.mention} event channel for you. "
@@ -279,8 +279,17 @@ class EventsCog(commands.Cog):
     
     @commands.command()
     async def _c_list(self, ctx, *args):
+        if ctx.author.id != 311838457687441418: return
         msg = "```\nchannel_name : position\n"
         for c in events_category.channels:
             msg += f"{c.name} : {c.position}\n"
         msg += "```"
         await ctx.send(msg)
+
+    @commands.command()
+    async def _c_move(self, ctx, *args):
+        if ctx.author.id != 311838457687441418: return
+        c = zerobot_common.guild.get_channel(int(args[0]))
+        c_orig = c.position
+        await c.edit(position = int(args[1]))
+        await ctx.send(f"moved {c.name} from index {c_orig} to {c.position}")
