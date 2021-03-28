@@ -1,9 +1,9 @@
 '''
-Enables syncing guide channels with contents posted on a google spreadsheet. 
-Allows multiple people to collaborate on discord posts for guides.
+Enables syncing channels with contents posted on a google spreadsheet. 
+Allows multiple people to collaborate on discord posts for channels.
 
-Everything related to synching channels from the google drive guides sheet is 
-in this module.
+Everything related to synching channels from the google drive channels sheet 
+is in this module.
 '''
 import zerobot_common
 import utilities
@@ -11,14 +11,14 @@ import discord
 from discord.ext import commands
 from logfile import LogFile
 
-# start log for guides module
-guideslog = LogFile('logs/guideslog')
-# load google sheets document that contains the actual guide sheets (tabs)
-guides_doc_name = zerobot_common.settings.get('guides_doc_name')
-guides_doc = zerobot_common.drive_client.open(guides_doc_name)
-# load config that describes which channels should contain which guides
-guidechannels_filename = zerobot_common.settings.get('guidechannels_filename')
-guidechannels = utilities.load_json(guidechannels_filename)
+# start log for channels module
+channelslog = LogFile('logs/channelslog')
+# load google sheets document that contains the actual channel sheets (tabs)
+channels_doc_name = zerobot_common.settings.get('channels_doc_name')
+channels_doc = zerobot_common.drive_client.open(channels_doc_name)
+# load config that describes which channels should be synched with what
+synched_channels_filename = zerobot_common.settings.get('synched_channels_filename')
+synched_channels = utilities.load_json(synched_channels_filename)
 
 class Post():
     """
@@ -41,14 +41,14 @@ def find_post(posts, row):
         if post.row == row: return post
     return None
 
-def read_guides_sheet(sheetname):
+def read_channel_sheet(channel_name):
     """
     Reads all the cells in the first column of the named sheet and returns 
     them as a list of Post objects. Recognizes image upload posts separately.
     The row of each post is stored as well for referencing later.
     """
     zerobot_common.drive_connect()
-    sheet = guides_doc.worksheet(sheetname)
+    sheet = channels_doc.worksheet(channel_name)
     sheet_matrix = sheet.get_all_values()
     posts = []
     num = 1
@@ -70,39 +70,39 @@ def read_guides_sheet(sheetname):
         num += 1
     return posts
 
-class GuidesCog(commands.Cog):
+class ChannelCog(commands.Cog):
     """
-    Handles guide channels and commands related to guides.
+    Handles synched channels and commands related to synching.
     """
     def __init__(self, bot):
         self.bot = bot
 
     @commands.command()
-    async def reloadguides(self, ctx):
+    async def reloadchannels(self, ctx):
         """
-        Reload all the guides the bot knows about.
+        Reload all the channels the bot knows about.
         """
-        for guide_name in guidechannels:
-            await self.reload_guide(guide_name)
+        for channel_name in synched_channels:
+            await self.reload_channel(channel_name)
 
     @commands.command()
-    async def reloadguide(self, ctx, guide_name):
+    async def reloadchannel(self, ctx, channel_name):
         """
-        Reload a single guide by name, this should be the spreadsheet name.
-        The related channel is found by the bot in guidechannel.json.
+        Reload a single channel by name, must match the spreadsheet name.
+        The related channel is found by the bot in synched_channels.
         """
-        await self.reload_guide(guide_name)
+        await self.reload_channel(channel_name)
     
-    async def reload_guide(self, guide_name):
+    async def reload_channel(self, channel_name):
         """
-        Actual process for clearing and re-creating posts a channel.
+        Actual process for clearing and re-creating posts in a channel.
         - clears channel first
         - sends empty message for each post (so we can reference future ones)
         - edits the text in each post, with reference links to other posts.
         """
-        channel_id = guidechannels[guide_name]
+        channel_id = synched_channels[channel_name]
         channel = zerobot_common.guild.get_channel(channel_id)
-        posts = read_guides_sheet(guide_name)
+        posts = read_channel_sheet(channel_name)
         await channel.purge()
         # create empty posts
         for post in posts:

@@ -6,7 +6,7 @@ from discord.ext import commands
 from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
-from GuidesCog import GuidesCog
+from ChannelCog import ChannelCog
 from DropCompCog import DropCompCog
 from ForumThreadCog import ForumThreadCog
 from FunResponsesCog import FunResponsesCog
@@ -66,8 +66,8 @@ async def on_ready():
     if bot.get_cog("ApplicationsCog") == None:
         if zerobot_common.applications_enabled:
             bot.add_cog(ApplicationsCog(bot))
-    if bot.get_cog("GuidesCog") == None:
-        bot.add_cog(GuidesCog(bot))
+    if bot.get_cog("ChannelCog") == None:
+        bot.add_cog(ChannelCog(bot))
     if bot.get_cog("EventsCog") == None:
         if zerobot_common.events_enabled:
             bot.add_cog(EventsCog(bot))
