@@ -21,10 +21,10 @@ match_disc_ingame = {
 }
 # adding "" = not having a site account is allowed as match
 match_disc_site = {
-    "Leaders" : ["Leader","Co-Leader"],
-    "Clan Issues" : ["Clan Issues"],
-    "PvM Coordinator" : ["Clan-Coordinator"],
-	"Staff Member" : ["Staff Member"],
+    "Leaders" : ["","Leader","Co-Leader"],
+    "Clan Issues" : ["","Clan Issues"],
+    "PvM Coordinator" : ["","Clan-Coordinator"],
+	"Staff Member" : ["","Staff Member"],
 	"MasterClass PvMer" : ["","MasterClass PvMer"],
 	"Supreme PvMer" : ["","Supreme PvMer"],
 	"PvM Specialists" : ["","PvM Specialists"],
