@@ -283,12 +283,12 @@ class ApplicationsCog(commands.Cog):
         channel = await zerobot_common.guild.create_text_channel(
             f"{rank_name}-{ctx.author.display_name}",
             category=app_category,
-            reason="joining"
+            reason="rankup"
         )
         await setup_app_channel(ctx, channel, rank_name)
         await message_ctx(ctx.author, channel_creation_message + channel.mention)
         # register the application and update copy on disk
-        join_app = Application(
+        rankup_app = Application(
             channel.id,
             ctx.author.id,
             type = "rankup",
@@ -298,8 +298,8 @@ class ApplicationsCog(commands.Cog):
         # staff apps can only be handled manually.
         if rank_name == "staff_member":
             permissions.disallow("accept", channel.id)
-            join_app.votes_required = 999
-        applications.append(join_app)
+            rankup_app.votes_required = 999
+        applications.append(rankup_app)
         # clean the app requests channel for new requests
         await self.clean_app_requests(ctx)
 
@@ -334,6 +334,59 @@ class ApplicationsCog(commands.Cog):
         applications.append(join_app)
         # clean the app requests channel for new requests
         await self.clean_app_requests(ctx)
+
+        name = ctx.author.display_name
+        join_app.fields_dict["name"] = name
+
+        # check if banned or returning member and post extra info.
+        if zerobot_common.memberlist_enabled:
+            memblist = self.bot.get_cog("MemberlistCog")
+            # do background check
+            try:
+                await memblist.background_check_app(zerobot_common.bot_channel, join_app)
+                # passed, post confirm of no issues in bot channel
+                msg = (
+                    f"Join app opened for {ctx.author.display_name}: "
+                    "They are not on the banlist and I do not recognize them "
+                    "as an ex-clanmember.")
+                await zerobot_common.bot_channel.send(msg)
+            except BannedUserError:
+                # on banlist, post error in app and full info in bot channel
+                await channel.send(f"_ _\n⛔ There is a problem with this app, please check the staff bot channel. ⛔\n_ _")
+                await zerobot_common.bot_channel.send(
+                    f"Join app opened for {ctx.author.display_name}. "
+                    f"Can not accept a ⛔ Banned Member ⛔. \n"
+                    f"They need to appeal their ban status first through <@&308529829672910848> "
+                    f"and need to be removed from the banlist by them first.\n"
+                    f"Remove their ban with: `-zbot removemember banned_members id`\n"
+                    f"  id: ingame name, discord_id or profile_link\n"
+                    f"you can retry accepting the app after Clan Issues resolved the ban."
+                )
+                return
+            except ExistingUserWarning:
+                # possible previous member, might need full memb reqs
+                # post full member reqs in app and member info in bot channel
+                await channel.send(
+                    f"\n\n☝ You may have been a previous member. I tried to post info that could help in the staff bot channel. ☝\n"
+                    f"If you were a previous member you also need to post these gear reqs and unlocks for the full member rank:"
+                )
+                img_file = open(f"application_templates/full_member_image.png", "rb")
+                img = discord.File(img_file)
+                await channel.send("", file=img)
+                await channel.send(
+                    f"The staff members in here can confirm if you also need to post the full member reqs.\n"
+                    f"The DPM and Boss tags can be done in your own time, those are not needed, if you were a previous member you only need to post the items and unlocks."
+                )
+                await zerobot_common.bot_channel.send(
+                    f"☝ Join app opened for {ctx.author.display_name} ☝: "
+                    f"They are not on the banlist, but I found previous member results above for them on the spreadsheet, you may want to check / remove those. "
+                )
+        else:
+            await zerobot_common.bot_channel.send(
+                f"Join app opened for {ctx.author.display_name}: "
+                f"Failed to check memberlist, could not check if they were a "
+                f"previous member or if they are on the banlist."
+            )
     
     async def clean_app_requests(self, ctx):
         """
@@ -377,6 +430,49 @@ class ApplicationsCog(commands.Cog):
         guest_app = Application(channel.id, ctx.author.id)
         applications.append(guest_app)
         await self.clean_app_requests(ctx)
+
+        name = ctx.author.display_name
+        guest_app.fields_dict["name"] = name
+        # check if banned or returning member and post extra info.
+        if zerobot_common.memberlist_enabled:
+            memblist = self.bot.get_cog("MemberlistCog")
+            # do background check
+            try:
+                await memblist.background_check_app(zerobot_common.bot_channel, guest_app)
+                # passed, post confirm of no issues in bot channel
+                msg = (
+                    f"Guest app opened for {ctx.author.display_name}: "
+                    "They are not on the banlist and I do not recognize them "
+                    "as an ex-clanmember.")
+                await zerobot_common.bot_channel.send(msg)
+            except BannedUserError:
+                # on banlist, post error in app and full info in bot channel
+                await channel.send(f"_ _\n⛔ There is a problem with this app, please check the staff bot channel. ⛔\n_ _")
+                await zerobot_common.bot_channel.send(
+                    f"Guest app opened for {ctx.author.display_name}. "
+                    f"Can not accept a ⛔ Banned Member ⛔. \n"
+                    f"They need to appeal their ban status first through <@&308529829672910848> "
+                    f"and need to be removed from the banlist by them first.\n"
+                    f"Remove their ban with: `-zbot removemember banned_members id`\n"
+                    f"  id: ingame name, discord_id or profile_link\n"
+                    f"you can retry accepting the app after Clan Issues resolved the ban."
+                )
+                return
+            except ExistingUserWarning:
+                # possible previous member, just post their info
+                await channel.send(
+                    f"_ _\nYou may have been a previous member. I tried to post info that could help in the staff bot channel.\n"
+                )
+                await zerobot_common.bot_channel.send(
+                    f"Guest app opened for {ctx.author.display_name}: "
+                    f"They are not on the banlist, but I found previous member results above for them on the spreadsheet, you may want to check / remove those. "
+                )
+        else:
+            await zerobot_common.bot_channel.send(
+                f"Guest app opened for {ctx.author.display_name}: "
+                f"Failed to check memberlist, could not check if they were a "
+                f"previous member or if they are on the banlist."
+            )
     
     @commands.command()
     async def archive(self, ctx):
@@ -493,33 +589,37 @@ class ApplicationsCog(commands.Cog):
         name = discord_user.display_name
         app.fields_dict["name"] = name
 
-        message = f"Accepting {name} as guest: "
+        # do background check
         if zerobot_common.memberlist_enabled:
             memblist = self.bot.get_cog("MemberlistCog")
-            # do background check
             try:
                 await memblist.background_check_app(zerobot_common.bot_channel, app)
-                message += (
-                    "They are not on the banlist and I do not recognize them "
-                    "as an ex-clanmember")
-            except BannedUserError:
-                await ctx.send(f"There was a problem accepting this app, please check the staff bot channel.")
-                app.set_status("open")
-                message += (
-                    f"Can not accept \uD83D\uDE21 Banned Member \U0001F621. "
-                    f"Remove them from the banlist first. You can use `-zbot "
-                    f"removemember banned_members id`\n"
-                    f"id = name or discord_id or profile_link\n\n"
-                    f"then retry accepting the app."
+                await zerobot_common.bot_channel.send(
+                    f"Accepted {name} as guest."
                 )
-                await zerobot_common.bot_channel.send(message)
+            except BannedUserError:
+                # banned, report unable to accept
+                await ctx.send(f"_ _\n⛔ There is a problem with this app, please check the staff bot channel. ⛔\n_ _")
+                app.set_status("open")
+                zerobot_common.bot_channel.send(
+                    f"Can not accept {name} as guest. ⛔ Banned Member ⛔."
+                    f"They need to appeal their ban status first through <@&308529829672910848> "
+                    f"and need to be removed from the banlist by them first.\n"
+                    f"Remove their ban with: `-zbot removemember banned_members id`\n"
+                    f"  id: ingame name, discord_id or profile_link\n"
+                    f"you can retry accepting the app after Clan Issues resolved the ban."
+                )
                 return
             except ExistingUserWarning:
-                await ctx.send(f"You may have been a previous member, I tried to post info that could help in the staff bot channel.")
-                message += f"They are not on the banlist, but I found previous member results above for them on the memberlist, you may want to check / remove those."
+                await zerobot_common.bot_channel.send(
+                    f"Accepted {name} as guest: "
+                    f"They are not on the banlist, but I found previous member results above for them on the memberlist, you may want to check / remove those."
+                )
         else:
-            message += f"Failed to check memberlist, could not check if they were a previous member or if they are on the banlist."
-        await zerobot_common.bot_channel.send(message)
+            await zerobot_common.bot_channel.send(
+                f"Accepted {name} as guest, but failed to check memberlist, "
+                f"could not check if they were a previous member or if they are on the banlist."
+            )
 
         # add guest role
         guest_role = zerobot_common.get_named_role(guest_role_name)
@@ -542,43 +642,48 @@ class ApplicationsCog(commands.Cog):
         Accept join application = give new member role, remove applicant role.
         + if enabled, instruct memberlist module to add the member.
         """
+        # update name with latest discord name right before adding to list
         discord_id = app.fields_dict["requester_id"]
         discord_user = zerobot_common.guild.get_member(discord_id)
         name = discord_user.display_name
         app.fields_dict["name"] = name
 
-        message = f"Accepting {name}: "
+        message = f""
 
         if zerobot_common.memberlist_enabled:
             memblist = self.bot.get_cog("MemberlistCog")
             # do background check
             try:
                 await memblist.background_check_app(zerobot_common.bot_channel, app)
-                message += (
-                    "They are not on the banlist and I do not recognize them "
-                    "as an ex-clanmember")
-            except BannedUserError:
-                await ctx.send(f"There was a problem accepting this app, please check the staff bot channel.")
-                app.set_status("open")
-                msg = (
-                    f"Can not accept \uD83D\uDE21 Banned Member \U0001F621. "
-                    f"Remove them from the banlist first. You can use `-zbot "
-                    f"removemember banned_members id`\n"
-                    f"id = name or discord_id or profile_link\n\n"
-                    f"then retry accepting the app."
+                await zerobot_common.bot_channel.send(
+                    f"Accepted {name}. They are not on the banlist and I do not recognize them "
+                    "as an ex-clanmember"
                 )
-                await zerobot_common.bot_channel.send(message + msg)
+            except BannedUserError:
+                await ctx.send(f"_ _\n⛔ There is a problem with this app, please check the staff bot channel. ⛔\n_ _")
+                app.set_status("open")
+                zerobot_common.bot_channel.send(
+                    f"Can not accept {name} joining. ⛔ Banned Member ⛔. "
+                    f"They need to appeal their ban status first through <@&308529829672910848> "
+                    f"and need to be removed from the banlist by them first.\n"
+                    f"Remove their ban with: `-zbot removemember banned_members id`\n"
+                    f"  id: ingame name, discord_id or profile_link\n"
+                    f"you can retry accepting the app after Clan Issues resolved the ban."
+                )
                 return
             except ExistingUserWarning:
-                await ctx.send(f"You may have been a previous member, I tried to post info that could help in the staff bot channel.")
-                message += f"They are not on the banlist, but I found previous member results above for them on the spreadsheet, you may want to check / remove those. "
+                await zerobot_common.bot_channel.send(
+                    f"Accepted {name}. They are not on the banlist, but I still found previous member results above for them on the spreadsheet, you may want to check / remove those. "
+                )
             # add member to memberlist
             await memblist.add_member_app(zerobot_common.bot_channel, app)
             message += f"I have added them to the memberlist spreadsheet. "
             # post 10 least active people that were not active in last 30 days
             await memblist.post_inactives(zerobot_common.bot_channel, 30, 10)
         else:
-            message += f"Failed to check memberlist, could not check if they were a previous member or if they are on the banlist."
+            await zerobot_common.bot_channel.send(
+                f"Accepted {name}. But failed to check memberlist, could not check if they were a previous member or if they are on the banlist."
+            )
         
         # if the site link was set in the app try updating it already
         profile_link = app.fields_dict["profile_link"]
@@ -613,7 +718,7 @@ class ApplicationsCog(commands.Cog):
         await send_accepted_messages(discord_user, ctx)
 
         message += (
-            f" I have also them info on notify tags, dpm tags, and links to "
+            f" I have also sent them info on notify tags, dpm tags, and links to "
             f"all the useful pvm info / discords. \n\nYou still need to "
             f"invite them ingame. I have asked them to look for an invite."
         )

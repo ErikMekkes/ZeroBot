@@ -60,7 +60,7 @@ async def forumthread_check_scheduler(self):
         return
     else:
         await zerobot_common.bot_channel.send(
-            f"@here the forum thread <{thread_url}> needs a bump!"
+            f"@here the forum thread <{thread_url.replace(',thd','')}> needs a bump!"
         )
 
 class ForumThreadCog(commands.Cog):
