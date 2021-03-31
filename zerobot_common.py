@@ -126,7 +126,6 @@ class SheetParams:
 current_members_sheet = drive_doc.worksheet("Current Members")
 old_members_sheet = drive_doc.worksheet("Old Members")
 banned_members_sheet = drive_doc.worksheet("Banned Members")
-recent_changes_sheet = drive_doc.worksheet("Recent Changes")
 warnings_sheet  = drive_doc.worksheet("Warnings")
 
 # if set, use date and time formats from settings 
