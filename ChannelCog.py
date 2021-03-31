@@ -92,6 +92,7 @@ class ChannelCog(commands.Cog):
         The related channel is found by the bot in synched_channels.
         """
         await self.reload_channel(channel_name)
+        await ctx.send(f"Finished reloading {channel_name}.")
     
     async def reload_channel(self, channel_name):
         """
