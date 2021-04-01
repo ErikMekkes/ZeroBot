@@ -461,13 +461,15 @@ class MemberlistCog(commands.Cog):
         if len(args) == 0:
             await ctx.send("No enough arguments\n" + use_msg)
             return
-        if len(args) > 1:
-            await ctx.send("Too many arguments\n" + use_msg)
-            return
+        id = " ".join(args).lower()
         try:
-            id = parse_discord_id(args[0])
+            id = parse_discord_id(id)
         except Exception:
-            id = args[0]
+            pass
+        try:
+            id = parse_profile_link(id)
+        except Exception:
+            pass
         
         results = await self.search_all(id)
         if (len(results.combined_list()) == 0):
