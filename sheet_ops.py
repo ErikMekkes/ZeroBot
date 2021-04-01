@@ -2,45 +2,11 @@ import time
 from datetime import datetime
 import zerobot_common
 import utilities
-from zerobot_common import SheetParams, discord_ranks, gem_exceptions
+from zerobot_common import SheetParams, rank_index, gem_exceptions
 from member import Member, valid_profile_link , valid_discord_id, Warning
 from memberlist import memberlist_sort_name, memberlist_get
+from rankchecks import match_disc_ingame, match_disc_site
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
-
-site_ranks = {
-    'Leader' : 10,
-    'Co-Leader' : 10,
-    'Clan-Coordinator' : 9,
-    'Clan Issues' : 9,
-    'Citadel Co' : 9,
-    'Media Co' : 9,
-    'Staff Member' : 9,
-    'MasterClass PvMer' : 8,
-    'Supreme PvMer' : 7,
-    'PvM Specialists' : 6,
-    'Elite Member' : 6,
-    'Veteran Member' : 5,
-    'Advanced Member' : 4,
-    'Full Member' : 3,
-    'Recruit' : 2,
-    'Registered Guest' : 1,
-    'Retired member' : 1,
-    'Kicked Member' : 0
-}
-ingame_ranks = {
-    'Owner' : 10,
-    'Deputy Owner' : 10,
-    'Overseer' : 10,
-    'Coordinator' : 9,
-    'Organiser' : 9,
-    'Admin' : 8,
-    'General' : 7,
-    'Captain' : 6,
-    'Lieutenant' : 5,
-    'Sergeant' : 4,
-    'Corporal' : 3,
-    'Recruit' : 2
-}
 
 ##TODO modify tosheet
 def memberlist_to_sheet(memberlist, sheet):
@@ -253,50 +219,33 @@ def color_spreadsheet():
     for x in memberlist:
         # orange gem column, for push to do gem : no gem, current rank higher than novice
         if not(x.passed_gem) and (
-            discord_ranks.get(x.discord_rank, 0) > discord_ranks['Recruit']
+            rank_index(discord_role_name=x.discord_rank) < zerobot_common.join_rank_index
             ):
             passed_gem_ranges.append((f'F{row}', orange_fmt))
         row += 1
     row = SheetParams.header_rows + 1
     for x in memberlist:
-        # discord rank color
-        if (x.passed_gem or (x.discord_rank in gem_exceptions or x.name in gem_exceptions)):
-            # check ingame rank for mismatch
-            if discord_ranks.get(x.discord_rank, 0) > ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', green_fmt))
-            if discord_ranks.get(x.discord_rank, 0) < ingame_ranks.get(x.rank, 0): ingame_rank_ranges.append((f'B{row}', orange_fmt))
-            # check site rank for mismatch
+        discord_rank_index = rank_index(discord_role_name=x.discord_rank)
+        # colour discord rank if missing or not auto updating
+        if discord_rank_index is None:
+            # no discord rank = red for missing
+            discord_rank_ranges.append((f'C{row}', red_fmt))
+        elif not valid_discord_id(x.discord_id):
+            # discord rank fine but not autoupdating = grey
+            discord_rank_ranges.append((f'C{row}', gray_fmt))
+        else:
+            if not (x.passed_gem or (x.discord_rank in gem_exceptions or x.name in gem_exceptions)):
+                if discord_rank_index < zerobot_common.join_rank_index:
+                    # discord rank higher than recruit and no gem
+                    discord_rank_ranges.append((f'C{row}', orange_fmt))
+            # check ingame rank for mismatch with discord
+            if not x.rank in match_disc_ingame[x.discord_rank] : ingame_rank_ranges.append((f'B{row}', orange_fmt))
+            # if no site link, color gray = not autoupdating
             if not valid_profile_link(x.profile_link):
                 site_rank_ranges.append((f'D{row}', gray_fmt))
             else:
-                if discord_ranks.get(x.discord_rank, 0) > site_ranks.get(x.site_rank, 0): site_rank_ranges.append((f'D{row}', green_fmt))
-                if discord_ranks.get(x.discord_rank, 0) < site_ranks.get(x.site_rank, 0): site_rank_ranges.append((f'D{row}', orange_fmt))
-            # colour discord rank if missing or not auto updating
-            if discord_ranks.get(x.discord_rank, 0) == 0:
-                # no discord rank = red for missing
-                discord_rank_ranges.append((f'C{row}', red_fmt))
-            elif not valid_discord_id(x.discord_id):
-                # discord rank fine but not autoupdating = grey
-                discord_rank_ranges.append((f'C{row}', gray_fmt))
-        else:   
-            # ingame rank above novice = should get derank
-            if ingame_ranks.get(x.rank, 0) > ingame_ranks['Recruit']: ingame_rank_ranges.append((f'B{row}', orange_fmt))
-            if not valid_profile_link(x.profile_link):
-                site_rank_ranges.append((f'D{row}', gray_fmt))
-            else:
-                # above novice = should get derank
-                if site_ranks.get(x.site_rank, 0) > site_ranks['Recruit']: site_rank_ranges.append((f'D{row}', orange_fmt))
-                # below novice = should get rankup
-                if site_ranks.get(x.site_rank, 0) < site_ranks['Recruit']: site_rank_ranges.append((f'D{row}', green_fmt))
-            # discord rank
-            if discord_ranks.get(x.discord_rank, 0) == 0:
-                # no discord rank = red for missing
-                discord_rank_ranges.append((f'C{row}', red_fmt))
-            elif discord_ranks.get(x.discord_rank, 0) > discord_ranks.get('Recruit'):
-                # discord rank but too high
-                discord_rank_ranges.append((f'C{row}', orange_fmt))
-            elif not valid_discord_id(x.discord_id):
-                # discord rank fine but not autoupdating = grey
-                discord_rank_ranges.append((f'C{row}', gray_fmt))
+                # check site rank for mismatch with discord
+                if not x.site_rank in match_disc_site[x.discord_rank] : site_rank_ranges.append((f'D{row}', orange_fmt))
         row += 1
 
     # clear all previous formatting

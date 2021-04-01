@@ -174,30 +174,22 @@ inactive_exceptions = load_json(inactive_exceptions_filename)
 # how long before someone is considered inactive
 inactive_days = 30
 
-# Discord roles and their ranks, because you might have discord roles that are
+# Discord roles and their ranks, taken from the corresponding json settings 
+# file for them. This is needed because you might have discord roles that are
 # not used for ranks, and because the bot needs to know the rank order.
-# If you use an equal number the highest listed one is still ranked higher.
-# If you want the bot to be able to check if members have the right ranks, you
-# need to give matching ingame / discord / site ranks the same number.
+# First listed = highest rank, rank decreases as index goes up.
 # THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
-discord_ranks = {
-	"Leaders" : 11,
-    "Clan Issues": 10,
-    "PvM Coordinator": 10,
-	"Staff Member" : 9,
-	"MasterClass PvMer" : 8,
-	"Supreme PvMer" : 7,
-	"PvM Specialists" : 6,
-	"Elite Member" : 6,
-	"Veteran Member" : 5,
-	"Advanced Member" : 4,
-	"Full Member" : 3,
-	"Recruit" : 2,
-    'Clan Friends/Allies' : 1,
-    "Guest" : 1,
-    "Waiting Approval" : 0
-}
+json_rank_ids = load_json(settings.get("discord_ranks_filename"))
+discord_rank_ids = {}
+for k,v in json_rank_ids.items():
+    discord_rank_ids[int(k)] = v
+# A few individual ones for easy of access
+guest_role_id = settings.get("guest_role_id")
+join_role_id = settings.get("join_role_id")
+join_rank_index = rank_index(discord_role_id=join_role_id)
 clan_member_role_id = settings.get("clan_member_role_id")
+staff_role_id = settings.get("staff_role_id")
+staff_rank_index = rank_index(discord_role_id=staff_role_id)
 gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists"]
 gem_req_rank = "Full Member"
 
@@ -241,3 +233,70 @@ def get_named_role(role_name):
         if (role.name == role_name):
             return role
     return None
+
+def is_member(discord_user):
+    """
+    Checks if a discord user is a clan member using the role given to all
+    clan members.
+    """
+    for r in discord_user.roles:
+        if r.id == clan_member_role_id:
+            return True
+    return False
+def get_rank_id(discord_role_name):
+    """
+    Look up id for a discord rank name
+    """
+    names = list(discord_rank_ids.values())
+    if discord_role_name in names:
+        index = names.index(discord_role_name)
+        return list(discord_rank_ids.keys())[index]
+    return -1    
+def rank_index(*args, discord_user=None, discord_role_id=None, discord_role_name=None):
+    """
+    Returns the rank index for this role. Uses discord_rank_ids to
+    determine which rank is highest (first mentioned is highest).
+    """
+    num_args = -2
+    for k in locals().values():
+        if k is not None:
+            num_args += 1
+    if num_args != 1:
+        raise Exception("Unknown argument type passed to role_rank().")
+    # rank name based
+    if discord_role_name is not None:
+        names = list(discord_rank_ids.values())
+        if discord_role_name in names:
+            return names.index(discord_role_name)
+        return None
+    # discord user based
+    if discord_user is not None:
+        highest_rank = len(discord_rank_ids)
+        for role in discord_user.roles:
+            rank = rank_index(discord_role_id=role.id)
+            if rank is not None and rank < highest_rank:
+                highest_rank = rank
+        if highest_rank == len(discord_rank_ids):
+            return None
+        return highest_rank
+    # rank id based
+    if discord_role_id is not None:
+        ids = list(discord_rank_ids.keys())
+        if discord_role_id in ids:
+            return ids.index(discord_role_id)
+        return None
+def highest_role(discord_user):
+    """
+    Returns the highest role this discord user has. Uses discord_rank_ids to
+    determine which rank is highest (first mentioned is highest).
+    """
+    rank = len(discord_rank_ids)
+    highest_role = None
+    for role in discord_user.roles:
+        index = rank_index(discord_role_id=role.id)
+        if index is None:
+            continue
+        if index < rank:
+            rank = index
+            highest_role = role
+    return highest_role

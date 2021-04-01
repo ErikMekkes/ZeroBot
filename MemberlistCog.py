@@ -247,7 +247,8 @@ async def process_leaving(self, leaving_list):
         return
     
     for memb in leaving_list:
-        if (zerobot_common.discord_ranks.get(memb.discord_rank, 0) > 7):
+        rank_index = zerobot_common.rank_index(discord_role_name=memb.discord_rank)
+        if rank_index <= zerobot_common.staff_rank_index:
             await zerobot_common.bot_channel.send(
                 f"Can not do automatic deranks for leaving member: "
                 f"{memb.name}, bot isn't allowed to change staff ranks. "
@@ -862,10 +863,11 @@ class MemberlistCog(commands.Cog):
         discord_id = args[2]
         profile_link = args[3].replace("http:", "https:")
         # should be a valid rank, no staff rank changes allowed
-        if (zerobot_common.discord_ranks.get(rank, 0) == 0):
+        rank_index = zerobot_common.rank_index(discord_role_name=rank)
+        if rank_index is None:
             await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return
-        if (zerobot_common.discord_ranks.get(rank, 0) > 8):
+        if rank_index <= zerobot_common.staff_rank_index:
             await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
         # should be an 18 length number, or "0" as explicit 'doesnt use discord' case
