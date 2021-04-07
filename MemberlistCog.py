@@ -247,7 +247,7 @@ async def process_leaving(self, leaving_list):
         return
     
     for memb in leaving_list:
-        rank_index = zerobot_common.rank_index(discord_role_name=memb.discord_rank)
+        rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
         if rank_index <= zerobot_common.staff_rank_index:
             await zerobot_common.bot_channel.send(
                 f"Can not do automatic deranks for leaving member: "
@@ -863,7 +863,7 @@ class MemberlistCog(commands.Cog):
         discord_id = args[2]
         profile_link = args[3].replace("http:", "https:")
         # should be a valid rank, no staff rank changes allowed
-        rank_index = zerobot_common.rank_index(discord_role_name=rank)
+        rank_index = utilities.rank_index(discord_role_name=rank)
         if rank_index is None:
             await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return

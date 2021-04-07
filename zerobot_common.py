@@ -37,7 +37,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 # zerobot modules
 import utilities
-from utilities import load_json, dump_json
+from utilities import load_json, dump_json, rank_index
 from logfile import LogFile
 from site_ops import SiteOps
 from permissions import Permissions
@@ -183,6 +183,9 @@ json_rank_ids = load_json(settings.get("discord_ranks_filename"))
 discord_rank_ids = {}
 for k,v in json_rank_ids.items():
     discord_rank_ids[int(k)] = v
+# store a copy in utilities as well, these should remain unchanged
+utilities.discord_rank_ids = discord_rank_ids
+
 # A few individual ones for easy of access
 guest_role_id = settings.get("guest_role_id")
 join_role_id = settings.get("join_role_id")
@@ -251,40 +254,7 @@ def get_rank_id(discord_role_name):
     if discord_role_name in names:
         index = names.index(discord_role_name)
         return list(discord_rank_ids.keys())[index]
-    return -1    
-def rank_index(*args, discord_user=None, discord_role_id=None, discord_role_name=None):
-    """
-    Returns the rank index for this role. Uses discord_rank_ids to
-    determine which rank is highest (first mentioned is highest).
-    """
-    num_args = -2
-    for k in locals().values():
-        if k is not None:
-            num_args += 1
-    if num_args != 1:
-        raise Exception("Unknown argument type passed to role_rank().")
-    # rank name based
-    if discord_role_name is not None:
-        names = list(discord_rank_ids.values())
-        if discord_role_name in names:
-            return names.index(discord_role_name)
-        return None
-    # discord user based
-    if discord_user is not None:
-        highest_rank = len(discord_rank_ids)
-        for role in discord_user.roles:
-            rank = rank_index(discord_role_id=role.id)
-            if rank is not None and rank < highest_rank:
-                highest_rank = rank
-        if highest_rank == len(discord_rank_ids):
-            return None
-        return highest_rank
-    # rank id based
-    if discord_role_id is not None:
-        ids = list(discord_rank_ids.keys())
-        if discord_role_id in ids:
-            return ids.index(discord_role_id)
-        return None
+    return -1
 def highest_role(discord_user):
     """
     Returns the highest role this discord user has. Uses discord_rank_ids to

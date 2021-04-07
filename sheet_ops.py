@@ -2,7 +2,7 @@ import time
 from datetime import datetime
 import zerobot_common
 import utilities
-from zerobot_common import SheetParams, rank_index, gem_exceptions
+from zerobot_common import SheetParams, gem_exceptions
 from member import Member, valid_profile_link , valid_discord_id, Warning
 from memberlist import memberlist_sort_name, memberlist_get
 from rankchecks import match_disc_ingame, match_disc_site
@@ -219,13 +219,13 @@ def color_spreadsheet():
     for x in memberlist:
         # orange gem column, for push to do gem : no gem, current rank higher than novice
         if not(x.passed_gem) and (
-            rank_index(discord_role_name=x.discord_rank) < zerobot_common.join_rank_index
+            utilities.rank_index(discord_role_name=x.discord_rank) < zerobot_common.join_rank_index
             ):
             passed_gem_ranges.append((f'F{row}', orange_fmt))
         row += 1
     row = SheetParams.header_rows + 1
     for x in memberlist:
-        discord_rank_index = rank_index(discord_role_name=x.discord_rank)
+        discord_rank_index = utilities.rank_index(discord_role_name=x.discord_rank)
         # colour discord rank if missing or not auto updating
         if discord_rank_index is None:
             # no discord rank = red for missing
