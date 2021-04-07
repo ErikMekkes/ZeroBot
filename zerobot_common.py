@@ -300,3 +300,14 @@ def highest_role(discord_user):
             rank = index
             highest_role = role
     return highest_role
+
+async def remove_lower_roles(discord_user, role_index):
+    """
+    Removes all ranked roles that are lower than the mentioned rank_index 
+    from the discord user.
+    """
+    for role in discord_user.roles:
+        index = rank_index(discord_role_id=role.id)
+        if index is not None and index > role_index:
+            reason = "Removing lower ranks."
+            await discord_user.remove_roles(role, reason=reason)

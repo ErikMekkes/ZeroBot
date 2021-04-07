@@ -991,6 +991,10 @@ class MemberlistCog(commands.Cog):
         member.discord_rank = ""
 
     async def removeroles(self, member):
+        """
+        Removes any ranked roles below staff rank, removes clan member role
+        and assigns the guest role afterwards. They keep other roles.
+        """
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
             await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
@@ -1000,8 +1004,16 @@ class MemberlistCog(commands.Cog):
             await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
-        await discord_user.edit(roles=[], reason="remove roles")
-        member.discord_rank = ""
+        # Remove ranked roles below staff
+        await zerobot_common.remove_lower_roles(discord_user, zerobot_common.staff_rank_index)
+        # Remove clan member role
+        clan_member_role = zerobot_common.guild.get_role(zerobot_common.clan_member_role_id)
+        await discord_user.remove_roles(clan_member_role, reason="left clan")
+        # add guest role
+        guest_role_id = zerobot_common.guest_role_id
+        guest_role = zerobot_common.guild.get_role(guest_role_id)
+        await discord_user.add_roles(guest_role, reason="left clan")
+        member.discord_rank = "Guest"
 
     @commands.command()
     async def respond(self, ctx):

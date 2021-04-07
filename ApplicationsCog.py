@@ -30,7 +30,7 @@ from pathlib import Path
 import os
 
 import zerobot_common
-from zerobot_common import is_member, highest_role, rank_index
+from zerobot_common import is_member, highest_role, rank_index, remove_lower_roles
 import utilities
 
 from utilities import send_messages, message_ctx
@@ -128,20 +128,6 @@ channel_creation_message = (
     "I have a created a channel for your application on the Zer0 Discord "
     "server, please go to : "
 )
-
-async def remove_lower_roles(discord_user, role_index):
-    """
-    Removes all ranked roles that are lower than the mentioned rank_index 
-    from the discord user.
-    """
-    print(role_index)
-    for role in discord_user.roles:
-        index = rank_index(discord_role_id=role.id)
-        print(index)
-        if index is not None and index > role_index:
-            reason = "Removing lower ranks."
-            await discord_user.remove_roles(role, reason=reason)
-
 
 async def setup_app_channel(ctx, channel, app_type):
     """
