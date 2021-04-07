@@ -217,11 +217,11 @@ def color_spreadsheet():
     row = SheetParams.header_rows + 1
     # check passed gem and rank after gem columns
     for x in memberlist:
+        discord_rank_index = utilities.rank_index(discord_role_name=x.discord_rank)
         # orange gem column, for push to do gem : no gem, current rank higher than novice
-        if not(x.passed_gem) and (
-            utilities.rank_index(discord_role_name=x.discord_rank) < zerobot_common.join_rank_index
-            ):
-            passed_gem_ranges.append((f'F{row}', orange_fmt))
+        if not(x.passed_gem) and discord_rank_index is not None:
+            if discord_rank_index < zerobot_common.join_rank_index:
+                passed_gem_ranges.append((f'F{row}', orange_fmt))
         row += 1
     row = SheetParams.header_rows + 1
     for x in memberlist:
