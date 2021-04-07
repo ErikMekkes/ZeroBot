@@ -30,10 +30,10 @@ from pathlib import Path
 import os
 
 import zerobot_common
-from zerobot_common import is_member, highest_role, rank_index, remove_lower_roles
+from zerobot_common import is_member, highest_role, remove_lower_roles
 import utilities
 
-from utilities import send_messages, message_ctx
+from utilities import send_messages, message_ctx, rank_index
 from logfile import LogFile
 from permissions import Permissions
 from application import Application

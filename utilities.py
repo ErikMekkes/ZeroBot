@@ -8,6 +8,8 @@ dateformat = '%Y-%m-%d'
 timeformat = '%H.%M.%S'
 datetimeformat = '%Y-%m-%d_%H.%M.%S'
 
+discord_rank_ids = {}
+
 def read_file(filename, type=None):
     """
     A safe wrapper for reading a file from disk as string.
@@ -219,3 +221,37 @@ def bracket_parser(txt):
     if len(textrem) != 0:
         return res + bracket_parser(textrem)
     return res
+
+def rank_index(*args, discord_user=None, discord_role_id=None, discord_role_name=None):
+    """
+    Returns the rank index for this role. Uses discord_rank_ids to
+    determine which rank is highest (first mentioned is highest).
+    """
+    num_args = -2
+    for k in locals().values():
+        if k is not None:
+            num_args += 1
+    if num_args != 1:
+        raise Exception("Unknown argument type passed to role_rank().")
+    # rank name based
+    if discord_role_name is not None:
+        names = list(discord_rank_ids.values())
+        if discord_role_name in names:
+            return names.index(discord_role_name)
+        return None
+    # discord user based
+    if discord_user is not None:
+        highest_rank = len(discord_rank_ids)
+        for role in discord_user.roles:
+            rank = rank_index(discord_role_id=role.id)
+            if rank is not None and rank < highest_rank:
+                highest_rank = rank
+        if highest_rank == len(discord_rank_ids):
+            return None
+        return highest_rank
+    # rank id based
+    if discord_role_id is not None:
+        ids = list(discord_rank_ids.keys())
+        if discord_role_id in ids:
+            return ids.index(discord_role_id)
+        return None
