@@ -213,19 +213,15 @@ def color_spreadsheet():
     site_rank_ranges = list()
     passed_gem_ranges = list()
 
-    # ingame rank = Col B, clan Rank = Col C, Discord Rank = Col D, Passed Gem = Col F
+    # ingame rank = Col B, Discord Rank = Col C, Site Rank = Col D, Passed Gem = Col F
     row = SheetParams.header_rows + 1
-    # check passed gem and rank after gem columns
     for x in memberlist:
         discord_rank_index = utilities.rank_index(discord_role_name=x.discord_rank)
-        # orange gem column, for push to do gem : no gem, current rank higher than novice
+        # colour gem column
         if not(x.passed_gem) and discord_rank_index is not None:
             if discord_rank_index < zerobot_common.join_rank_index:
+                # push to do gems : no gem, current rank higher than novice
                 passed_gem_ranges.append((f'F{row}', orange_fmt))
-        row += 1
-    row = SheetParams.header_rows + 1
-    for x in memberlist:
-        discord_rank_index = utilities.rank_index(discord_role_name=x.discord_rank)
         # colour discord rank if missing or not auto updating
         if discord_rank_index is None:
             # no discord rank = red for missing
