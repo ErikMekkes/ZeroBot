@@ -30,6 +30,7 @@ from pathlib import Path
 import os
 
 import zerobot_common
+from zerobot_common import is_member, highest_role, rank_index, remove_lower_roles
 import utilities
 
 from utilities import send_messages, message_ctx
@@ -45,38 +46,6 @@ from member import valid_profile_link
 votes_for_guest = 1
 votes_for_join = 3
 votes_for_rankup = 2
-
-# Rank required to be able to start a guest or join application. If they do not
-# have a rank or only lower ones the bot will ignore them. the bot will only
-# start applications for users with a higher rank
-# Useful as a whitelist for apps, or if they need to do something else first.
-# If you do not want such a minimum rank and want th
-# is assumed to be able to start an application as long as you gave them the
-# right to type it in the channel on discord. If you want to disable this and
-can_apply_role_name = "Waiting Approval"
-can_apply_rank = zerobot_common.discord_ranks.get(can_apply_role_name, None)
-# response message sent to people who can not apply but tried to
-cant_apply_message = (
-    "Please check our <#748523828291960892> channel before " +
-    "starting an application :)."
-)
-
-# rank given to guests
-guest_role_name = "Guest"
-guest_rank = zerobot_common.discord_ranks.get(guest_role_name)
-
-# rank given to joining members
-join_role_name = "Recruit"
-join_rank = zerobot_common.discord_ranks.get(join_role_name)
-# message for non members who try to rankup instead of join
-join_before_rankup_message = (
-    "You have to join the clan first before you can rank up :) "
-    "Use `-zbot join` to join the clan"
-)
-
-# I do not like adding these... but names can be inconsistent. And people
-# quickly get annoyed at the "I meant that why didnt it get it" thing.
-# plus we need usable rank names for app channels and archived files...
 
 # what people type down -> what rankup they mean, in a format that works for
 # files and channel names.
@@ -121,9 +90,12 @@ discord_rank_parser = {
 }
 
 # discord ranks that can not be applied for, like admin or special ones
-disallowed_rankups = [
-    "Leaders", "Elite Member"
-]
+disallowed_rankups = {
+    192302021808750592 : "Leaders",
+    308529829672910848 : "Clan Issues",
+    311579087770615808 : "PvM Coordinator",
+    192305153897005067 : "Elite Member"
+}
 
 # The remaining ones below are automated, you shouldnt have to change anything
 # there. But you can edit permissions / applications .json files by hand if
@@ -145,37 +117,17 @@ app_req_channel_id = zerobot_common.settings.get("app_requests_channel_id")
 app_category_id = zerobot_common.settings.get("applications_category_id")
 app_category = None
 
+
+# message for non members who try to rankup instead of join
+join_before_rankup_message = (
+    "You have to join the clan first before you can rank up :) \n"
+    "Use `-zbot join` to join the clan, or `-zbot guest` to register as a guest for now."
+)
 app_not_found_msg = "Could not find a related application for this channel."
 channel_creation_message = (
     "I have a created a channel for your application on the Zer0 Discord "
     "server, please go to : "
 )
-
-def highest_discord_rank(discord_user):
-    """
-    Returns a discord user's highest rank, using the discord_ranks table.
-    Returns None if not ranked.
-    """
-    rank = -1
-    for role in discord_user.roles:
-        role_rank  = zerobot_common.discord_ranks.get(role.name,-1)
-        if (role_rank >= rank):
-            rank = role_rank
-    return rank
-
-def highest_discord_role(discord_user):
-    """
-    Returns a discord user's highest rank, using the discord_ranks table.
-    Returns None if not ranked.
-    """
-    rank = -1
-    result_role = None
-    for role in discord_user.roles:
-        role_rank  = zerobot_common.discord_ranks.get(role.name,-1)
-        if (role_rank >= rank):
-            rank = role_rank
-            result_role = role
-    return result_role
 
 async def setup_app_channel(ctx, channel, app_type):
     """
@@ -231,8 +183,7 @@ class ApplicationsCog(commands.Cog):
         if not(ctx.channel.id == app_req_channel_id): return
 
         # return if not joined yet
-        current_rank = highest_discord_rank(ctx.author)
-        if (current_rank < join_rank):
+        if not is_member(ctx.author):
             await ctx.send(join_before_rankup_message)
             return
         # return if wrong format
@@ -244,31 +195,31 @@ class ApplicationsCog(commands.Cog):
         if (open_app != None):
             await message_ctx(ctx.author, f"You already have an open application at <#{open_app.channel_id}>", alt_ctx=ctx)
             return
-        
+        # parse name, validity checked later with possible rankups
         rank_name = "_".join(args).lower()
         rank_name = rank_parser.get(rank_name, rank_name)
         discord_rank_name = discord_rank_parser.get(rank_name, rank_name)
-        rank = zerobot_common.discord_ranks.get(discord_rank_name, -1)
 
         # create a copy of discord ranks
-        possible_rankups = zerobot_common.discord_ranks.copy()
+        possible_rankups = zerobot_common.discord_rank_ids.copy()
         # remove ranks that can not be applied for
-        for r_name in disallowed_rankups:
+        for r_id in disallowed_rankups.keys():
             try:
-                possible_rankups.pop(r_name)
+                possible_rankups.pop(r_id)
             except KeyError as e:
                 app_log.log_exception(e, ctx)
                 pass
+        current_rank = rank_index(discord_user=ctx.author)
+        lower_rank_ids = list(zerobot_common.discord_rank_ids.keys())[current_rank:]
         # remove ranks that are equal to or lower than the users current rank
-        for r_name, rank in zerobot_common.discord_ranks.items():
-            if rank <= current_rank:
-                try:
-                    possible_rankups.pop(r_name)
-                except KeyError as e:
-                    app_log.log_exception(e, ctx)
-                    pass
+        for r_id in lower_rank_ids:
+            try:
+                possible_rankups.pop(r_id)
+            except KeyError as e:
+                app_log.log_exception(e, ctx)
+                pass
         # reverse to list most likely rankup first
-        possible_rankups = list(possible_rankups.keys())
+        possible_rankups = list(possible_rankups.values())
         possible_rankups.reverse()
         # return if rank is not a possible rankup for this discord user
         if (not discord_rank_name in possible_rankups):
@@ -288,6 +239,7 @@ class ApplicationsCog(commands.Cog):
         await setup_app_channel(ctx, channel, rank_name)
         await message_ctx(ctx.author, channel_creation_message + channel.mention)
         # register the application and update copy on disk
+        # TODO track rank id instead of name (or both, but use id)
         rankup_app = Application(
             channel.id,
             ctx.author.id,
@@ -296,6 +248,7 @@ class ApplicationsCog(commands.Cog):
             votes_required = votes_for_rankup
         )
         # staff apps can only be handled manually.
+        #TODO use id from settings and any higher rank
         if rank_name == "staff_member":
             permissions.disallow("accept", channel.id)
             rankup_app.votes_required = 999
@@ -622,11 +575,12 @@ class ApplicationsCog(commands.Cog):
             )
 
         # add guest role
-        guest_role = zerobot_common.get_named_role(guest_role_name)
+        guest_id = zerobot_common.guest_role_id
+        guest_role = zerobot_common.guild.get_role(guest_id)
         await discord_user.add_roles(guest_role, reason="accepted guest")
-        # remove waiting approval role
-        can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
-        await discord_user.remove_roles(can_apply_role, reason="Adding guest")
+        # remove lower roles
+        guest_index = rank_index(discord_role_id=guest_id)
+        await remove_lower_roles(discord_user, guest_index)
 
         await message_ctx(
             discord_user, 
@@ -684,12 +638,26 @@ class ApplicationsCog(commands.Cog):
             await zerobot_common.bot_channel.send(
                 f"Accepted {name}. But failed to check memberlist, could not check if they were a previous member or if they are on the banlist."
             )
+
+        # add generic clan member role
+        clan_member_role = zerobot_common.guild.get_role(zerobot_common.clan_member_role_id)
+        await discord_user.add_roles(clan_member_role, reason="accepted member")
+        # add joined rank role
+        join_role = zerobot_common.guild.get_role(zerobot_common.join_role_id)
+        await discord_user.add_roles(join_role, reason="accepted member")
+        # remove lower ranked roles
+        join_rank_index = rank_index(discord_role_id=zerobot_common.join_role_id)
+        await remove_lower_roles(discord_user, join_rank_index)
+        message += (
+            f" I have given them the {join_role.name} rank on discord and "
+            f"removed their previous lower rank(s)."
+        )
         
         # if the site link was set in the app try updating it already
         profile_link = app.fields_dict["profile_link"]
         if zerobot_common.site_enabled and profile_link != "no site":
             if valid_profile_link(profile_link):
-                zerobot_common.siteops.setrank(profile_link, join_role_name)
+                zerobot_common.siteops.setrank(profile_link, join_role.name)
             else:
                 txt = (
                     f"invalid site profile set while accepting app: "
@@ -697,22 +665,6 @@ class ApplicationsCog(commands.Cog):
                 )
                 app_log.log(txt)
                 await zerobot_common.bot_channel.send(txt)
-
-        # add member role
-        in_clan_role = zerobot_common.get_named_role("Clan Member")
-        await discord_user.add_roles(in_clan_role, reason="accepted member")
-        join_role = zerobot_common.get_named_role(join_role_name)
-        await discord_user.add_roles(join_role, reason="accepted member")
-        # remove allowed to make app role if present
-        can_apply_role = zerobot_common.get_named_role(can_apply_role_name)
-        await discord_user.remove_roles(can_apply_role, reason="Adding member")
-        # remove guest role if present
-        guest_role = zerobot_common.get_named_role(guest_role_name)
-        await discord_user.remove_roles(guest_role, reason="Adding member")
-        message += (
-            f" I have given them the {join_role_name} rank on discord and "
-            f"removed their previous lower rank(s)."
-        )
 
         # send welcome messages
         await send_accepted_messages(discord_user, ctx)
@@ -732,27 +684,28 @@ class ApplicationsCog(commands.Cog):
         discord_id = app.fields_dict["requester_id"]
         discord_user = zerobot_common.guild.get_member(discord_id)
         # find current role and new role
-        current_role = highest_discord_role(discord_user)
-        current_rank = zerobot_common.discord_ranks.get(current_role.name, 0)
-        if current_rank >= zerobot_common.discord_ranks.get("Staff Member"):
+        current_role = highest_role(discord_user)
+        current_rank_index = rank_index(discord_role_id=current_role.id)
+        if current_rank_index <= rank_index(discord_role_id=zerobot_common.staff_role_id):
             await ctx.send(
                 f"Trying to edit a Staff Member, "
                 f"bot is not allowed to edit Staff Members"
             )
             return
         new_rank_name = app.fields_dict["rank"]
-        new_role = zerobot_common.get_named_role(new_rank_name)
-        new_rank = zerobot_common.discord_ranks.get(new_rank_name, 0)
-        if new_rank >= zerobot_common.discord_ranks.get("Staff Member"):
+        new_rank_id = zerobot_common.get_rank_id(new_rank_name)
+        new_rank_index = rank_index(discord_role_id=new_rank_id)
+        if new_rank_index <= rank_index(discord_role_id=zerobot_common.staff_role_id):
             await ctx.send(
                 f"Trying to make someone a Staff Member, "
                 f"bot is not allowed to edit Staff Members"
             )
             return
         # add new rank role
-        await discord_user.add_roles(new_role, reason="member rankup")
-        # remove old rank role
-        await discord_user.remove_roles(current_role, reason="member rankup")
+        new_rank_role = zerobot_common.guild.get_role(new_rank_id)
+        await discord_user.add_roles(new_rank_role, reason="member rankup")
+        # remove lower ranks
+        await remove_lower_roles(discord_user, new_rank_index)
 
         await message_ctx(discord_user, f"Your application for {new_rank_name} was accepted :)")
         await ctx.send(f"Rankup application to {new_rank_name} accepted :)\n You can continue to talk in this channel until it is archived.")

@@ -247,7 +247,8 @@ async def process_leaving(self, leaving_list):
         return
     
     for memb in leaving_list:
-        if (zerobot_common.discord_ranks.get(memb.discord_rank, 0) > 7):
+        rank_index = zerobot_common.rank_index(discord_role_name=memb.discord_rank)
+        if rank_index <= zerobot_common.staff_rank_index:
             await zerobot_common.bot_channel.send(
                 f"Can not do automatic deranks for leaving member: "
                 f"{memb.name}, bot isn't allowed to change staff ranks. "
@@ -862,10 +863,11 @@ class MemberlistCog(commands.Cog):
         discord_id = args[2]
         profile_link = args[3].replace("http:", "https:")
         # should be a valid rank, no staff rank changes allowed
-        if (zerobot_common.discord_ranks.get(rank, 0) == 0):
+        rank_index = zerobot_common.rank_index(discord_role_name=rank)
+        if rank_index is None:
             await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
             return
-        if (zerobot_common.discord_ranks.get(rank, 0) > 8):
+        if rank_index <= zerobot_common.staff_rank_index:
             await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
             return
         # should be an 18 length number, or "0" as explicit 'doesnt use discord' case
@@ -989,6 +991,10 @@ class MemberlistCog(commands.Cog):
         member.discord_rank = ""
 
     async def removeroles(self, member):
+        """
+        Removes any ranked roles below staff rank, removes clan member role
+        and assigns the guest role afterwards. They keep other roles.
+        """
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
             await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
@@ -998,8 +1004,16 @@ class MemberlistCog(commands.Cog):
             await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
-        await discord_user.edit(roles=[], reason="remove roles")
-        member.discord_rank = ""
+        # Remove ranked roles below staff
+        await zerobot_common.remove_lower_roles(discord_user, zerobot_common.staff_rank_index)
+        # Remove clan member role
+        clan_member_role = zerobot_common.guild.get_role(zerobot_common.clan_member_role_id)
+        await discord_user.remove_roles(clan_member_role, reason="left clan")
+        # add guest role
+        guest_role_id = zerobot_common.guest_role_id
+        guest_role = zerobot_common.guild.get_role(guest_role_id)
+        await discord_user.add_roles(guest_role, reason="left clan")
+        member.discord_rank = "Guest"
 
     @commands.command()
     async def respond(self, ctx):
