@@ -2,6 +2,7 @@ import io
 import discord
 from discord.ext import commands
 import zerobot_common
+from utilities import rank_index
 
 class ReactionRolesCog(commands.Cog):
     '''
@@ -43,11 +44,11 @@ class ReactionRolesCog(commands.Cog):
             )
             return
         # specific case for waiting approval role
-        if role_id == zerobot_common.get_named_role('Waiting Approval').id:
+        if role_id == zerobot_common.approval_role_id:
             # return if user already has a ranked role. Approval not needed.
-            for role in discord_user.roles:
-                if role.name in zerobot_common.discord_ranks:
-                    return
+            index = rank_index(discord_user=discord_user)
+            if index is not None:
+                return
             # assign waiting approval role.
             await discord_user.add_roles(
                 role_to_add,

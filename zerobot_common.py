@@ -187,7 +187,10 @@ for k,v in json_rank_ids.items():
 utilities.discord_rank_ids = discord_rank_ids
 
 # A few individual ones for easy of access
+approval_role_id = settings.get("approval_role_id")
+approval_rank_index = rank_index(discord_role_id=approval_role_id)
 guest_role_id = settings.get("guest_role_id")
+guest_rank_index = rank_index(discord_role_id=guest_role_id)
 join_role_id = settings.get("join_role_id")
 join_rank_index = rank_index(discord_role_id=join_role_id)
 clan_member_role_id = settings.get("clan_member_role_id")
