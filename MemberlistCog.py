@@ -241,6 +241,7 @@ async def process_leaving(self, leaving_list):
     site rank to retired. 
     """
     leaving_size = len(leaving_list)
+    self.logfile.log(f"{leaving_size} leaving members:")
     if (leaving_size > 10):
         await zerobot_common.bot_channel.send(
             f"Safety Check: too many members leaving for automatic site "
@@ -250,7 +251,9 @@ async def process_leaving(self, leaving_list):
         )
         return
     
+    today_date = datetime.utcnow().strftime(utilities.dateformat)
     for memb in leaving_list:
+        self.logfile.log(f" - {memb.name} is leaving, updating discord and site ranks...")
         rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
         if rank_index <= zerobot_common.staff_rank_index:
             await zerobot_common.bot_channel.send(
@@ -268,13 +271,12 @@ async def process_leaving(self, leaving_list):
                 zerobot_common.siteops.setrank_member(memb, "Retired member")
             else:
                 await zerobot_common.bot_channel.send(
-                    f"Could not remove site rank for {memb.name} : "
+                    f"Could not remove site rank for {memb.name}, profile link : "
                     f"{memb.profile_link}"
                 )
         # update leave date and reason
         if (memb.leave_date == ""):
-            today_date = datetime.utcnow()
-            memb.leave_date = today_date.strftime(utilities.dateformat)
+            memb.leave_date = today_date
         if (memb.leave_reason == ""):
             memb.leave_reason = "left or inactive kick"
         self.old_members.append(memb)
@@ -1008,11 +1010,11 @@ class MemberlistCog(commands.Cog):
             await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
             return
         
-        # Remove ranked roles below staff
-        await zerobot_common.remove_lower_roles(discord_user, zerobot_common.staff_rank_index)
-        # Remove clan member role
+        # Remove clan member role and ranked roles below staff
+        roles_to_remove = zerobot_common.get_lower_ranks(discord_user, zerobot_common.staff_rank_index)
         clan_member_role = zerobot_common.guild.get_role(zerobot_common.clan_member_role_id)
-        await discord_user.remove_roles(clan_member_role, reason="left clan")
+        roles_to_remove.append(clan_member_role)
+        await discord_user.remove_roles(*roles_to_remove, reason="left clan")
         # add guest role
         guest_role_id = zerobot_common.guest_role_id
         guest_role = zerobot_common.guild.get_role(guest_role_id)

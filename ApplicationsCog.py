@@ -30,7 +30,7 @@ from pathlib import Path
 import os
 
 import zerobot_common
-from zerobot_common import is_member, highest_role, remove_lower_roles
+from zerobot_common import is_member, highest_role
 import utilities
 
 from utilities import send_messages, message_ctx, rank_index
@@ -579,8 +579,8 @@ class ApplicationsCog(commands.Cog):
         guest_role = zerobot_common.guild.get_role(guest_id)
         await discord_user.add_roles(guest_role, reason="accepted guest")
         # remove lower roles
-        guest_index = rank_index(discord_role_id=guest_id)
-        await remove_lower_roles(discord_user, guest_index)
+        roles_to_remove = zerobot_common.get_lower_ranks(discord_user, zerobot_common.guest_rank_index)
+        await discord_user.remove_roles(*roles_to_remove, reason="accepted guest")
 
         await message_ctx(
             discord_user, 
@@ -646,8 +646,8 @@ class ApplicationsCog(commands.Cog):
         join_role = zerobot_common.guild.get_role(zerobot_common.join_role_id)
         await discord_user.add_roles(join_role, reason="accepted member")
         # remove lower ranked roles
-        join_rank_index = rank_index(discord_role_id=zerobot_common.join_role_id)
-        await remove_lower_roles(discord_user, join_rank_index)
+        roles_to_remove = zerobot_common.get_lower_ranks(discord_user, zerobot_common.join_rank_index)
+        await discord_user.remove_roles(*roles_to_remove, reason="accepted member")
         message += (
             f" I have given them the {join_role.name} rank on discord and "
             f"removed their previous lower rank(s)."
@@ -705,7 +705,8 @@ class ApplicationsCog(commands.Cog):
         new_rank_role = zerobot_common.guild.get_role(new_rank_id)
         await discord_user.add_roles(new_rank_role, reason="member rankup")
         # remove lower ranks
-        await remove_lower_roles(discord_user, new_rank_index)
+        roles_to_remove = zerobot_common.get_lower_ranks(discord_user, new_rank_index)
+        await discord_user.remove_roles(*roles_to_remove, reason="accepted guest")
 
         await message_ctx(discord_user, f"Your application for {new_rank_name} was accepted :)")
         await ctx.send(f"Rankup application to {new_rank_name} accepted :)\n You can continue to talk in this channel until it is archived.")
