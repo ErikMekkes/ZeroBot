@@ -274,13 +274,13 @@ def highest_role(discord_user):
             highest_role = role
     return highest_role
 
-def get_lower_ranks(discord_user, rank_index):
+def get_lower_ranks(discord_user, r_index):
     """
-    Returns all ranked roles the user has that are lower than rank_index.
+    Returns all ranked roles the user has that are lower than r_index.
     """
     lower_roles = []
     for role in discord_user.roles:
         index = rank_index(discord_role_id=role.id)
-        if index is not None and index > rank_index:
+        if index is not None and index > r_index:
             lower_roles.append(role)
     return lower_roles
