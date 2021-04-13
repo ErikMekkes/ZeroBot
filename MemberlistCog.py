@@ -194,10 +194,13 @@ async def daily_update(self):
     self.current_members = comp_res.staying + comp_res.joining + comp_res.renamed
     # get site updates, send list to siteops func that updates it
     update_discord_info(self.current_members)
+    self.logfile.log("retrieved discord user changes...")
     if zerobot_common.site_enabled:
         zerobot_common.siteops.update_site_info(self.current_members)
+    self.logfile.log("retrieved site user changes...")
     # for leaving members remove discord roles, set site rank to retired
     await process_leaving(self, comp_res.leaving)
+    self.logfile.log("updated discord accounts of leaving members...")
 
     # sort updated lists
     memberlist_sort_name(self.current_members)
@@ -205,6 +208,7 @@ async def daily_update(self):
     memberlist_sort_name(self.banned_members)
     # check memberlists for duplicate discord ids
     await warn_duplicates(self)
+    self.logfile.log("checked the memberlists for duplicates...")
 
     # write updated memberlists to disk as backup
     cur_backup_name = "memberlists/current_members/current_membs_" + date_str + ".txt"
@@ -276,13 +280,13 @@ async def process_leaving(self, leaving_list):
         self.old_members.append(memb)
 
 class MemberlistCog(commands.Cog):
-    '''
+    """
     Handles commands related to memberlist changes and starts the daily update.
-    '''
+    """
     def __init__(self, bot):
         self.bot = bot
         self.logfile = LogFile("logs/botlog")
-        self.logfile.log(f'MembList cog loaded and ready.')
+        self.logfile.log(f"MembList cog loaded and ready.")
         self.updating = False
         self.update_msg = ""
         self.confirmed_update = False
