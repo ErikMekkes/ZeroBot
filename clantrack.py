@@ -143,7 +143,7 @@ def compare_lists(ingame_members, current_members):
             # stay assigned to leaving members.
             clantrack_log.log(
                 f"Missing data for leaving member : {leave.name}. "
-                "Can not check for renames, assigned as leaving member."
+                "Can not check for renames, assigned as potential leaving member."
             )
             continue
         # calculate match chances
@@ -217,6 +217,7 @@ def compare_lists(ingame_members, current_members):
     leaving = leaving_members.copy()
     for memb in leaving:
         if (memb.rank == "needs invite"):
+            clantrack_log.log(f"{memb.name} was not invited yet, kept on list.")
             leaving_members.remove(memb)
             staying_members.append(memb)
             continue
