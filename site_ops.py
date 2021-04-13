@@ -68,7 +68,7 @@ class SiteOps:
         Assumes the user credentials have sufficient permissions on site.
         """
         _sign_in_url = zerobot_common.site_base_url + "/users/sign_in.json"
-        sign_in_res = self.session.post(_sign_in_url, json=zerobot_common.site_login_credentials)
+        sign_in_res = self.session.post(_sign_in_url, json=zerobot_common.site_login_credentials, timeout=10)
         self.token = sign_in_res.json()["user_session"]["authentication_token"]
         self.logfile.log(f"Logged in on site, token: {self.token}")
     def _signout(self):
@@ -76,7 +76,7 @@ class SiteOps:
         Signs the current token out of the clan site.
         """
         _sign_out_url = zerobot_common.site_base_url + "/users/sign_out.json?auth_token="
-        sign_out_res = self.session.delete(_sign_out_url + self.token)
+        sign_out_res = self.session.delete(_sign_out_url + self.token, timeout=10)
         self.logfile.log(f"Logging out token: {self.token}, response code : {sign_out_res.status_code}")
         self.token = None
     def setrank_member(self, member, new_rank):
@@ -109,7 +109,7 @@ class SiteOps:
         new_site_rank_id = _site_rank_ids.get(rank, 0)
         user_changes = {"member": {"rank_id": new_site_rank_id}}
         update_user_res = self.session.patch(
-            update_user_url, json=user_changes
+            update_user_url, json=user_changes, timeout=10
         )
         #TODO: account for timeouts, retries, removed user / bad responses?
         self.logfile.log(
@@ -131,10 +131,14 @@ class SiteOps:
         
         get_member_url = profile_link + ".json"
         try:
-            get_member_res = self.session.get(get_member_url)
+            get_member_res = self.session.get(get_member_url, timeout=10)
         except requests.exceptions.Timeout:
-            # TODO: maybe limit this with retries as well
-            return self.getRank(profile_link)
+            if retries > 3:
+                raise SiteConnectionError(
+                    f"Failed to get rank from site : {profile_link}"
+                )
+            retries += 1
+            return self.getRank(profile_link, retries)
         
         if (get_member_res.status_code == requests.codes["ok"]):
             json_res = get_member_res.json()
@@ -142,12 +146,12 @@ class SiteOps:
             rank = _site_rank_names.get(member["rank_id"],"")
             return rank
         else:
-            if retries < 3:
-                retries += 1
-                return self.getRank(profile_link, retries)
-            raise SiteConnectionError(
-                f"Failed to get rank from site : {profile_link}"
-            )
+            if retries > 3:
+                raise SiteConnectionError(
+                    f"Failed to get rank from site : {profile_link}"
+                )
+            retries += 1
+            return self.getRank(profile_link, retries)
     def update_site_info(self, memberlist):
         """
         Updates site rank for all members in the memberlist. Uses their set
