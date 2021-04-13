@@ -157,6 +157,7 @@ async def warnings_from_sheet(self):
     """
     memberlist = list()
     today = datetime.utcnow()
+    zerobot_common.drive_connect()
     warnings_matrix = zerobot_common.warnings_sheet.get_all_values()
     for i in range(1,len(warnings_matrix)):
         warning = Warning.from_sheet_format(warnings_matrix[i])
