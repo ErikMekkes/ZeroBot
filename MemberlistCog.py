@@ -255,6 +255,13 @@ async def process_leaving(self, leaving_list):
     for memb in leaving_list:
         self.logfile.log(f" - {memb.name} is leaving, updating discord and site ranks...")
         rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
+        if rank_index is None:
+            await zerobot_common.bot_channel.send(
+                f"Unknown rank for leaving member: {memb.name}, skipped for "
+                "automatic rank removal. You will have to update their "
+                "discord roles and site rank manually."
+            )
+            continue
         if rank_index <= zerobot_common.staff_rank_index:
             await zerobot_common.bot_channel.send(
                 f"Can not do automatic deranks for leaving member: "
