@@ -528,13 +528,22 @@ class MemberlistCog(commands.Cog):
         if not args[0] in list_names:
             await ctx.send(use_msg)
             return
+        id = " ".join(args[1:]).lower()
+        try:
+            id = parse_discord_id(id)
+        except Exception:
+            pass
+        try:
+            id = parse_profile_link(id)
+        except Exception:
+            pass
         
         list_access = await self.lock()
-        memb = memberlist_remove(list_access[args[0]], args[1])
+        memb = memberlist_remove(list_access[args[0]], id)
         await self.unlock()
 
         if memb is None:
-            await ctx.send(f"No member found for {args[1]} in {args[0]}.")
+            await ctx.send(f"No member found for {id} in {args[0]}.")
             return
         await ctx.send(f"Removed {memb.name} from {args[0]}.")
     @commands.command()
@@ -558,13 +567,22 @@ class MemberlistCog(commands.Cog):
         if not args[1] in list_names:
             await ctx.send(use_msg)
             return
+        id = " ".join(args[2:]).lower()
+        try:
+            id = parse_discord_id(id)
+        except Exception:
+            pass
+        try:
+            id = parse_profile_link(id)
+        except Exception:
+            pass
         
         list_access = await self.lock()
-        memb = memberlist_move(list_access[args[0]], list_access[args[1]], args[2])
+        memb = memberlist_move(list_access[args[0]], list_access[args[1]], id)
         await self.unlock()
 
         if memb is None:
-            await ctx.send(f"No member found for {args[2]} in {args[0]}.")
+            await ctx.send(f"No member found for {id} in {args[0]}.")
             return
         await ctx.send(f"Moved {memb.name} from {args[0]} to {args[1]}.")
     
@@ -635,11 +653,15 @@ class MemberlistCog(commands.Cog):
                     await ctx.send(f"{new_value} is not a valid profile link")
                     return
 
-        # see if id is a number for discord id
+        id = (args[1]).lower()
         try:
-            id = parse_discord_id(args[1])
+            id = parse_discord_id(id)
         except Exception:
-            id = args[1]
+            pass
+        try:
+            id = parse_profile_link(id)
+        except Exception:
+            pass
         
         list_access = await self.lock()
         memb = memberlist_get(list_access[args[0]], id)
@@ -655,7 +677,7 @@ class MemberlistCog(commands.Cog):
         await self.unlock()
 
         if memb is None:
-            await ctx.send(f"No member found for {args[1]} in {args[0]}.")
+            await ctx.send(f"No member found for {id} in {args[0]}.")
             return
         await ctx.send(f"Edited {attribute} of {memb.name} from {old_value} to {new_value}.")
 
