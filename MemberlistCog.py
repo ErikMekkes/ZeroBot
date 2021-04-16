@@ -483,12 +483,18 @@ class MemberlistCog(commands.Cog):
         )
         await channel.send(msg)
         messages = [
-            "Name         | Ban reason\n",
-            "-------------------------\n"
+            "Name         |    Date    | Ban Reason\n",
+            "----------------------------------------\n"
         ]
         for i in range(0, 25):
             memb = mlist[i]
-            messages.append(memb.bannedInfo() + "\n")
+            msg = memb.bannedInfo()
+            if len(msg) > 140:
+                index = msg.rfind(" ",0, 140)
+                part1 = msg[0:index]
+                part2 = "                           " + msg[index:len(msg)]
+                msg = part1 + "\n" + part2
+            messages.append(msg + "\n")
         await send_multiple(channel, messages, codeblock=True)
         msg = (
             "_ _\n"
