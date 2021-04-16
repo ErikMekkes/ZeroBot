@@ -176,8 +176,11 @@ def memberlist_sort_days_inactive(mlist):
         mlist[j+1] = key
 
 # for sorting memberlist accounting for jagex spaces
-def memberlist_sort_clan_xp(mlist):
-    memberlist_sort(mlist, clan_xp_cond)
+def memberlist_sort_clan_xp(mlist,asc=True):
+    memberlist_sort(mlist, clan_xp_cond, asc=asc)
+# for sorting memberlist accounting for jagex spaces
+def memberlist_sort_leave_date(mlist, asc=True):
+    memberlist_sort(mlist, leave_date_cond, asc=asc)
 
 # for sorting memberlist accounting for jagex spaces
 def memberlist_sort(mlist, sort_cond, asc=True):
@@ -205,6 +208,14 @@ def hosts_cond(memb1, memb2, asc=True):
     for x in memb2.notify_stats.values():
         hosts2 += x
     if hosts1 < hosts2:
+        return asc
+    return not asc
+def leave_date_cond(memb_1, memb_2, asc=True):
+    if memb_1.leave_date < memb_2.leave_date:
+        return asc
+    return not asc
+def runescore_cond(memb_1, memb_2, asc=True):
+    if memb_1.activities["runescore"][1] < memb_2.activities["runescore"][1]:
         return asc
     return not asc
 

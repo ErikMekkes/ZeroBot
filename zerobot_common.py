@@ -151,6 +151,7 @@ guild = None
 # default channel where bot can post status and error messages
 bot_channel_id = settings.get("bot_channel_id")
 bot_channel = None
+banlist_channel_id = settings.get("banlist_channel_id")
 
 # channel names and their ids, loaded on bot startup from guild.
 discord_channels = None

@@ -35,7 +35,7 @@ from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
 import memberlist
-from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all, memberlist_compare_stats
+from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_sort_leave_date, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all, memberlist_compare_stats
 from member import Member, valid_discord_id, valid_profile_link, notify_role_names
 from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
 
@@ -456,6 +456,47 @@ class MemberlistCog(commands.Cog):
         else:
             link_results = await self.search_all(profile_link)
         return name_results + id_results + link_results
+    
+    @commands.command()
+    async def refresh_banlist(self, ctx, *args):
+        """
+        Refreshes the banlist channel with new messages.
+        """
+        channel = zerobot_common.guild.get_channel(zerobot_common.banlist_channel_id)
+        await channel.purge()
+        # fetch latest from sheet with lock -> unlock
+        await self.lock()
+        await self.unlock()
+        # retrieve up to date, modifyable copy from disk
+        mlist = memberlist_from_disk(zerobot_common.banned_members_filename)
+        # sort last to leave first
+        memberlist_sort_leave_date(mlist, asc=False)
+        today = datetime.utcnow().strftime(utilities.dateformat)
+        msg = (
+            "**=== Zer0 PvM Banlist ===**\n\n"
+            "We strongly suggest to NOT invite these people to your pvm teams.\n"
+            "We may hold you responsible for any drama caused if you bring them into anything Zer0 related.\n\n"
+
+            "This list only shows the 25 most recent Zer0 bans.\n"
+            "The full Zer0 PvM banlist can be found here: <http://tiny.cc/Zer0PvMBanList>\n\n"
+            f"Last Updated: {today}"
+        )
+        await channel.send(msg)
+        messages = [
+            "Name         | Ban reason\n",
+            "-------------------------\n"
+        ]
+        for i in range(0, 25):
+            memb = mlist[i]
+            messages.append(memb.bannedInfo() + "\n")
+        await send_multiple(channel, messages, codeblock=True)
+        msg = (
+            "_ _\n"
+            "Ban Lists from the other PvM Communities:\n"
+            " - Raid FC Banlist  : <http://tiny.cc/raidfcbans>\n"
+            " - AoD 7-10 Banlist : <http://tiny.cc/AoD7-10BanList>"
+        )
+        await channel.send(msg)
     
     @commands.command()
     async def find(self, ctx, *args):
