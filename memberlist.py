@@ -92,7 +92,7 @@ def memberlist_to_disk(memberlist, filename):
     (\n) characters with attributes separated by tabs.
     """
     if not isinstance(memberlist, list):
-        text = f"Object to be written to disk is not of list[Member]: {str(memberlist)}"
+        text = f"Object to be written to disk is not of list[Member]."
         raise NotAMemberList(text)
     return write_file(memberlist_to_string(memberlist), filename)
 def memberlist_from_disk(filename):
@@ -118,10 +118,14 @@ def memberlist_from_string(memberlist_string):
         result = list()
         memberlist_array = memberlist_string.splitlines()
         for memb_str in memberlist_array:
-            result.append(Member.from_string(memb_str))
+            try:
+                result.append(Member.from_string(memb_str))
+            except Exception as ex:
+                text = f"String to be read as member is not a Member: {memb_str}"
+                raise NotAMember(text)
         return result
-    except Exception:
-        text = f"String to be read as memberlist is not of list[Member]: {str(memberlist_string)}"
+    except Exception as ex:
+        text = f"String to be read as memberlist is not of list[Member]. {ex}"
         raise NotAMemberList(text)
 def memberlist_to_string(memberlist):
     """
@@ -134,7 +138,7 @@ def memberlist_to_string(memberlist):
     if not isinstance(memberlist, list):
         text = (
             f"Object to be converted to a memberlist string is not of "
-            f"list[Member]: {str(memberlist)}"
+            f"list[Member]."
         )
         raise NotAMemberList(text)
     mlist = []
