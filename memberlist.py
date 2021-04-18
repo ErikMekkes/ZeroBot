@@ -54,7 +54,7 @@ def memberlist_add(memberlist, member):
     element can still be modified after being added.
     """
     if not isinstance(member, Member):
-        text = "Object to append to memberlist is not of Member."
+        text = f"Object to append to memberlist is not of Member: {str(member)}"
         raise NotAMember(text)
     memberlist.append(member)
 def memberlist_remove(memberlist, member):
@@ -92,7 +92,7 @@ def memberlist_to_disk(memberlist, filename):
     (\n) characters with attributes separated by tabs.
     """
     if not isinstance(memberlist, list):
-        text = "Object to be written to disk is not of list[Member]."
+        text = f"Object to be written to disk is not of list[Member]: {str(memberlist)}"
         raise NotAMemberList(text)
     return write_file(memberlist_to_string(memberlist), filename)
 def memberlist_from_disk(filename):
@@ -121,7 +121,7 @@ def memberlist_from_string(memberlist_string):
             result.append(Member.from_string(memb_str))
         return result
     except Exception:
-        text = "String to be read as memberlist is not of list[Member]"
+        text = f"String to be read as memberlist is not of list[Member]: {str(memberlist_string)}"
         raise NotAMemberList(text)
 def memberlist_to_string(memberlist):
     """
@@ -134,7 +134,7 @@ def memberlist_to_string(memberlist):
     if not isinstance(memberlist, list):
         text = (
             f"Object to be converted to a memberlist string is not of "
-            f"list[Member]."
+            f"list[Member]: {str(memberlist)}"
         )
         raise NotAMemberList(text)
     mlist = []
@@ -142,7 +142,7 @@ def memberlist_to_string(memberlist):
         if not isinstance(memb, Member):
             text = (
                 f"Object in memberlist to be converted to a member string is "
-                f"not of Member."
+                f"not of Member: {str(memb)}"
             )
             raise NotAMember(text)
         mlist.append(memb.to_string())
