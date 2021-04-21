@@ -431,13 +431,17 @@ class ApplicationsCog(commands.Cog):
     async def archive(self, ctx):
         # log command attempt and check if command allowed
         app_log.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(permissions.is_allowed("archive", ctx.channel.id)) : return
+        if not(
+            permissions.is_allowed("archive", ctx.channel.id) or 
+            zerobot_common.permissions.is_allowed("archive", ctx.channel.id)
+        ):
+            await ctx.send("Not allowed in this channel!")
+            return
 
         app = applications.get_app(ctx.channel.id)
         if (app == None):
-            await ctx.send(app_not_found_msg)
-            return
-        if (app.fields_dict["status"] == "open"):
+            await ctx.send(app_not_found_msg + "\n I will copy all the posts to the archive, but will not delete the channel.")
+        elif (app.fields_dict["status"] == "open"):
             await ctx.send(
                 "This application has not been accepted or rejected yet! "
                 "Use `-zbot accept` or `-zbot reject`"
@@ -462,13 +466,19 @@ class ApplicationsCog(commands.Cog):
         for msg in reversed(messages):
             messages_file.write(msg + "\n")
         messages_file.close()
-        await ctx.channel.delete(reason="archived")
-        # clear permissions for channel
-        permissions.disallow("archive", ctx.channel.id)
-        permissions.disallow("accept", ctx.channel.id)
-        permissions.disallow("cancel", ctx.channel.id)
-        permissions.disallow("reject", ctx.channel.id)
-        permissions.disallow("sitelink", ctx.channel.id)
+        if (app == None):
+            await ctx.send("Finished archiving all the posts!")
+            # clear permissions for channel (archive once)
+            permissions.disallow("archive", ctx.channel.id)
+            zerobot_common.permissions.disallow("archive", ctx.channel.id)
+        else:
+            await ctx.channel.delete(reason="archived")
+            # clear permissions for application
+            permissions.disallow("archive", ctx.channel.id)
+            permissions.disallow("accept", ctx.channel.id)
+            permissions.disallow("cancel", ctx.channel.id)
+            permissions.disallow("reject", ctx.channel.id)
+            permissions.disallow("sitelink", ctx.channel.id)
     
     @commands.command()
     async def sitelink(self, ctx, profile_link):
