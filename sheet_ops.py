@@ -41,7 +41,7 @@ def memberlist_from_sheet(sheet):
         memberlist.append(Member.from_sheet(member_matrix[i]))
     return memberlist
 
-def clear_sheet(sheet):
+def clear_sheet(sheet, clear_bg_colors=False):
     zerobot_common.drive_connect()
     # empty the sheet
     sheet.clear()
@@ -50,11 +50,12 @@ def clear_sheet(sheet):
         'range' : SheetParams.header_range,
         'values' : [SheetParams.header_entries]
         }], value_input_option = 'USER_ENTERED')
-    # clear background colors for non-header
-    white_fmt = CellFormat(backgroundColor=Color(1,1,1))
-    format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
+    if clear_bg_colors:
+        # clear background colors for non-header
+        white_fmt = CellFormat(backgroundColor=Color(1,1,1))
+        format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
 def clear_sheets():
-    clear_sheet(zerobot_common.current_members_sheet)
+    clear_sheet(zerobot_common.current_members_sheet, clear_bg_colors=True)
     clear_sheet(zerobot_common.old_members_sheet)
     clear_sheet(zerobot_common.banned_members_sheet)
 def start_update_warnings():
