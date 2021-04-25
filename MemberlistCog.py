@@ -778,7 +778,7 @@ class MemberlistCog(commands.Cog):
                 f"{k} - {v}"
             )
         msg += "```"
-        await ctx.seend(msg)
+        await ctx.send(msg)
     
     async def get_discord_user(self, member):
         # check format of member's id
