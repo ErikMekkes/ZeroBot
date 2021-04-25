@@ -146,13 +146,13 @@ def update_discord_info(_memberlist):
                 memb.passed_gem = True
                 index = list(melee_dpm_tags.keys()).index(r.id)
                 if index > highest_melee:
-                    memb.misc["highest_mage"] = r.name
+                    memb.misc["highest_melee"] = r.name
                     highest_melee = index
             if r.id in range_dpm_tags:
                 memb.passed_gem = True
                 index = list(range_dpm_tags.keys()).index(r.id)
                 if index > highest_range:
-                    memb.misc["highest_mage"] = r.name
+                    memb.misc["highest_range"] = r.name
                     highest_range = index
 
         # update highest discord rank
