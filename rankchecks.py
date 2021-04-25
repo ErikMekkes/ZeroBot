@@ -38,21 +38,25 @@ match_disc_site = {
     "Waiting Approval" : [""]
 }
 
-# used to find a member's highest dps tag
-dps_tags = {
-    '170k Mage DPM (No longer obtainable)' : 1,
-    '170k Range DPM' : 1,
-    '170k Melee DPM' : 1,
-    '180k Mage DPM' : 2,
-    '180k Range DPM' : 2,
-    '180k Melee DPM' : 2,
-    '200k Mage DPM' : 3,
-    '200k Range DPM' : 3,
-    '200k Melee DPM' : 3,
-    'Extreme Mage' : 4,
-    'Extreme Range' : 4,
-    'Extreme Melee' : 4,
-    'Extreme DPS' : 5
+# dpm tags, lowest at top (highest rank = highest index in dict)
+# names are unused, just to distinguish here and perhaps for future use
+mage_dpm_tags = {
+    590922060193071118: "Initiate Mage DPM",
+    590923162410024980: "Adept Mage DPM",
+    590923449162006553: "Master Mage DPM",
+    590924385452556309: "Extreme Mage DPM"
+}
+melee_dpm_tags = {
+    590922131366477824: "Initiate Melee DPM",
+    590923236603199509: "Adept Melee DPM",
+    590923501930545181: "Master Melee DPM",
+    590924439604953139: "Extreme Melee DPM"
+}
+range_dpm_tags = {
+    590921829204623381: "Initiate Range DPM",
+    590923065622528000: "Adept Range DPM",
+    590923403377246208: "Master Range DPM",
+    590924088852217856: "Extreme Range DPM"
 }
 
 # This table is used to convert user typed ranks to intended discord rank
@@ -120,45 +124,40 @@ def update_discord_info(_memberlist):
         # update discord name
         memb.discord_name = usr.name
 
-        # update passed gem
+        # update dpm tags
         memb.passed_gem = False
+        highest_mage = -1
+        highest_melee = -1
+        highest_range = -1
         for r in usr.roles:
-            if r.name in dps_tags :
+            if r.id == 668543463322812451:
+                memb.misc["highest_mage"] = r.name
+                memb.misc["highest_melee"] = r.name
+                memb.misc["highest_range"] = r.name
                 memb.passed_gem = True
                 break
-
-        # update highest gems
-        for r in usr.roles:
-            if "Extreme DPS" == r.name:
-                memb.misc["highest_mage"] = "Extreme DPS"
-                memb.misc["highest_melee"] = "Extreme DPS"
-                memb.misc["highest_range"] = "Extreme DPS"
-                break
-            else :
-                if "Mage" in r.name:
-                    current_tag = dps_tags.get(memb.misc["highest_mage"], 0)
-                    if dps_tags.get(r.name, 0) > current_tag:
-                        memb.misc["highest_mage"] = r.name
-                if "Melee" in r.name:
-                    current_tag = dps_tags.get(memb.misc["highest_melee"], 0)
-                    if dps_tags.get(r.name, 0) > current_tag:
-                        memb.misc["highest_melee"] = r.name
-                if "Range" in r.name:
-                    current_tag = dps_tags.get(memb.misc["highest_range"], 0)
-                    if dps_tags.get(r.name, 0) > current_tag:
-                        memb.misc["highest_range"] = r.name
+            if r.id in mage_dpm_tags:
+                memb.passed_gem = True
+                index = list(mage_dpm_tags.keys()).index(r.id)
+                if index > highest_mage:
+                    memb.misc["highest_mage"] = r.name
+                    highest_mage = index
+            if r.id in melee_dpm_tags:
+                memb.passed_gem = True
+                index = list(melee_dpm_tags.keys()).index(r.id)
+                if index > highest_melee:
+                    memb.misc["highest_mage"] = r.name
+                    highest_melee = index
+            if r.id in range_dpm_tags:
+                memb.passed_gem = True
+                index = list(range_dpm_tags.keys()).index(r.id)
+                if index > highest_range:
+                    memb.misc["highest_mage"] = r.name
+                    highest_range = index
 
         # update highest discord rank
-        rank = len(match_disc_ingame)
-        for r in usr.roles:
-            try:
-                rank_numb = list(match_disc_ingame.keys()).index(r.name)
-            except ValueError:
-                # this role is not a known rank
-                continue
-            if rank_numb < rank:
-                rank = rank_numb
-                memb.discord_rank = r.name
+        highest_role = zerobot_common.highest_role(usr)
+        memb.discord_rank = highest_role.name
         # store all current discord role ids.
         discord_roles = []
         for r in usr.roles:
