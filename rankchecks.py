@@ -129,6 +129,9 @@ def update_discord_info(_memberlist):
         highest_mage = -1
         highest_melee = -1
         highest_range = -1
+        memb.misc["highest_mage"] = ""
+        memb.misc["highest_melee"] = ""
+        memb.misc["highest_range"] = ""
         for r in usr.roles:
             if r.id == 668543463322812451:
                 memb.misc["highest_mage"] = r.name
