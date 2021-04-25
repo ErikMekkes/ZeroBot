@@ -38,7 +38,8 @@ match_disc_site = {
     "Waiting Approval" : [""]
 }
 
-#dpm tags, lowest at top (highest rank = highest index in dict)
+# dpm tags, lowest at top (highest rank = highest index in dict)
+# names are unused, just to distinguish here and perhaps for future use
 mage_dpm_tags = {
     590922060193071118: "Initiate Mage DPM",
     590923162410024980: "Adept Mage DPM",
@@ -130,28 +131,28 @@ def update_discord_info(_memberlist):
         highest_range = -1
         for r in usr.roles:
             if r.id == 668543463322812451:
-                memb.misc["highest_mage"] = "Extreme Mage DPM"
-                memb.misc["highest_melee"] = "Extreme Melee DPM"
-                memb.misc["highest_range"] = "Extreme Range DPM"
+                memb.misc["highest_mage"] = r.name
+                memb.misc["highest_melee"] = r.name
+                memb.misc["highest_range"] = r.name
                 memb.passed_gem = True
                 break
             if r.id in mage_dpm_tags:
                 memb.passed_gem = True
                 index = list(mage_dpm_tags.keys()).index(r.id)
                 if index > highest_mage:
-                    memb.misc["highest_mage"] = mage_dpm_tags.get(r.id)
+                    memb.misc["highest_mage"] = r.name
                     highest_mage = index
             if r.id in melee_dpm_tags:
                 memb.passed_gem = True
                 index = list(melee_dpm_tags.keys()).index(r.id)
                 if index > highest_melee:
-                    memb.misc["highest_mage"] = melee_dpm_tags.get(r.id)
+                    memb.misc["highest_mage"] = r.name
                     highest_melee = index
             if r.id in range_dpm_tags:
                 memb.passed_gem = True
                 index = list(range_dpm_tags.keys()).index(r.id)
                 if index > highest_range:
-                    memb.misc["highest_mage"] = range_dpm_tags.get(r.id)
+                    memb.misc["highest_mage"] = r.name
                     highest_range = index
 
         # update highest discord rank
