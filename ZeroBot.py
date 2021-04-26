@@ -97,5 +97,15 @@ async def on_command_error(ctx, error):
         traceback.format_exception(type(error), error, error.__traceback__)
     )
 
+@bot.event
+async def on_disconnect():
+    zerobot_common.logfile.log(f"Bot disconnected.")
+@bot.event
+async def on_connect():
+    zerobot_common.logfile.log(f"Bot connected.")
+@bot.event
+async def on_resumed():
+    zerobot_common.logfile.log(f"Bot session resumed.")
+
 # actually start the bot
 bot.run(zerobot_common.auth_token)
