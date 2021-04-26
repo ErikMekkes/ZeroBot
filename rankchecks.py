@@ -160,7 +160,10 @@ def update_discord_info(_memberlist):
 
         # update highest discord rank
         highest_role = zerobot_common.highest_role(usr)
-        memb.discord_rank = highest_role.name
+        if highest_role is not None:
+            memb.discord_rank = highest_role.name
+        # previous rank info kept if new rank unknown?
+
         # store all current discord role ids.
         discord_roles = []
         for r in usr.roles:
