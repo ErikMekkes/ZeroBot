@@ -772,10 +772,10 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
         if not(zerobot_common.permissions.is_allowed("exceptions", ctx.channel.id)) : return
 
-        msg = "```Ingame name - Reason"
+        msg = "```Ingame name - Reason\n"
         for k,v in zerobot_common.inactive_exceptions.items():
             msg += (
-                f"{k} - {v}"
+                f"{k} - {v}\n"
             )
         msg += "```"
         await ctx.send(msg)
