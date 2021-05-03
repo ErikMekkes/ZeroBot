@@ -1176,14 +1176,20 @@ class MemberlistCog(commands.Cog):
 
         # check if command has correct number of arguments
         use_msg = (
-            "usage: `-zbot clanstats <date>`"
-            " date = optional date that bot should compare with."
-            "        this can either be a number for x days ago,"
-            "        or a date in yyyy-mm-dd format! (example: 2020-12-28)"
-            "        default is 30 days ago if not specified."
+            "usage: "
+            "`-zbot clanstats`"
+            "    shows clan stats from last 30 days"
+            "`-zbot clanstats <days>`"
+            "    days = a number, shows clan stats since <days> ago"
+            "`-zbot clanstats <date>`"
+            "    date = a date in yyyy-mm-dd format! (example: 2020-12-28)"
+            "    shows clan stats since <date>"
+            "`-zbot clanstats <date_1> <date_2>`"
+            "    date = a date in yyyy-mm-dd format! (example: 2020-12-28)"
+            "    shows clan stats since between <date_1> and <date_2>"
         )
 
-        if len(args) > 1:
+        if len(args) > 2:
             await ctx.send("Too many arguments!\n" + use_msg)
             return
         if len(args) == 0:
@@ -1193,23 +1199,40 @@ class MemberlistCog(commands.Cog):
                 # try parse as x days ago
                 try:
                     days = int(args[0])
-                    date = datetime.utcnow() - timedelta(days=days)
+                    date_1 = datetime.utcnow() - timedelta(days=days)
                 except ValueError:
                     # try parse as date instead
-                    date = datetime.strptime(args[0], utilities.dateformat)
+                    date_1 = datetime.strptime(args[0], utilities.dateformat)
             except ValueError:
                 # neither parsed successfully
                 await ctx.send(f"Incorrect dateformat: {args[0]}\n" + use_msg)
                 return
-        date_string = date.strftime(utilities.dateformat)
+        if len(args) == 2:
+            try:
+                # try to parse as date
+                date_1 = datetime.strptime(args[0], utilities.dateformat)
+                date_2 = datetime.strptime(args[1], utilities.dateformat)
+            except ValueError:
+                # one of the dates did not parse successfully
+                await ctx.send(f"Incorrect dateformat: {args[0]} {args[1]}\n" + use_msg)
+                return
+        date_string_1 = date_1.strftime(utilities.dateformat)
         base_memblist_name = "memberlists/current_members/current_membs_"
-        oldlist_filename = base_memblist_name + date_string + ".txt"
+        oldlist_filename = base_memblist_name + date_string_1 + ".txt"
         # load disk versions to guarantee safe comparison
         oldlist = memberlist_from_disk(oldlist_filename)
         if len(oldlist) == 0:
-            await ctx.send(f"No archived memberlist found for {date_string}")
+            await ctx.send(f"No archived memberlist found for {date_string_1}")
             return
-        newlist = memberlist_from_disk("memberlists/current_members.txt")
+        if len(args) == 2:
+            date_string_2 = date_2.strftime(utilities.dateformat)
+            newlist_filename = base_memblist_name + date_string_2 + ".txt"
+            newlist = memberlist_from_disk(newlist_filename)
+            if len(newlist) == 0:
+                await ctx.send(f"No archived memberlist found for {date_string_2}")
+                return
+        else:
+            newlist = memberlist_from_disk("memberlists/current_members.txt")
         current_size = len(newlist)
         stats = memberlist_compare_stats(newlist, oldlist)
         stayed = len(stats)
@@ -1234,13 +1257,17 @@ class MemberlistCog(commands.Cog):
             top5xp += f"{stats[i].name} : {stats[i].clan_xp}\n"
         
 
+        if len(args) == 2:
+            stat_range = f"between {date_string_1} and {date_string_2}"
+        else:
+            stat_range = f"since {date_string_1}"
         embed = discord.Embed()
         embed.set_author(
-            name = f"{zerobot_common.guild.name} stats since {date_string}",
+            name = f"{zerobot_common.guild.name} stats {stat_range}",
             icon_url = zerobot_common.guild.icon_url)
         embed.description = (
             f"Current Members: {current_size}\n"
-            f"New members since {date_string}: {new_membs}\n"
+            f"New members {stat_range}: {new_membs}\n"
             f"Clan members on discord: {membs_on_discord}\n"
             f"Total users on discord: {total_on_disc}\n"
             f"\n"
@@ -1255,6 +1282,7 @@ class MemberlistCog(commands.Cog):
             f"Members that are inactive ingame: {len(inactives)}\n"
             "First ten, if you are on this list it is very likely that you will get "
             "kicked when we need to make space for new members:\n"
+            "You can check your own activity with `-zbot active` in <#307827142534889472>\n"
         )
         top5inactive += (
             "```Name         Rank              Join Date  Clan xp    Last "
