@@ -1106,7 +1106,7 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
     
     @commands.command()
-    async def active(self, ctx):
+    async def active(self, ctx, *args):
         """
         Tells you your activity status.
         """
@@ -1114,9 +1114,21 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
         if not(zerobot_common.permissions.is_allowed('active', ctx.channel.id)) : return
 
-        memb = memberlist_get(self.current_members, ctx.author.id)
+        if len(args) == 0:
+            id = ctx.author.id
+        else:
+            id = " ".join(args).lower()
+            try:
+                id = parse_discord_id(id)
+            except Exception:
+                pass
+            try:
+                id = parse_profile_link(id)
+            except Exception:
+                pass
+        memb = memberlist_get(self.current_members, id)
         if memb is None:
-            await ctx.send("Could not find you on the memberlist!")
+            await ctx.send(f"Could not find {id} on the memberlist!")
 
         today = datetime.utcnow()
         inactive_date = today - memb.last_active
