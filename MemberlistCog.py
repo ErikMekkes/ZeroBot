@@ -1137,26 +1137,26 @@ class MemberlistCog(commands.Cog):
         inactive = days_inactive > zerobot_common.inactive_days
         if inactive:
             status = (
-                "You are on our list of inactive members. "
-                "**! You risk getting kicked !**\n"
+                f"{memb.name} is on our list of inactive members! "
+                "** And risks getting kicked for inactivity!**\n"
             )
             resp = (
-                "To be removed from the inactives list: Do any of the skills "
-                "or activities (wildy kills, runescore, etc.) on the "
-                "highscores or ask a staff member.\n"
+                "To be removed from the inactives list: Get skill xp, "
+                "wildy kills, runescore, do clues, rename, or ask a staff "
+                "member.\n"
             )
         else:
-            status = "You are not on our list of inactive members. "
+            status = f"{memb.name} is not on our list of inactive members. "
             resp = (
-                f"You have {zerobot_common.inactive_days - days_inactive} "
-                f"days left before you're considered inactive.\n"
-                f"If you think you will be gone for longer than that and you "
-                f"want to avoid inactivity kicks, tell a staff member.\n"
+                f"{memb.name} has {zerobot_common.inactive_days - days_inactive} "
+                f"days left before we consider them inactive.\n"
+                f"If {memb.name} will be away for longer than that and wants "
+                f"to avoid inactivity kicks, tell a staff member.\n"
             )
 
         res = (
             f"{status}"
-            f"You were last active ingame {days_inactive} days ago on "
+            f"{memb.name} was last active ingame {days_inactive} days ago on "
             f"{inactive_datestr}.\n{resp}\n"
             f"Anyone inactive for more than {zerobot_common.inactive_days} "
             f"days may be kicked when we need to make space for new members. "
