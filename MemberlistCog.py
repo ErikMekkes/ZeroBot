@@ -1106,13 +1106,13 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
     
     @commands.command()
-    async def active(self, ctx, *args):
+    async def activity(self, ctx, *args):
         """
         Tells you your activity status.
         """
         # log command attempt and check if command allowed
         self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('active', ctx.channel.id)) : return
+        if not(zerobot_common.permissions.is_allowed('activity', ctx.channel.id)) : return
 
         if len(args) == 0:
             id = ctx.author.id
@@ -1282,7 +1282,7 @@ class MemberlistCog(commands.Cog):
             f"Members that are inactive ingame: {len(inactives)}\n"
             "First ten, if you are on this list it is very likely that you will get "
             "kicked when we need to make space for new members:\n"
-            "You can check your own activity with `-zbot active` in <#307827142534889472>\n"
+            "You can check your own activity with `-zbot activity` in <#307827142534889472>\n"
         )
         top5inactive += (
             "```Name         Rank              Join Date  Clan xp    Last "
