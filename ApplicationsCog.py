@@ -1,4 +1,5 @@
 """
+Standalone Module, but very complex setup.
 This module lets you configure a channel that people can request applications
 in. The bot creates a new channel for each application under a preset category.
 The applicant will be given access to post in that channel by the bot.
@@ -16,12 +17,14 @@ On its own, this module will just manage their discord ranks. If you have the
 memberlist or siteops modules enabled it will also update their status there.
 
 Config required for this module:
+ - check discord ranks setup in zerobot_common
  - check these settings in settings.json:
    - clan_server_id
    - applications_category_id
    - app_requests_channel_id
    - default_bot_channel_id
- - check discord_ranks table in zerobot_common
+   - discord rank ids for ranks
+   - check if site / memberlist module enabled, and their settings if so
  - check the setup below for this module
 """
 from discord.ext import commands
@@ -30,10 +33,9 @@ from pathlib import Path
 import os
 
 import zerobot_common
-from zerobot_common import is_member, highest_role
 import utilities
 
-from utilities import send_messages, message_ctx, rank_index
+from utilities import message_ctx, rank_index
 from logfile import LogFile
 from permissions import Permissions
 from application import Application
@@ -156,7 +158,7 @@ async def setup_app_channel(ctx, channel, app_type):
         + open("application_templates/app_base_message").read())
     await channel.send(msg)
     # send all the messages belonging to the channel
-    await send_messages(
+    await utilities.send_messages(
         channel,
         f"application_templates/{app_type}_messages.json"
     )
@@ -183,7 +185,7 @@ class ApplicationsCog(commands.Cog):
         if not(ctx.channel.id == app_req_channel_id): return
 
         # return if not joined yet
-        if not is_member(ctx.author):
+        if not zerobot_common.is_member(ctx.author):
             await ctx.send(join_before_rankup_message)
             return
         # return if wrong format
@@ -694,9 +696,9 @@ class ApplicationsCog(commands.Cog):
         discord_id = app.fields_dict["requester_id"]
         discord_user = zerobot_common.guild.get_member(discord_id)
         # find current role and new role
-        current_role = highest_role(discord_user)
+        current_role = zerobot_common.highest_role(discord_user)
         current_rank_index = rank_index(discord_role_id=current_role.id)
-        if current_rank_index <= rank_index(discord_role_id=zerobot_common.staff_role_id):
+        if current_rank_index <= zerobot_common.staff_rank_index:
             await ctx.send(
                 f"Trying to edit a Staff Member, "
                 f"bot is not allowed to edit Staff Members"
@@ -705,7 +707,7 @@ class ApplicationsCog(commands.Cog):
         new_rank_name = app.fields_dict["rank"]
         new_rank_id = zerobot_common.get_rank_id(new_rank_name)
         new_rank_index = rank_index(discord_role_id=new_rank_id)
-        if new_rank_index <= rank_index(discord_role_id=zerobot_common.staff_role_id):
+        if new_rank_index <= zerobot_common.staff_rank_index:
             await ctx.send(
                 f"Trying to make someone a Staff Member, "
                 f"bot is not allowed to edit Staff Members"
@@ -857,7 +859,7 @@ async def send_accepted_messages(discord_user, ctx):
         f"You can continue to talk in this channel until it is archived."
     )
     # send customizable welcome messages
-    await send_messages(
+    await utilities.send_messages(
         discord_user,
         f"application_templates/welcome_messages.json",
         alt_ctx=ctx

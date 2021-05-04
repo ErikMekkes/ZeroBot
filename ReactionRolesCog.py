@@ -1,23 +1,38 @@
+"""
+Standalone Module
+
+Lets you configure messages such that responding with emojis to them gives
+the person who reacted a certain role for that emoji.
+"""
 import io
 import discord
 from discord.ext import commands
+from logfile import LogFile
 import zerobot_common
 from utilities import rank_index
 
+logfile = None
+
 class ReactionRolesCog(commands.Cog):
-    '''
+    """
     Handles giving roles for reactions to certain messages.
-    '''
+    """
     def __init__(self, bot):
         self.bot = bot
-        zerobot_common.reactionlog.log(f'Reactionroles cog loaded and ready.')
+        global logfile
+        logfile = LogFile(
+            "logs/reactionroles",
+            parent = zerobot_common.logfile,
+            parent_prefix = "reactionroles"
+        )
+        logfile.log(f"Reactionroles cog loaded and ready.")
     
     @commands.Cog.listener()
     async def on_raw_reaction_add(self, payload):
-        '''
+        """
         This event is triggered for anyone adding a reaction to anything.
         Must keep this efficient, return asap if irrelevant.
-        '''
+        """
         # check if its a reaction role message, return if not.
         msg_id = str(payload.message_id)
         reaction_message = zerobot_common.reaction_messages.get(msg_id)
@@ -70,10 +85,10 @@ class ReactionRolesCog(commands.Cog):
     
     @commands.Cog.listener()
     async def on_raw_reaction_remove(self, payload):
-        '''
+        """
         This event is triggered for anyone removing a reaction from anything.
         Must keep this efficient, return asap if irrelevant.
-        '''
+        """
         # check if its a reaction role message, return if not.
         msg_id = str(payload.message_id)
         reaction_message = zerobot_common.reaction_messages.get(msg_id)

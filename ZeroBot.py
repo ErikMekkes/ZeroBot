@@ -1,3 +1,9 @@
+"""
+Main Zerobot file
+
+Starts up the bot using the discord credentials.
+Loads up any modules (Cogs) that have been enabled in settings.json
+"""
 import zerobot_common
 import discord
 import traceback
@@ -60,14 +66,17 @@ async def on_ready():
     
     # start the different command modules of the bot.
     if bot.get_cog("MemberlistCog") == None:
-        bot.add_cog(MemberlistCog(bot))
+        if zerobot_common.memberlist_enabled:
+            bot.add_cog(MemberlistCog(bot))
     if bot.get_cog("ReactionRolesCog") == None:
-        bot.add_cog(ReactionRolesCog(bot))
+        if zerobot_common.reaction_roles_enabled:
+            bot.add_cog(ReactionRolesCog(bot))
     if bot.get_cog("ApplicationsCog") == None:
         if zerobot_common.applications_enabled:
             bot.add_cog(ApplicationsCog(bot))
     if bot.get_cog("ChannelCog") == None:
-        bot.add_cog(ChannelCog(bot))
+        if zerobot_common.channel_manager_enabled:
+            bot.add_cog(ChannelCog(bot))
     if bot.get_cog("EventsCog") == None:
         if zerobot_common.events_enabled:
             bot.add_cog(EventsCog(bot))
@@ -97,6 +106,7 @@ async def on_command_error(ctx, error):
         traceback.format_exception(type(error), error, error.__traceback__)
     )
 
+# logging connection status for debugging
 @bot.event
 async def on_disconnect():
     zerobot_common.logfile.log(f"Bot disconnected.")

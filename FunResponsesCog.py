@@ -1,3 +1,12 @@
+"""
+Standalone Module
+Makes the bot respond with funny replies when a trigger phrase is typed in 
+a discord channel the bot can access.
+
+Can be enabled or disables with "funresponses_enabled" in the settings.json 
+config file.
+"""
+
 from discord.ext import tasks, commands
 import random
 import zerobot_common

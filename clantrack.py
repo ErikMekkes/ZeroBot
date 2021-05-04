@@ -1,6 +1,10 @@
 """
-For fetching ingame data from the api and comparing the old memberlist with
-the new data from the api.
+For fetching ingame data from the rs api and comparing the old memberlist with
+the new data from the rs api. Basically Runeclan for just our clanmembers, but
+with some additional highscore stats like clues and wildy kills.
+
+Is able to very accurately identify new names for people in clan that renamed.
+Does so by comparing ingame memberlist changes and individual member stats.
 """
 import zerobot_common
 import utilities

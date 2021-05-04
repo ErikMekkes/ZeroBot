@@ -1,0 +1,20 @@
+{
+    "bot_auth_token_filename": "credentials/bot_auth_token",
+    "dateformat": "%Y-%m-%d",
+    "timeformat": "%H.%M.%S",
+    "rs_api_clan_name": "Zer0+PvM",
+    "clan_server_id": 691623711194873936,
+    "bot_channel_id": 752196891260747926,
+    "permissions_filename": "permissions.json",
+    "memberlist_enabled": true,
+    "daily_mlist_update_enabled": true,
+    "daily_update_time": "12.00.00",
+    "discord_ranks_filename": "discord_ranks.json",
+    "guest_role_id": 711183557011177483,
+    "clan_member_role_id": 804849416228831242,
+    "staff_role_id": 817471124442054667,
+    "inactive_exceptions_filename": "inactive_exceptions.json",
+    "current_members_filename": "memberlists/current_members.txt",
+    "old_members_filename": "memberlists/old_members.txt",
+    "banned_members_filename": "memberlists/banned_members.txt"
+}

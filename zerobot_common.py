@@ -1,34 +1,38 @@
 # variables, functions and settings that are shared between zerobot modules
+# Go through the steps in here until you see the try to run now instruction.
 
 # MAKE SURE YOU DO NOT SHARE your bot auth_token or drive creds keyfile, anyone
 # can use them to modify your drive docs or take over your bot and do anything 
 # it has permissions for. if you use git, the credentials folder used for these
-# files in settings.json is in the .gitignore.
+# files in settings.json is in the .gitignore for this reason.
 
-# WARNING: Everything in here should be referenced directly and fully as 
-# zerobot_common.something. Do not make local copies of them for reference, or 
-# be EXTREMELY sure they are NEVER reassigned. For example, if you use in a 
-# different file : _easy_name = zerobot_common.variable, that copy will point 
-# to the same object initially, but if the one in here is ever reassigned your
-# copy will not update and will still point to the old value, not the new one! 
-# similarly, reassigning your copy afterwards : _easy_name = new_value, will 
-# NOT update zerobot_common.discord_roles_filename
+"""
+Notes for developers:
+WARNING: Most things in here should be referenced directly and fully as 
+zerobot_common.something. Do not make local copies of them for reference, or 
+be EXTREMELY sure they are NEVER reassigned. For example, if you use in a 
+different file : _easy_name = zerobot_common.variable, that copy will point 
+to the same object initially, but if the one in here is ever reassigned your
+copy will not update and will still point to the old value, not the new one! 
+similarly, reassigning your copy afterwards : _easy_name = new_value, will 
+NOT update zerobot_common._easy_name to new_value
 
-# Note on imports and circular dependencies:
-# This module should not have circular depencies, it should also load no matter
-# which modules have been enabled or disabled.
-# - utilities and logfile modules are safe, self contained imports.
-#
-# site_ops and permissions modules break this promise, they require references 
-# to this module. However, they only use references to this module in functions
-# that are not run at import time.
-# So while they are linked, they do not cause circular dependencies for imports
-# and as long as the program ensures that those references have been 
-# initialised by the time those functions are run (which it does) there is no
-# problem with imports at program runtime. I currently prefer this over
-# splitting this file, and it makes sense from an order of operations view. But
-# I might look into decoupling them a bit more in the future.
+Note on imports and circular dependencies:
+This module should not have circular depencies, it should load no matter
+which modules have been enabled or disabled.
+- utilities and logfile modules are similar safe, self contained imports.
 
+Example of non-breaking circular importing:
+site_ops and permissions modules do break the promise, they require references 
+to this module. However, they only use references to this module in functions
+that are not run at import time!
+So while they are linked, they do not cause circular dependencies for imports
+and as long as the program ensures that those references have been 
+initialised by the time those functions are run (which it does) there is no
+problem with imports at program runtime. I currently prefer this over
+splitting this file, and it makes sense from an order of operations view. But
+I might look into decoupling them a bit more in the future.
+"""
 import json
 import os
 from datetime import datetime
@@ -42,49 +46,164 @@ from logfile import LogFile
 from site_ops import SiteOps
 from permissions import Permissions
 
-# load bot settings from json file
+# load bot settings from json file, can change the name here to use different 
+# a different settings file, nice for testing.
 settings_file = "settings.json"
 settings = load_json(settings_file)
 
-# Check which modules should be enabled.
-applications_enabled = settings.get("enable_applications")
-memberlist_enabled = True
-sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled")
-dropcomp_enabled = settings.get("dropcomp_enabled")
-daily_memberlist_update_enabled = settings.get("daily_memberlist_update_enabled")
-events_enabled = settings.get("events_enabled")
-forumthread_enabled = settings.get("forumthread_enabled")
-forumthread = settings.get("forumthread")
-funresponses_enabled = settings.get("funresponses_enabled")
-
-# load authentication token for starting bot, you should have made your own 
-# discord bot. Create a discord application, then make a bot for it. Starting
+# Create a discord application, then make a bot for it. Starting
 # point to do that is here: https://discord.com/developers/applications
+
+# Load your authentication token to start the bot with, you should have made 
+# your own discord bot. You can find your auth token on the developers page.
+# DO NOT SHARE YOUR TOKEN WITH ANYONE, or they can take over your bot.
 bot_auth_token_filename = settings.get("bot_auth_token_filename")
 auth_file = open(bot_auth_token_filename)
 auth_token = auth_file.read()
 auth_file.close()
 
+# This loads date and time formats from settings if you want different ones.
+# The default settings for this work fine, no changes needed.
+_df = settings.get("dateformat", utilities.dateformat)
+_tf = settings.get("timeformat", utilities.dateformat)
+utilities.dateformat = _df
+utilities.timeformat = _tf
+utilities.datetimeformat = _df + "_" + _tf
+
+# clan name used to look up clan memberlist on official rs hiscores api
+rs_api_clan_name = settings.get("rs_api_clan_name")
+# The id of your clan discord server, right click your server -> 'Copy ID'
+# if you cant see the copy id option, go to your discord settings, go to app
+#     settings, Advanced, and enable 'Developer Mode' to be able to check IDs.
+# The bot must also be added to your discord server or it wont see the server!
+clan_server_id = settings.get("clan_server_id")
+guild = None
+# channel where bot can post status and error messages, create one, name it
+# 'staff-bot-command' to keep things easy for now. Find its channel id and 
+# update it in settings.json, ID can be found with right click on channel.
+bot_channel_id = settings.get("bot_channel_id")
+bot_channel = None
+
+# You can tell the bot where commands are allowed to be used, do this in this 
+# file by adding channel names or channel ids to the list of a command.
+# by default a lot of them are allowed in the staff-bot channel
+permissions_filename = settings.get("permissions_filename")
+permissions = Permissions(permissions_filename)
+
+# The main memberlist function, works a bit like runeclan.
+# can also be toggled, you dont have to use it, but its the most common one.
+memberlist_enabled = settings.get("memberlist_enabled", True)
+daily_mlist_update_enabled = settings.get("daily_mlist_update_enabled", True)
+daily_update_time = settings.get("daily_update_time")
+
+# Check the discord_ranks.json settings file. Make sure that file contains
+# your discord ranks in the right order! (highest at the top). You will need
+# at least these three roles:
+#  - Staff Member
+#  - Clan Member
+#  - Guest
+
+# Check the match_disc_ingame and parse_discord_rank tables in rankchecks.py !
+# They should match your setup for rank names!
+
+# This is needed because the bot needs to know which ranks match up with what.
+# You might have more discord ranks or roles that are not used for ranks, and 
+# the bot needs to know the rank order.
+# THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which match up.
+json_rank_ids = load_json(settings.get("discord_ranks_filename"))
+discord_rank_ids = {}
+for k,v in json_rank_ids.items():
+    discord_rank_ids[int(k)] = v
+# store a copy in utilities as well, these should remain unchanged
+utilities.discord_rank_ids = discord_rank_ids
+
+# A few individual ranks/roles for ease of access, make sure these match!
+# guest role on discord, for discord users that have not joined clan
+#     also automatically given to ex clan members
+guest_role_id = settings.get("guest_role_id")
+guest_rank_index = rank_index(discord_role_id=guest_role_id)
+# clan member discord role given to all clan members
+clan_member_role_id = settings.get("clan_member_role_id")
+# staff member discord role, higher roles are also considered staff.
+# staff members or higher roles are protected from bot changes
+staff_role_id = settings.get("staff_role_id")
+staff_rank_index = rank_index(discord_role_id=staff_role_id)
+
+# The bot automatically notifies you who is inactive in your clan. It will
+# take a while for this to become useful if you just started using the bot.
+# But it is nice for clans close to the member limit / to keep people active.
+# You can add people that should not be on the inactives list to this file:
+inactive_exceptions_filename = settings.get("inactive_exceptions_filename")
+inactive_exceptions = load_json(inactive_exceptions_filename)
+# How long it should take before someone is considered inactive:
+inactive_days = 30
+
+# This is just where the memberlists are kept, be careful with these files.
 current_members_filename = settings.get("current_members_filename")
 old_members_filename = settings.get("old_members_filename")
 banned_members_filename = settings.get("banned_members_filename")
 
-# Google Drive credentials and client to interact with the Google Drive API
-# You should have a service account, with credentials to login to it.
-# Starting point for creating one : https://console.developers.google.com/
-# You should also have given your service account access to your drive sheet:
-# Invite it using the share button on the doc, use the service account's email.
-drive_scope = ["https://spreadsheets.google.com/feeds",
-        "https://www.googleapis.com/auth/drive"]
-drive_creds_keyfile_name = settings.get("drive_creds_keyfile_name")
-drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
-    drive_creds_keyfile_name,
-    drive_scope
-)
-drive_client = gspread.authorize(drive_creds)
-drive_doc_name = settings.get("drive_doc_name")
-drive_doc = drive_client.open(drive_doc_name)
 
+
+# You should have a working clan memberlist bot by this point :) try it out
+#  by running ZeroBot.py. The remaining settings are for other modules.
+# Type '-zbot updatelist' in the bot command channel to run the memberlist 
+# update right away! Then try the the '-zbot find', '-zbot inactives', and 
+# '-zbot activity' commands after the daily update is done.
+
+
+
+
+# ENABLING THIS IS REQUIRED for google drive ZeroBot modules:
+# - google drive spreadsheet copy of the memberlist, for editing / backups
+# - channel syncing from spreadsheet text, to edit discord messages together.
+# - competition spreadsheet, for managing teams and tracking messages
+drive_functions_enabled = settings.get("drive_functions_enabled", False)
+# You need a service account, which allows the bot to access google drive.
+#   Starting point for creating one : https://console.developers.google.com/
+#   After you made a service account, create access credentials for it and 
+#   copy the keyfile to the credentials folder.
+#   the default place for it is credentials/drive_creds_keyfile.json
+# DO NOT SHARE YOUR CREDENTIALS, or they can take over your google drive.
+if drive_functions_enabled:
+    drive_scope = ["https://spreadsheets.google.com/feeds",
+            "https://www.googleapis.com/auth/drive"]
+    # name of your keyfile with google credentials created in the dev console
+    drive_creds_keyfile_name = settings.get("drive_creds_keyfile_name")
+    drive_creds = ServiceAccountCredentials.from_json_keyfile_name(
+        drive_creds_keyfile_name,
+        drive_scope
+    )
+    drive_client = gspread.authorize(drive_creds)
+
+# The settings below let you set up a google drive version of the memberlists.
+# Highly recommended for editing and as a backup of the memberlist info.
+#      Needs the google drive credentials setup above to work.
+# You need a Google Drive spreadsheet that uses the bot's memberlist format,
+# make a copy of this example spreadsheet to get the correct format: 
+# https://docs.google.com/spreadsheets/d/1IjuFWeiRxcrb2JIKeF7Dywuj6DeMc8Po9Ihj1oPyrh4
+#   You do not need to add the first info by hand, the bot will add all your
+#   clanmembers automatically with the next daily update it does.
+# Be careful with the format ! Do not delete / move / add columns!
+#   You can hide columns you dont use (right click column -> hide)
+#   You can edit info, but keep the same format! (number stays number etc.)
+# Next give the service account access to your spreadsheet by inviting it,
+# use the share button on the sheet, then enter your service account's email.
+sheet_memberlist_enabled = settings.get("sheet_memberlist_enabled", False)
+if sheet_memberlist_enabled:
+    # name of the memberlist spreadsheet document
+    memberlist_doc_name = settings.get("memberlist_doc_name")
+    memberlist_doc = drive_client.open(memberlist_doc_name)
+
+    # spreadsheet tabs that are used in the memberlist document
+    current_members_sheet = memberlist_doc.worksheet("Current Members")
+    old_members_sheet = memberlist_doc.worksheet("Old Members")
+    banned_members_sheet = memberlist_doc.worksheet("Banned Members")
+    warnings_sheet  = memberlist_doc.worksheet("Warnings")
+
+# Information for the bot on the layout of drive spreadsheets, if you change
+# the sheet layout this needs to be updated too, and the functions used in
+# sheet_ops.py to read the sheet. This is why you're careful with the layout.
 class SheetParams:
     start_col = "A"
     end_col = "R"
@@ -122,88 +241,60 @@ class SheetParams:
         )
         return range_str
 
-# spreadsheet tabs that are used
-current_members_sheet = drive_doc.worksheet("Current Members")
-old_members_sheet = drive_doc.worksheet("Old Members")
-banned_members_sheet = drive_doc.worksheet("Banned Members")
-warnings_sheet  = drive_doc.worksheet("Warnings")
+# Other modules you can toggle in settings.json, see example_settings.json
+# They have more settings and configs in their own python files. I wont go
+# through explaining them all, the code and settings should be straigtforward.
+applications_enabled = settings.get("enable_applications", False)
+dropcomp_enabled = settings.get("dropcomp_enabled", False)
+events_enabled = settings.get("events_enabled", False)
+forumthread_enabled = settings.get("forumthread_enabled", False)
+forumthread = settings.get("forumthread")
+reaction_roles_enabled = settings.get("reaction_roles_enabled", False)
+funresponses_enabled = settings.get("funresponses_enabled", False)
+channel_manager_enabled = settings.get("channel_manager_enabled", False)
 
-# if set, use date and time formats from settings 
-_df = settings.get("dateformat", utilities.dateformat)
-_tf = settings.get("timeformat", utilities.dateformat)
-utilities.dateformat = _df
-utilities.timeformat = _tf
-utilities.datetimeformat = _df + "_" + _tf
-
-# Manager for operations to clan site, hosted by shivtr (https://shivtr.com/)
-site_login_creds_filename = settings.get("site_login_credentials_filename")
-site_login_credentials = load_json(site_login_creds_filename)
-site_base_url = settings.get("site_base_url")
-siteops = SiteOps()
-# disable site? (site rank functions will always have "full member" as result)
-site_enabled = settings.get("site_enabled")
-
-# name used to look up members_lite clan memberlist file on official rs api
-rs_api_clan_name = settings.get("rs_api_clan_name")
-# guild = the clan discord "server" object, loaded on bot start using it's id.
-clan_server_id = settings.get("clan_server_id")
-guild = None
-# default channel where bot can post status and error messages
-bot_channel_id = settings.get("bot_channel_id")
-bot_channel = None
+# banlist channel where the bot can post banlist info.
+# for memberlist refresh_banlist command, might add to daily update as well
 banlist_channel_id = settings.get("banlist_channel_id")
 
+# specific for applications only
+if applications_enabled:
+    # role on discord that allows people to start an application
+    approval_role_id = settings.get("approval_role_id")
+    approval_rank_index = rank_index(discord_role_id=approval_role_id)
+    # role given to people when they join the clan (usually matching recruit)
+    join_role_id = settings.get("join_role_id")
+    join_rank_index = rank_index(discord_role_id=join_role_id)
+
+# Manager for operations to clan site, hosted by shivtr (https://shivtr.com/)
+site_enabled = settings.get("site_enabled", False)
+if site_enabled:
+    site_login_creds_filename = settings.get("site_login_credentials_filename")
+    site_login_credentials = load_json(site_login_creds_filename)
+    site_base_url = settings.get("site_base_url")
+    siteops = SiteOps()
+
 # channel names and their ids, loaded on bot startup from guild.
+# only used by permissions.py to look up name -> id
 discord_channels = None
 
-
-# logfiles
+# main logfile for the bot
 logfile = LogFile("logs/logfile")
-reactionlog = LogFile("logs/reactionroles")
 
-# load known messages that should give a role for a reaction from disk
-reaction_messages_filename = settings.get("reaction_messages_filename")
-reaction_messages = load_json(reaction_messages_filename)
+# load messages that should give a role for a reaction from disk
+if reaction_roles_enabled:
+    reaction_messages_filename = settings.get("reaction_messages_filename")
+    reaction_messages = load_json(reaction_messages_filename)
 
-# load permissions for use of commands in channels from disk
-permissions_filename = settings.get("permissions_filename")
-permissions = Permissions(permissions_filename)
-
-# people that wont be shown on the inactives list
-inactive_exceptions_filename = settings.get("inactive_exceptions_filename")
-inactive_exceptions = load_json(inactive_exceptions_filename)
-# how long before someone is considered inactive
-inactive_days = 30
-
-# Discord roles and their ranks, taken from the corresponding json settings 
-# file for them. This is needed because you might have discord roles that are
-# not used for ranks, and because the bot needs to know the rank order.
-# First listed = highest rank, rank decreases as index goes up.
-# THESE ROLES SHOULD HAVE UNIQUE NAMES, or the bot won't know which to assign.
-json_rank_ids = load_json(settings.get("discord_ranks_filename"))
-discord_rank_ids = {}
-for k,v in json_rank_ids.items():
-    discord_rank_ids[int(k)] = v
-# store a copy in utilities as well, these should remain unchanged
-utilities.discord_rank_ids = discord_rank_ids
-
-# A few individual ones for easy of access
-approval_role_id = settings.get("approval_role_id")
-approval_rank_index = rank_index(discord_role_id=approval_role_id)
-guest_role_id = settings.get("guest_role_id")
-guest_rank_index = rank_index(discord_role_id=guest_role_id)
-join_role_id = settings.get("join_role_id")
-join_rank_index = rank_index(discord_role_id=join_role_id)
-clan_member_role_id = settings.get("clan_member_role_id")
-staff_role_id = settings.get("staff_role_id")
-staff_rank_index = rank_index(discord_role_id=staff_role_id)
+# individuals or ranks that dont need dpm knowledge check
 gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists"]
+# minimum rank that needs a dpm knowledge check
 gem_req_rank = "Full Member"
 
 
 
 
-# recommended not to modify the functions below
+# recommended not to touch the functions below
 
 def drive_connect():
     """

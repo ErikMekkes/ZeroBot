@@ -1,24 +1,25 @@
-'''
+"""
+Standalone Module
 Enables syncing channels with contents posted on a google spreadsheet. 
 Allows multiple people to collaborate on discord posts for channels.
 
-Everything related to synching channels from the google drive channels sheet 
-is in this module.
-'''
+Requires google drive credentials and document access, see zerobot_common.
+"""
 import zerobot_common
 import utilities
 import discord
 from discord.ext import commands
 from logfile import LogFile
 
-# start log for channels module
-channelslog = LogFile('logs/channelslog')
-# load google sheets document that contains the actual channel sheets (tabs)
-channels_doc_name = zerobot_common.settings.get('channels_doc_name')
-channels_doc = zerobot_common.drive_client.open(channels_doc_name)
-# load config that describes which channels should be synched with what
-synched_channels_filename = zerobot_common.settings.get('synched_channels_filename')
-synched_channels = utilities.load_json(synched_channels_filename)
+if zerobot_common.channel_manager_enabled:
+    # start log for channels module
+    channelslog = LogFile("logs/channelslog")
+    # load google sheets document that contains the actual channel sheets (tabs)
+    channels_doc_name = zerobot_common.settings.get("channels_doc_name")
+    channels_doc = zerobot_common.drive_client.open(channels_doc_name)
+    # load config that describes which channels should be synched with what
+    synched_channels_filename = zerobot_common.settings.get("synched_channels_filename")
+    synched_channels = utilities.load_json(synched_channels_filename)
 
 class Post():
     """
@@ -112,7 +113,7 @@ class ChannelCog(commands.Cog):
                 #TODO post and delete img
                 found = utilities.download_img(post.img_url, "zbottemp.png")
                 if found:
-                    img_file = open("zbottemp.png", 'rb')
+                    img_file = open("zbottemp.png", "rb")
                     img = discord.File(img_file)
                     msg = await channel.send(post.row, file=img)
                     post.msg = msg
