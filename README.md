@@ -40,13 +40,13 @@ I obviously made it so you cant use our live versions unless I grant you access 
 - your own discord application / bot (https://discord.com/developers/applications), along with its bot auth token
 - your own discord server, to which you have added your bot so that it is allowed to connect, with permissions that let the bot access what it needs.
 Go through the steps and comments in zerobot_common.py and check the settings.json entries mentioned in there along the way.
-Doing that should guide you to a basic clan memberlist management bot, by going through these steps
+Doing that should guide you to a memberlist management bot that has ingame stats like runeclan, by going through these steps:
   - getting the bot in your discord server and configuring your clan name
   - setting up a discord channel for bot commands and responses
   - permissions.json : telling the bot which commands are allowed where
   - enabling the daily memberlist update at a convenient time.
   - setting up discord roles and which ranks they match with, using discord_ranks.json and rankchecks.py
-  - setting up the list of inactivite members notification, and using inactive_exceptions.json
+  - setting up the list of inactivite members, and using inactive_exceptions.json
 
 As long as you followed the above when you run zerobot.py it should connect to your discord and start its timer for the daily memberlist update. You can force the first update right away by typing -zbot updatelist in you bot command channel, and then try out commands like, -zbot find, -zbot inactives, and -zbot activity.
 
