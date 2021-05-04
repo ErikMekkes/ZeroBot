@@ -30,14 +30,6 @@ class Post():
         self.row = row
         self.msg = None
         self.img_url = None
-        
-        global logfile
-        logfile = LogFile(
-            "logs/channelslog",
-            parent = zerobot_common.logfile,
-            parent_prefix = "channelslog"
-        )
-        logfile.log(f"Channels cog loaded and ready.")
 
 def find_post(posts, row):
     """
@@ -85,6 +77,14 @@ class ChannelCog(commands.Cog):
     """
     def __init__(self, bot):
         self.bot = bot
+        
+        global logfile
+        logfile = LogFile(
+            "logs/channelslog",
+            parent = zerobot_common.logfile,
+            parent_prefix = "channelslog"
+        )
+        logfile.log(f"Channels cog loaded and ready.")
 
     @commands.command()
     async def reloadchannels(self, ctx):

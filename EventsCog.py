@@ -212,7 +212,12 @@ class EventsCog(commands.Cog):
         """
         self.bot = bot
         global logfile
-        logfile = LogFile("logs/events", parent=zerobot_common.logfile)
+        logfile = LogFile(
+            "logs/eventslog",
+            parent = zerobot_common.logfile,
+            parent_prefix = "eventslog"
+        )
+        logfile.log(f"Events cog loaded and ready.")
 
         # Find events category in Zer0 server and store it
         categories = zerobot_common.guild.categories
