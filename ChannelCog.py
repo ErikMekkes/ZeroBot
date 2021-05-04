@@ -11,9 +11,9 @@ import discord
 from discord.ext import commands
 from logfile import LogFile
 
+logfile = None
+
 if zerobot_common.channel_manager_enabled:
-    # start log for channels module
-    channelslog = LogFile("logs/channelslog")
     # load google sheets document that contains the actual channel sheets (tabs)
     channels_doc_name = zerobot_common.settings.get("channels_doc_name")
     channels_doc = zerobot_common.drive_client.open(channels_doc_name)
@@ -30,6 +30,14 @@ class Post():
         self.row = row
         self.msg = None
         self.img_url = None
+        
+        global logfile
+        logfile = LogFile(
+            "logs/channelslog",
+            parent = zerobot_common.logfile,
+            parent_prefix = "channelslog"
+        )
+        logfile.log(f"Channels cog loaded and ready.")
 
 def find_post(posts, row):
     """
