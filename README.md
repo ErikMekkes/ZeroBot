@@ -47,15 +47,14 @@ Doing that should guide you to a basic clan memberlist management bot, by going 
   - enabling the daily memberlist update at a convenient time.
   - setting up discord roles and which ranks they match with, using discord_ranks.json and rankchecks.py
   - setting up the list of inactivite members notification, and using inactive_exceptions.json
+
 As long as you followed the above when you run zerobot.py it should connect to your discord and start its timer for the daily memberlist update. You can force the first update right away by typing -zbot updatelist in you bot command channel, and then try out commands like, -zbot find, -zbot inactives, and -zbot activity.
 
 There are many other modules you can enable afterwards.
-- module to handle applications to join the clan or rankup on discord.
-    also includes the option to safely archive discord channels (copies all text and images to disk)
+- module to handle applications to join the clan or rankup on discord. Also includes the option to safely archive discord channels (copies all text and images to disk)
 - google drive memberlist spreadsheet connection, to show and edit member info easily in one place
 - module for a shivtr clan site connection, to manage member ranks there
-- module to let the bot get text from a spreadsheet, and post it as discord messages.
-  very nice for working on discord messages together, like channels with guides or large amounts of info text. 
+- module to let the bot get text from a spreadsheet, and post it as discord messages. Very nice for working on discord messages together, like channels with guides or large amounts of info text. 
 - module to track when our clan recruitment thread needs a bump.
 - module to assign roles when people react with emojis to posts.
 - module with some fun examples of random bot chat responses.
