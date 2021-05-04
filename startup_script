@@ -17,6 +17,10 @@ eval `ssh-agent -s`
 ssh-add /home/user/.ssh/ClanTrackDeploy
 # switch to the git folder and pull latest version, make sure it's on the right branch.
 cd /home/user/ClanTrack
+# stash local changes, to try and keep changes you made, like settings files
+# if there are conflicts you will have to choose which version to keep.
+git stash
 git pull
+git stash pop
 # start the actual listbot python code.
 /home/user/ClanTrack/.venv/bin/python /home/user/ClanTrack/ZeroBot.py

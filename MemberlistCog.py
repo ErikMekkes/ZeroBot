@@ -113,7 +113,7 @@ async def daily_update_scheduler(self):
     Schedules the daily updates at the time specified in settings.
     """
     # wait remaining time until update after 23h task loop wakes up
-    update_time_str = zerobot_common.settings.get("daily_update_time")
+    update_time_str = zerobot_common.daily_update_time
     update_time = datetime.strptime(update_time_str, utilities.timeformat)
     wait_time = update_time - datetime.utcnow()
     memberlist_log.log(f'auto_upd in {wait_time.seconds/3600}h')
@@ -308,7 +308,7 @@ class MemberlistCog(commands.Cog):
         self.list_access = {}
 
         # start daily update loop
-        if zerobot_common.daily_memberlist_update_enabled:
+        if zerobot_common.daily_mlist_update_enabled:
             try:
                 daily_update_scheduler.start(self)
             except RuntimeError:
@@ -462,6 +462,9 @@ class MemberlistCog(commands.Cog):
         """
         Refreshes the banlist channel with new messages.
         """
+        if zerobot_common.banlist_channel_id is None:
+            await ctx.send("Banlist channel isnt set up in settings.json.")
+            return
         channel = zerobot_common.guild.get_channel(zerobot_common.banlist_channel_id)
         await channel.purge()
         # fetch latest from sheet with lock -> unlock

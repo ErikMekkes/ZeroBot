@@ -1,11 +1,10 @@
 {
-    "active": [
+    "activity": [
         "staff-bot-command",
         "bot-commands"
     ],
-    "archive": [],
-    "addmember": [
-        "staff-bot-command"
+    "archive": [
+        
     ],
     "banlist": [
         "staff-bot-command"
@@ -19,7 +18,7 @@
     ],
     "event": [
         "staff-bot-command",
-        "event-room"
+        "bot-commands"
     ],
     "findmember": [
         "staff-bot-command"
@@ -34,9 +33,6 @@
         "staff-bot-command"
     ],
     "restart": [
-        "staff-bot-command"
-    ],
-    "setrank": [
         "staff-bot-command"
     ],
     "todos": [

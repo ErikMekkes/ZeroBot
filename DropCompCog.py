@@ -1,16 +1,21 @@
+"""
+Standalone Module
+Adds a number of commands to help with drop competitions.
+
+Requires google drive credentials and document access, see zerobot_common.
+"""
 from discord.ext import commands
 import zerobot_common
 import utilities
 from logfile import LogFile
 
-# start log for guides module
-guideslog = LogFile("logs/dropcomplog")
-# load google sheets document that contains the actual guide sheets (tabs)
-dropcomp_doc_name = zerobot_common.settings.get("dropcomp_doc_name")
-dropcomp_doc = zerobot_common.drive_client.open(dropcomp_doc_name)
-# load config that describes which channels should contain which guides
-teamchannels_filename = zerobot_common.settings.get("teamchannels_filename")
-teamchannels = utilities.load_json(teamchannels_filename)
+if zerobot_common.dropcomp_enabled:
+    # load google sheets document to enter drops on
+    dropcomp_doc_name = zerobot_common.settings.get("dropcomp_doc_name")
+    dropcomp_doc = zerobot_common.drive_client.open(dropcomp_doc_name)
+    # load config that describes which channels are for which teams
+    teamchannels_filename = zerobot_common.settings.get("teamchannels_filename")
+    teamchannels = utilities.load_json(teamchannels_filename)
 
 class DropCompCog(commands.Cog):
     """

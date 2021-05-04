@@ -1,3 +1,7 @@
+"""
+Standalone Module
+Allows normal discord members to create and manage channels for events.
+"""
 from discord.ext import tasks, commands
 import zerobot_common
 from logfile import LogFile

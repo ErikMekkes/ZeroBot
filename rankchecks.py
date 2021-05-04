@@ -15,10 +15,57 @@ match_disc_ingame = {
 	"Advanced Member" : ["Sergeant"],
 	"Full Member" : ["Corporal"],
 	"Recruit" : ["Recruit"],
-    'Clan Friends/Allies' : [],
+    "Clan Friends/Allies" : [],
     "Guest" : [],
     "Waiting Approval" : []
 }
+
+# This table is used to convert user typed ranks to intended discord rank
+# when someone types `-zbot rankup veteran` for example
+parse_discord_rank = {
+    "owner" : "Leaders",
+    "deputy leader" : "Leaders",
+    "co-leader" : "Leaders",
+    "clan-coordinator" : "Clan-Coordinator",
+    "clan issues" : "Clan Issues",
+    "citadel co" : "Citadel Co",
+    "media co" : "Media Co",
+    "staff member" : "Staff Member",
+    "masterclass pvmer" : "MasterClass PvMer",
+    "supreme pvmer" : "Supreme PvMer",
+    "pvm specialist" : "PvM Specialists",
+    "elite member" : "Elite Member",
+    "veteran member" : "Veteran Member",
+    "advanced member" : "Advanced Member",
+    "full member" : "Full Member",
+    "novice" : "Recruit",
+    "registered guest" : "Registered Guest",
+    "retired member" : "Retired member",
+    "kicked member" : "Kicked Member",
+    # name variations -> discord rank
+    "novice member" : "Recruit",
+    "recruit" : "Recruit",
+    "advanced" : "Advanced Member",
+    "veteran" : "Veteran Member",
+    "elite" : "Elite Member",
+    "specialist" : "PvM Specialists",
+    "pvm specialists" : "PvM Specialists",
+    "guest" : "Guest",
+    "retired" : "Retired member",
+    "kicked" : "Kicked Member",
+    "full" : "Full Member",
+    "leader" : "Leaders",
+    "staff_member" : "Staff Member",
+    "masterclass_pvmer" : "MasterClass PvMer",
+    "supreme_pvmer" : "Supreme PvMer",
+    "pvm_specialist" : "PvM Specialists",
+    "veteran_member" : "Veteran Member",
+    "advanced_member" : "Advanced Member",
+    "full_member" : "Full Member",
+    "waiting_approval" : "Waiting Approval"
+}
+
+# rank matching if shivtr site is connected.
 # adding "" = not having a site account is allowed as match
 match_disc_site = {
     "Leaders" : ["","Leader","Co-Leader"],
@@ -33,7 +80,7 @@ match_disc_site = {
 	"Advanced Member" : ["","Advanced Member"],
 	"Full Member" : ["","Full Member"],
 	"Recruit" : ["","Recruit"],
-    'Clan Friends/Allies' : ["","Registered Guest","Retired member"],
+    "Clan Friends/Allies" : ["","Registered Guest","Retired member"],
     "Guest" : ["","Registered Guest","Retired member"],
     "Waiting Approval" : [""]
 }
@@ -59,66 +106,20 @@ range_dpm_tags = {
     590924088852217856: "Extreme Range DPM"
 }
 
-# This table is used to convert user typed ranks to intended discord rank
-# when someone types `-zbot setrank specialist` for example
-parse_discord_rank = {
-    # correct name -> discord rank
-    'owner' : 'Leaders',
-    'deputy leader' : 'Leaders',
-    'co-leader' : 'Leaders',
-    'clan-coordinator' : 'Clan-Coordinator',
-    'clan issues' : 'Clan Issues',
-    'citadel co' : 'Citadel Co',
-    'media co' : 'Media Co',
-    'staff member' : 'Staff Member',
-    'masterclass pvmer' : 'MasterClass PvMer',
-    'supreme pvmer' : 'Supreme PvMer',
-    'pvm specialist' : 'PvM Specialists',
-    'elite member' : 'Elite Member',
-    'veteran member' : 'Veteran Member',
-    'advanced member' : 'Advanced Member',
-    'full member' : 'Full Member',
-    'novice' : 'Recruit',
-    'registered guest' : 'Registered Guest',
-    'retired member' : 'Retired member',
-    'kicked member' : 'Kicked Member',
-    # name variations -> discord rank
-    'novice member' : 'Recruit',
-    'recruit' : 'Recruit',
-    'advanced' : 'Advanced Member',
-    'veteran' : 'Veteran Member',
-    'elite' : 'Elite Member',
-    'specialist' : 'PvM Specialists',
-    'pvm specialists' : 'PvM Specialists',
-    'guest' : 'Guest',
-    'retired' : 'Retired member',
-    'kicked' : 'Kicked Member',
-    'full' : 'Full Member',
-    'leader' : 'Leaders',
-    'staff_member' : 'Staff Member',
-    'masterclass_pvmer' : 'MasterClass PvMer',
-    'supreme_pvmer' : 'Supreme PvMer',
-    'pvm_specialist' : 'PvM Specialists',
-    'veteran_member' : 'Veteran Member',
-    'advanced_member' : 'Advanced Member',
-    'full_member' : 'Full Member',
-    'waiting_approval' : 'Waiting Approval'
-}
-
 
 def update_discord_info(_memberlist):
-    '''
+    """
     Checks discord roles and dpm tags for each member in the memberlist and updates them to the highest rank.
-    '''
+    """
     # loop through memberlist
     for memb in _memberlist :
         # skip if discord id invalid
         if not valid_discord_id(memb.discord_id): continue
         usr = zerobot_common.guild.get_member(memb.discord_id)
         # skip if usr not found, keep old rank & discord id, set name as left discord to indicate
-        # 'Not in clan discord' = exception for old people who never joined / people who cant join
+        # "Not in clan discord" = exception for old people who never joined / people who cant join
         if (usr == None):
-            memb.discord_name = 'Left clan discord'
+            memb.discord_name = "Left clan discord"
             continue
 
         # update discord name

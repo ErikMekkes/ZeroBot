@@ -1,3 +1,8 @@
+"""
+Standalone Module
+Checks the visibility of our rs forum recruitment thread periodically and
+pings in the bot channel if it needs a bump for visibility.
+"""
 from bs4 import BeautifulSoup
 from discord.ext import tasks, commands
 import zerobot_common

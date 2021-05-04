@@ -1,17 +1,19 @@
 # ZeroBot
 ZeroBot is designed specifically for our clan to be able to do member applications and rankups on discord, and to track members namechanges, stats and activity.
-I'm looking to add more cool stuff like highscores, guides that can be edited through google drive, competitions etc.
+It can do a lot more cool stuff like roles assigned by emojis reactions, guides that can be edited through google drive and I'm usually looking to add more fun stuff for things like clan competitions and events.
 
-Because it is so specific to our clan, you might have to make many changes or cut out parts to make it work for you.
-Even so, if you're looking to make something similar there should be many usable parts / ideas here.
+Because it is so specific to our clan, you would have to make many changes or cut out parts to make this work for you.
+Even so, if you're looking to make something similar there should be many usable parts / ideas / examples here.
 I'll try to make the master branch a cleaner more generic clan utility bot, but it's not a current priority.
 
 Everything except for some .json settings / data files is in python, python's libraries for discord and google sheets are excellent and its fun coding practise.
 
-The only requirement to run it is a python environment with gspread, gspread_formatting, oauth2client and discord.py installed. The setup is complex though.
+As the project is simple python, use any editor you like. The actual setup is very complex though.
+To run it you only need a python environment with these dependencies installed:
+gspread, gspread_formatting, oauth2client, beautifulsoup4 and discord.py installed.
 I run our live version on a very simple but secure ubuntu server. I included an example systemd service file with a startup script that can pull a most recent version from git.
 
-## Suggested simple workspace setup: Windows, VSCode
+## Suggested simple workspace setup guide for Windows, using VSCode
 
 First steps:
 - install git and set up your git credentials
@@ -28,33 +30,37 @@ Set up Visual Studio Code:
 - Create a new virtual environment with this command in VSCode terminal (bottom center tab): python -m venv .venv
 - Activate the virtual environment for your terminal: .\.venv\Scripts\activate
 - check pip is up to date for your virtual environment: python -m pip install --upgrade pip
-- install the required python modules into your virtual environment: python -m pip install gspread gspread_formatting oauth2client discord.py
+- install the required python modules into your virtual environment: python -m pip install gspread gspread_formatting oauth2client beautifulsoup4 discord.py
 
 
-## To run the bot (or a test setup)
-The bot cant make any ingame changes, but keep in mind that depending on the access rights, it can do very real damage to your linked discord, spreadsheet or site when it is set up wrong or modified. It is highly recommended to make a separate test setup for all of the components below, and to run that test bot any time you make changes, to prevent mistakes from affecting your real version.
+## Setting up to run the bot (or a test setup)
+First off, a warning, while the bot cant make any ingame changes, keep in mind that depending on the access rights, it can do very real damage to your linked discord, spreadsheet or site when it is set up wrong or modified. It is highly recommended to make a separate test setup for all of the components below, and to run that test bot first any time you make changes, to prevent mistakes from affecting your real version.
 
 I obviously made it so you cant use our live versions unless I grant you access to them, so you will need:
 - your own discord application / bot (https://discord.com/developers/applications), along with its bot auth token
-- your own discord server to which your bot is allowed to connect, with permissions that let the bot access what it needs.
-- a setup of roles / categories / channels in your discord that matches the references for them in the bot's .json config files
-  - permissions.json : tell the bot which commands are allowed where (can use channel name or id)
-  - reaction_messages.json : tell the bot what role (id) to give for each response to a messages
-  - inactive_exceptions.json : you can enter names here that should not appear on the bots inactive player list
-  - rankchecks.py : tables in here tell the bot which ingame / discord / (*) site rank names match, used to tell you about mismatches.
-- your own memberlist google spreadsheet, with matching tabs / column setup (unless you modify the code for it).
-- your own google service account (https://console.developers.google.com/), with access to your google spreadsheet, and its service credentials keyfile.
-- once you have the above they can be set in settings.json. (make a 2nd settings.json for a test setup)
-  - use your own files for: bot_auth_token_filename, drive_creds_keyfile_name
-  - use your own clan & google drive file name
-  - use the ids from your own discord for : clan_server_id, applications_category_id, app_requests_channel_id, default_bot_channel_id
-  - (*) use your own clan site url and site_login_credentials_filename
+- your own discord server, to which you have added your bot so that it is allowed to connect, with permissions that let the bot access what it needs.
+Go through the steps and comments in zerobot_common.py and check the settings.json entries mentioned in there along the way.
+Doing that should guide you to a basic clan memberlist management bot, by going through these steps
+  - getting the bot in your discord server and configuring your clan name
+  - setting up a discord channel for bot commands and responses
+  - permissions.json : telling the bot which commands are allowed where
+  - enabling the daily memberlist update at a convenient time.
+  - setting up discord roles and which ranks they match with, using discord_ranks.json and rankchecks.py
+  - setting up the list of inactivite members notification, and using inactive_exceptions.json
+As long as you followed the above when you run zerobot.py it should connect to your discord and start its timer for the daily memberlist update. You can force the first update right away by typing -zbot updatelist in you bot command channel, and then try out commands like, -zbot find, -zbot inactives, and -zbot activity.
 
-(*) Unless you have a similar clan site (shivtr), You wont need to modify any site references. You should keep the site_disabled = true in settings.json.
-This disables site account management, to enable it you need to provide login credentials for an admin account on the site so the bot is be able to make rank changes.
+There are many other modules you can enable afterwards.
+- module to handle applications to join the clan or rankup on discord.
+    also includes the option to safely archive discord channels (copies all text and images to disk)
+- google drive memberlist spreadsheet connection, to show and edit member info easily in one place
+- module for a shivtr clan site connection, to manage member ranks there
+- module to let the bot get text from a spreadsheet, and post it as discord messages.
+  very nice for working on discord messages together, like channels with guides or large amounts of info text. 
+- module to track when our clan recruitment thread needs a bump.
+- module to assign roles when people react with emojis to posts.
+- module with some fun examples of random bot chat responses.
+- module to let members create and manage discord channels safely for events
+- module to upload screenshots from discord channels to a spreadsheet for clan competitions.
 
-As long as you followed the above and have the right references set up, when you run zerobot.py it should connect to your discord.
-It should start its timer for the daily update to your spreadsheet and you should be able to use all its commands and features.
-
-Contributions are very appreciated, if you added something cool or think you've cleaned something up or made it more efficient, make a pull request!
-Start a branch from GenericDev for contributions to the generic bot on master, or from ZeroBotTest for contributions to the Zer0 PvM specific bot on ZeroBotLive.
+I do not make plan to assist you with installing or adapting this to your use. As I've said, this is mostly a passion project specifically for Zer0 PvM.
+But, if you found a bug, added something cool or think you've cleaned something up or made it more efficient you can let me know by opening a pull request.
