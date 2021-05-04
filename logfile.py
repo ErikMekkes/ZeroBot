@@ -48,8 +48,9 @@ class LogFile:
         file.close()
         if self.parent is not None:
             if self.parent_prefix is not None:
-                self.parent.log(f"{parent_prefix} : {text}")
-            self.parent.log(text)
+                self.parent.log(f"{self.parent_prefix} : {text}")
+            else:
+                self.parent.log(text)
     def log_exception(self, error, ctx=None):
         """
         Logs an exception with its stacktrace.
