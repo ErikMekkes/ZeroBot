@@ -1196,7 +1196,7 @@ class MemberlistCog(commands.Cog):
             await ctx.send("Too many arguments!\n" + use_msg)
             return
         if len(args) == 0:
-            date = datetime.utcnow() - timedelta(days=30)
+            date_1 = datetime.utcnow() - timedelta(days=30)
         if len(args) == 1:
             try:
                 # try parse as x days ago
