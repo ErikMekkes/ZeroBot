@@ -187,7 +187,7 @@ def channel_position(date):
     Finds the channel position this date should have.
     """
     pos = 0
-    # loop through channels in category.
+    # loop through channels in category (= ordered by position).
     for c in events_category.channels:
         # check if channel matches the dateformat
         try:
@@ -195,11 +195,15 @@ def channel_position(date):
             time = c.name[4:9]
             c_date = parsedate(day, time)
             # if date is before, need to place new one after
-            if c_date < date:
+            if c_date <= date:
                 pos = c.position + 1
+            else:
+                # stop once we passed a channel with a later date.
+                # assuming channels are already ordered by date
+                break
         except Exception:
-            # ignore event channels without correct date, they stay.
-            continue
+            # skip over event channels without date.
+            pos = c.position + 1
     return pos
 
 class EventsCog(commands.Cog):
@@ -268,7 +272,6 @@ class EventsCog(commands.Cog):
         # move the other channels down to prepare for inserting a new one
         for c in events_category.channels:
             if c.position >= position:
-                print(f"moving {c.name} from index {position} to {c.position + 1}")
                 await c.edit(position = c.position + 1)
         # actually start making the channel
         channel = await events_category.create_text_channel(
