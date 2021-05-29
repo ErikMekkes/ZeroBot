@@ -93,6 +93,10 @@ def parsedate(daystr, timestr):
         day = 6
     elif daystr in "today":
         day = today.weekday()
+    elif daystr in "tomorrow":
+        day = today.weekday() + 1
+        if day == 7:
+            day = 0
     else:
         raise DateException(f"Unable to convert {daystr} to date.")
     # todays day number
@@ -109,17 +113,17 @@ def parsedate(daystr, timestr):
     timeformat3 = "%H:%M"
     time = None
     try:
-        time = datetime.strptime(timestr, timeformat1)
+        time = datetime.strptime(timestr[:len(timeformat1)], timeformat1)
     except ValueError:
         pass
     if time is None:
         try:
-            time = datetime.strptime(timestr, timeformat2)
+            time = datetime.strptime(timestr[:len(timeformat2)], timeformat2)
         except ValueError:
             pass
     if time is None:
         try:
-            time = datetime.strptime(timestr, timeformat3)
+            time = datetime.strptime(timestr[:len(timeformat3)], timeformat3)
         except ValueError:
             pass
     if time is None:
@@ -243,6 +247,7 @@ class EventsCog(commands.Cog):
         for r in ctx.author.roles:
             if r.id == zerobot_common.clan_member_role_id:
                 member = True
+                break
         if not member: return
 
         use_str = (
