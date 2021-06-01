@@ -1249,37 +1249,37 @@ class MemberlistCog(commands.Cog):
         total_on_disc = zerobot_common.guild.member_count
 
         memberlist.memberlist_sort(stats, memberlist.hosts_cond, asc=False)
-        top5hosts = "Most active hosts:\n"
-        for i in range(0,5):
+        top10hosts = "**Most active hosts:**\n"
+        for i in range(0,10):
             total = 0
             for x in stats[i].notify_stats.values():
                 total += x
-            top5hosts += f"{stats[i].name} : {total}\n"
+            top10hosts += f"{stats[i].name} : {total}\n"
 
 
         memberlist.memberlist_sort(stats, memberlist.clan_xp_cond, asc=False)
-        top10xp = "Most xp gained:\n"
+        top10xp = "**Most xp gained:**\n"
         for i in range(0,10):
             top10xp += f"{stats[i].name} : {stats[i].clan_xp}\n"
         
         memberlist.memberlist_sort(stats, memberlist.clues_cond, asc=False)
-        top10clues = f"Most clues done {stat_range}:\n"
+        top10clues = f"**Most clues done {stat_range}:**\n"
         for i in range(0,10):
             top10clues += f"{stats[i].name} : {stats[i].total_clues()}\n"
         
         memberlist.memberlist_sort(stats, memberlist.runescore_cond, asc=False)
-        top10runescore = f"Most runescore gained:\n"
+        top10runescore = f"**Most runescore gained:**\n"
         for i in range(0,10):
             top10runescore += f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
         
-        new_membs = f"{len(comp_res.joining)} members joined {stat_range}:\n"
+        new_membs = f"**{len(comp_res.joining)} members joined {stat_range}:**\n"
         for memb in comp_res.joining:
             new_membs += f" {memb.name},"
         new_membs = new_membs[:-1]
-        left_membs = f"{len(comp_res.leaving)} members left {stat_range}:\n"
+        left_membs = f"**{len(comp_res.leaving)} members left {stat_range}:**\n"
         for memb in comp_res.leaving:
             left_membs += f" {memb.name},"
-        renamed_membs = f"{len(comp_res.renamed)} members renamed {stat_range}:"
+        renamed_membs = f"**{len(comp_res.renamed)} members renamed {stat_range}:**"
         for memb in comp_res.renamed:
             renamed_membs += f"\n - {memb.name} = {memb.old_names[0]}"
 
@@ -1295,7 +1295,7 @@ class MemberlistCog(commands.Cog):
             f"{left_membs}\n"
             f"{renamed_membs}\n"
             f"\n"
-            f"{top5hosts}"
+            f"{top10hosts}"
             f"\n"
             f"{top10xp}"
             f"\n"
