@@ -1,5 +1,7 @@
+import utilities
 from utilities import read_file, write_file
 from member import Member
+from datetime import datetime
 from exceptions import NotAMember, NotAMemberList
 import copy
 
@@ -222,12 +224,61 @@ def runescore_cond(memb_1, memb_2, asc=True):
     if memb_1.activities["runescore"][1] < memb_2.activities["runescore"][1]:
         return asc
     return not asc
+def clues_cond(memb_1, memb_2, asc=True):
+    if memb_1.total_clues() < memb_2.total_clues():
+        return asc
+    return not asc
+
+class CompareResult():
+    """
+    CompareResult(staying, joining, leaving, renamed).
+    """
+    def __init__(self, staying, joining, leaving, renamed):
+        self.staying = staying
+        self.joining = joining
+        self.leaving = leaving
+        self.renamed = renamed
+    def summary_rows(self):
+        """
+        Gives a spreadsheet rows representation of memberlist changes
+        """
+        summary = list()
+        summary.append([(
+            "Memberlist changes from automatic update on "
+            + datetime.utcnow().strftime(utilities.dateformat)
+        )])
+        summary.append(["\nRenamed Clan Members:"])
+        for memb in self.renamed:
+            old_name = memb.old_names[len(memb.old_names)-1]
+            summary.append([f"{old_name} -> {memb.name}"])
+        summary.append(["\nLeft Clan:"])
+        for memb in self.leaving:
+            summary.append([memb.name])
+        summary.append(["\nJoined Clan:"])
+        for memb in self.joining:
+            summary.append([memb.name])
+        summary.append(["- - - - - - - - - - - - - - - - - - - - - - - - -"])
+
+        return summary
+    def summary(self):
+        """
+        Gives a text representation of memberlist changes
+        """
+        rows = self.summary_rows()
+        summary = ""
+        for line in rows:
+            summary += (line[0] + "\n")
+        return summary
 
 def memberlist_compare_stats(newlist, oldlist):
     """
     Returns the difference in stats for each member in both lists.
     """
-    result = []
+    staying_members = []
+    joining_members = []
+    leaving_members = copy.deepcopy(oldlist)
+    renamed_members = []
+    # first pass to identify who stayed, joined and renamed
     for memb in newlist:
         # try finding by discord id, most likely
         old_memb = memberlist_get(oldlist, memb.discord_id)
@@ -242,10 +293,20 @@ def memberlist_compare_stats(newlist, oldlist):
             for old_name in memb.old_names:
                 old_memb = memberlist_get(oldlist, old_name)
                 if old_memb is not None: break
-        # still not found = too new member or just not findable
+        
+        # not found = mark as new member
         if old_memb is None:
-            # Add blank member with no stats or just dont add
+            joining_members.append(memb)
             continue
-
-        result.append(memb.compare_stats(old_memb))
-    return result
+        # not none = found = mark as stayed and add comparison result
+        staying_members.append(memb.compare_stats(old_memb))
+        # different name = mark as renamed
+        if old_memb.name != memb.name:
+            memb.old_names = [old_memb.name]
+            renamed_members.append(memb)
+        # remove from leaving
+        leaving_members.remove(old_memb)
+        
+    return CompareResult(
+        staying_members, joining_members, leaving_members, renamed_members
+    )

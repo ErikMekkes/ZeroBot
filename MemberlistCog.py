@@ -1236,10 +1236,13 @@ class MemberlistCog(commands.Cog):
                 return
         else:
             newlist = memberlist_from_disk("memberlists/current_members.txt")
+        if len(args) == 2:
+            stat_range = f"between {date_string_1} and {date_string_2}"
+        else:
+            stat_range = f"since {date_string_1}"
         current_size = len(newlist)
-        stats = memberlist_compare_stats(newlist, oldlist)
-        stayed = len(stats)
-        new_membs = current_size - stayed
+        comp_res = memberlist_compare_stats(newlist, oldlist)
+        stats = comp_res.staying
         # count non-zer0 discord ids, or count 'clan_member' tags
         clan_member_role = zerobot_common.get_named_role("Clan Member")
         membs_on_discord = len(clan_member_role.members)
@@ -1255,28 +1258,50 @@ class MemberlistCog(commands.Cog):
 
 
         memberlist.memberlist_sort(stats, memberlist.clan_xp_cond, asc=False)
-        top5xp = "Most xp gained:\n"
-        for i in range(0,5):
-            top5xp += f"{stats[i].name} : {stats[i].clan_xp}\n"
+        top10xp = "Most xp gained:\n"
+        for i in range(0,10):
+            top10xp += f"{stats[i].name} : {stats[i].clan_xp}\n"
         
+        memberlist.memberlist_sort(stats, memberlist.clues_cond, asc=False)
+        top10clues = f"Most clues done {stat_range}:\n"
+        for i in range(0,10):
+            top10clues += f"{stats[i].name} : {stats[i].total_clues()}\n"
+        
+        memberlist.memberlist_sort(stats, memberlist.runescore_cond, asc=False)
+        top10runescore = f"Most runescore gained:\n"
+        for i in range(0,10):
+            top10runescore += f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
+        
+        new_membs = f"{len(comp_res.joining)} members joined {stat_range}:\n"
+        for memb in comp_res.joining:
+            new_membs += f" {memb.name},"
+        new_membs = new_membs[:-1]
+        left_membs = f"{len(comp_res.leaving)} members left {stat_range}:\n"
+        for memb in comp_res.leaving:
+            left_membs += f" {memb.name},"
+        renamed_membs = f"{len(comp_res.renamed)} members renamed {stat_range}:"
+        for memb in comp_res.renamed:
+            renamed_membs += f"\n - {memb.name} = {memb.old_names[0]}"
 
-        if len(args) == 2:
-            stat_range = f"between {date_string_1} and {date_string_2}"
-        else:
-            stat_range = f"since {date_string_1}"
         embed = discord.Embed()
         embed.set_author(
             name = f"{zerobot_common.guild.name} stats {stat_range}",
             icon_url = zerobot_common.guild.icon_url)
         embed.description = (
             f"Current Members: {current_size}\n"
-            f"New members {stat_range}: {new_membs}\n"
             f"Clan members on discord: {membs_on_discord}\n"
             f"Total users on discord: {total_on_disc}\n"
+            f"{new_membs}\n"
+            f"{left_membs}\n"
+            f"{renamed_membs}\n"
             f"\n"
-            f"{top5hosts}\n"
+            f"{top5hosts}"
             f"\n"
-            f"{top5xp}"
+            f"{top10xp}"
+            f"\n"
+            f"{top10clues}"
+            f"\n"
+            f"{top10runescore}"
         )
         await ctx.send(embed=embed)
 
