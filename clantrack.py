@@ -11,6 +11,7 @@ import utilities
 from utilities import int_0
 from logfile import LogFile
 from member import Member, skill_labels, activity_labels
+from memberlist import CompareResult
 from exceptions import NotAMember, NotAMemberList
 # external imports
 import requests
@@ -29,47 +30,6 @@ _member_base_url = (
 
 # logfile for clantrack
 clantrack_log = LogFile("logs/clantrack")
-
-class CompareResult():
-    """
-    CompareResult(staying, joining, leaving, renamed).
-    """
-    def __init__(self, staying, joining, leaving, renamed):
-        self.staying = staying
-        self.joining = joining
-        self.leaving = leaving
-        self.renamed = renamed
-    def summary_rows(self):
-        """
-        Gives a spreadsheet rows representation of memberlist changes
-        """
-        summary = list()
-        summary.append([(
-            "Memberlist changes from automatic update on "
-            + datetime.utcnow().strftime(utilities.dateformat)
-        )])
-        summary.append(["\nRenamed Clan Members:"])
-        for memb in self.renamed:
-            old_name = memb.old_names[len(memb.old_names)-1]
-            summary.append([f"{old_name} -> {memb.name}"])
-        summary.append(["\nLeft Clan:"])
-        for memb in self.leaving:
-            summary.append([memb.name])
-        summary.append(["\nJoined Clan:"])
-        for memb in self.joining:
-            summary.append([memb.name])
-        summary.append(["- - - - - - - - - - - - - - - - - - - - - - - - -"])
-
-        return summary
-    def summary(self):
-        """
-        Gives a text representation of memberlist changes
-        """
-        rows = self.summary_rows()
-        summary = ""
-        for line in rows:
-            summary += (line[0] + "\n")
-        return summary
 
 def compare_lists(ingame_members, current_members):
     """
