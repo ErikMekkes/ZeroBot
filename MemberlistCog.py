@@ -19,6 +19,8 @@ How to safely edit the memberlist:
    can desync the lists in memory from the ones on the disk / google drive.
 """
 from discord.ext import tasks, commands
+import io
+import textwrap
 import discord
 import time
 from datetime import datetime, timedelta
@@ -254,6 +256,12 @@ async def process_leaving(self, leaving_list):
     today_date = datetime.utcnow().strftime(utilities.dateformat)
     for memb in leaving_list:
         self.logfile.log(f" - {memb.name} is leaving, updating discord and site ranks...")
+        # update leave date and reason
+        if (memb.leave_date == ""):
+            memb.leave_date = today_date
+        if (memb.leave_reason == ""):
+            memb.leave_reason = "left or inactive kick"
+        self.old_members.append(memb)
         rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
         if rank_index is None:
             await zerobot_common.bot_channel.send(
@@ -281,12 +289,6 @@ async def process_leaving(self, leaving_list):
                     f"Could not remove site rank for {memb.name}, profile link : "
                     f"{memb.profile_link}"
                 )
-        # update leave date and reason
-        if (memb.leave_date == ""):
-            memb.leave_date = today_date
-        if (memb.leave_reason == ""):
-            memb.leave_reason = "left or inactive kick"
-        self.old_members.append(memb)
 
 class MemberlistCog(commands.Cog):
     """
@@ -1191,7 +1193,9 @@ class MemberlistCog(commands.Cog):
             "    date = a date in yyyy-mm-dd format! (example: 2020-12-28)"
             "    shows clan stats since between <date_1> and <date_2>"
         )
-
+        today_date = datetime.utcnow()
+        date_1 = None
+        date_2 = None
         if len(args) > 2:
             await ctx.send("Too many arguments!\n" + use_msg)
             return
@@ -1271,29 +1275,23 @@ class MemberlistCog(commands.Cog):
         top10runescore = f"**Most runescore gained:**\n"
         for i in range(0,10):
             top10runescore += f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
-        
-        new_membs = f"**{len(comp_res.joining)} members joined {stat_range}:**\n"
-        for memb in comp_res.joining:
-            new_membs += f" {memb.name},"
-        new_membs = new_membs[:-1]
-        left_membs = f"**{len(comp_res.leaving)} members left {stat_range}:**\n"
-        for memb in comp_res.leaving:
-            left_membs += f" {memb.name},"
-        renamed_membs = f"**{len(comp_res.renamed)} members renamed {stat_range}:**"
-        for memb in comp_res.renamed:
-            renamed_membs += f"\n - {memb.name} = {memb.old_names[0]}"
+
+        #TODO inactives between dates, so can do between and not just since
+        days_diff = (today_date - date_1).days
+        inactives = _Inactives(days_diff)
 
         embed = discord.Embed()
         embed.set_author(
             name = f"{zerobot_common.guild.name} stats {stat_range}",
             icon_url = zerobot_common.guild.icon_url)
         embed.description = (
-            f"Current Members: {current_size}\n"
+            f"Current clan Members: {current_size}\n"
             f"Clan members on discord: {membs_on_discord}\n"
             f"Total users on discord: {total_on_disc}\n"
-            f"{new_membs}\n"
-            f"{left_membs}\n"
-            f"{renamed_membs}\n"
+            f"{len(comp_res.joining)} members joined {stat_range}\n"
+            f"{len(comp_res.leaving)} members left {stat_range}\n"
+            f"{len(comp_res.renamed)} members renamed {stat_range}\n"
+            f"{len(inactives)} members inactive since {date_string_1}\n"
             f"\n"
             f"{top10hosts}"
             f"\n"
@@ -1304,22 +1302,45 @@ class MemberlistCog(commands.Cog):
             f"{top10runescore}"
         )
         await ctx.send(embed=embed)
-
-        inactives = _Inactives(30)
-        top5inactive = (
-            f"Members that are inactive ingame: {len(inactives)}\n"
-            "First ten, if you are on this list it is very likely that you will get "
+        inactives_str = (
+            f"Members that are inactive ingame since {date_string_1}: {len(inactives)}\n"
+            "If you are near the top of this list it is very likely that you will get "
             "kicked when we need to make space for new members:\n"
-            "You can check your own activity with `-zbot activity` in <#307827142534889472>\n"
         )
-        top5inactive += (
-            "```Name         Rank              Join Date  Clan xp    Last "
+        inactives_str += (
+            "Name         Rank              Join Date  Clan xp    Last "
             "Active  Site Profile Link                   Discord Name   \n"
         )
-        for i in range(0,10):
-            top5inactive += f"{inactives[i].inactiveInfo()}\n"
-        top5inactive += "```"
-        await ctx.send(top5inactive)
+        for memb in inactives:
+            inactives_str += f"{memb.inactiveInfo()}\n"
+        
+        new_membs = f"{len(comp_res.joining)} members joined {stat_range}:\n"
+        for memb in comp_res.joining:
+            new_membs += f" {memb.name},"
+        new_membs = new_membs[:-1]
+        left_membs = f"{len(comp_res.leaving)} members left {stat_range}:\n"
+        for memb in comp_res.leaving:
+            left_membs += f" {memb.name},"
+        renamed_membs = f"{len(comp_res.renamed)} members renamed {stat_range}:"
+        for memb in comp_res.renamed:
+            renamed_membs += f"\n - {memb.name} = {memb.old_names[0]}"
+
+        stats_str = (
+            f"{new_membs}\n"
+            f"\n"
+            f"{left_membs}\n"
+            f"\n"
+            f"{renamed_membs}\n"
+            f"\n"
+            f"{inactives_str}"
+        )
+        wrapped = stats_str.splitlines()
+        for num, l in enumerate(wrapped):
+            wrapped[num] = textwrap.fill(l, width=125)
+        stats_str = "\n".join(wrapped)
+        f = io.StringIO(stats_str)
+        disc_file = discord.File(f, "reactions.txt")
+        await ctx.send(content="More clan statistics:", file=disc_file)
     
     @commands.Cog.listener()
     async def on_message(self, message):
