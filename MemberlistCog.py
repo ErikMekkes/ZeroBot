@@ -1324,6 +1324,81 @@ class MemberlistCog(commands.Cog):
         renamed_membs = f"{len(comp_res.renamed)} members renamed {stat_range}:"
         for memb in comp_res.renamed:
             renamed_membs += f"\n - {memb.name} = {memb.old_names[0]}"
+        
+        changed_ranks = []
+        for memb in stats:
+            if memb.old_rank != memb.new_rank:
+                changed_ranks.append(memb)
+        changed_ranks_str = f"{len(changed_ranks)} members changed rank {stat_range}:"
+        for memb in changed_ranks:
+            changed_ranks_str += f"\n - {memb.name}: {memb.old_rank} -> {memb.new_rank}"
+        changed_dpm = []
+        for memb in stats:
+            memb.mage_change = ""
+            memb.melee_change = ""
+            memb.range_change = ""
+            changed = False
+            if memb.new_misc["highest_mage"] != memb.old_misc["highest_mage"]:
+                if memb.new_misc["highest_mage"] == "":
+                    memb.mage_change = f"Lost {memb.new_misc['highest_mage']}"
+                elif memb.old_misc["highest_mage"] == "":
+                    memb.mage_change = f"Gained {memb.new_misc['highest_mage']}"
+                else:
+                    memb.mage_change = f"{memb.old_misc['highest_mage']} -> {memb.new_misc['highest_mage']}"
+                changed = True
+            if memb.new_misc["highest_melee"] != memb.old_misc["highest_melee"]:
+                if memb.new_misc["highest_melee"] == "":
+                    memb.mage_change = f"Lost {memb.new_misc['highest_melee']}"
+                elif memb.old_misc["highest_melee"] == "":
+                    memb.mage_change = f"Gained {memb.new_misc['highest_melee']}"
+                else:
+                    memb.melee_change = f"{memb.old_misc['highest_melee']} -> {memb.new_misc['highest_melee']}"
+                changed = True
+            if memb.new_misc["highest_range"] != memb.old_misc["highest_range"]:
+                if memb.new_misc["highest_range"] == "":
+                    memb.mage_change = f"Lost {memb.new_misc['highest_range']}"
+                elif memb.old_misc["highest_range"] == "":
+                    memb.mage_change = f"Gained {memb.new_misc['highest_range']}"
+                else:
+                    memb.range_change = f"{memb.old_misc['highest_range']} -> {memb.new_misc['highest_range']}"
+                changed = True
+            if changed:
+                changed_dpm.append(memb)
+        changed_dpm_str = f"{len(changed_dpm)} members changed dpm {stat_range}:"
+        for memb in changed_dpm:
+            changed_dpm_str += (
+                f"\n - {memb.name}: {memb.mage_change}    {memb.melee_change}    {memb.range_change}"
+            )
+        changed_tags = []
+        for memb in stats:
+            changed = False
+            memb.new_tags = []
+            for id in memb.new_misc["discord_roles"]:
+                if not id in memb.old_misc["discord_roles"]:
+                    role = zerobot_common.guild.get_role(id)
+                    if role is None:
+                        memb.new_tags.append("deleted-role")
+                    else:
+                        memb.new_tags.append(role.name)
+                    changed = True
+            memb.lost_tags = []
+            for id in memb.old_misc["discord_roles"]:
+                if not id in memb.new_misc["discord_roles"]:
+                    role = zerobot_common.guild.get_role(id)
+                    if role is None:
+                        memb.new_tags.append("deleted-role")
+                    else:
+                        memb.new_tags.append(role.name)
+                    changed = True
+            if changed:
+                changed_tags.append(memb)
+        changed_tags_str = f"{len(changed_tags)} members changed discord tags {stat_range}:"
+        for memb in changed_tags:
+            changed_tags_str += f"\n - {memb.name}"
+            if len(memb.new_tags) != 0:
+                changed_tags_str += f"\n    New Tags: {','.join(memb.new_tags)}"
+            if len(memb.lost_tags) != 0:
+                changed_tags_str += f"\n    Lost Tags: {','.join(memb.lost_tags)}"
 
         stats_str = (
             f"{new_membs}\n"
@@ -1333,6 +1408,12 @@ class MemberlistCog(commands.Cog):
             f"{renamed_membs}\n"
             f"\n"
             f"{inactives_str}"
+            f"\n"
+            f"{changed_ranks_str}\n"
+            f"\n"
+            f"{changed_dpm_str}\n"
+            f"\n"
+            f"{changed_tags_str}\n"
         )
         wrapped = stats_str.splitlines()
         for num, l in enumerate(wrapped):

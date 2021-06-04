@@ -555,6 +555,8 @@ class Member:
             self.clan_xp - other.clan_xp,
             self.kills - other.kills
         )
+        memb.old_rank = other.discord_rank
+        memb.new_rank = self.discord_rank
         # copy skills
         for k, v in self.skills.items():
             memb.skills[k] = v
@@ -572,6 +574,9 @@ class Member:
         # for this the value is just a single int that can be subtracted.
         for k, v in other.notify_stats.items():
             memb.notify_stats[k] = self.notify_stats[k] - v
+        # only keep discord tags that did not stay the same
+        memb.new_misc = copy.deepcopy(self.misc)
+        memb.old_misc = copy.deepcopy(other.misc)
         return memb
 
 def valid_discord_id(id):
