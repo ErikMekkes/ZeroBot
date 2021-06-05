@@ -1386,9 +1386,9 @@ class MemberlistCog(commands.Cog):
                 if not id in memb.new_misc["discord_roles"]:
                     role = zerobot_common.guild.get_role(id)
                     if role is None:
-                        memb.new_tags.append("deleted-role")
+                        memb.lost_tags.append("deleted-role")
                     else:
-                        memb.new_tags.append(role.name)
+                        memb.lost_tags.append(role.name)
                     changed = True
             if changed:
                 changed_tags.append(memb)
