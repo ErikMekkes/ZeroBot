@@ -1275,6 +1275,11 @@ class MemberlistCog(commands.Cog):
         top10runescore = f"**Most runescore gained:**\n"
         for i in range(0,10):
             top10runescore += f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
+        
+        memberlist.memberlist_sort(stats, memberlist.wildykills_cond, asc=False)
+        top10pks = f"**Most Wildy PKs:**\n"
+        for i in range(0,10):
+            top10pks += f"{stats[i].name} : {stats[i].kills}\n"
 
         #TODO inactives between dates, so can do between and not just since
         days_diff = (today_date - date_1).days
@@ -1300,6 +1305,8 @@ class MemberlistCog(commands.Cog):
             f"{top10clues}"
             f"\n"
             f"{top10runescore}"
+            f"\n"
+            f"{top10pks}"
         )
         await ctx.send(embed=embed)
         inactives_str = (
@@ -1340,7 +1347,7 @@ class MemberlistCog(commands.Cog):
             changed = False
             if memb.new_misc["highest_mage"] != memb.old_misc["highest_mage"]:
                 if memb.new_misc["highest_mage"] == "":
-                    memb.mage_change = f"Lost {memb.new_misc['highest_mage']}"
+                    memb.mage_change = f"Lost {memb.old_misc['highest_mage']}"
                 elif memb.old_misc["highest_mage"] == "":
                     memb.mage_change = f"Gained {memb.new_misc['highest_mage']}"
                 else:
@@ -1348,7 +1355,7 @@ class MemberlistCog(commands.Cog):
                 changed = True
             if memb.new_misc["highest_melee"] != memb.old_misc["highest_melee"]:
                 if memb.new_misc["highest_melee"] == "":
-                    memb.mage_change = f"Lost {memb.new_misc['highest_melee']}"
+                    memb.mage_change = f"Lost {memb.old_misc['highest_melee']}"
                 elif memb.old_misc["highest_melee"] == "":
                     memb.mage_change = f"Gained {memb.new_misc['highest_melee']}"
                 else:
@@ -1356,7 +1363,7 @@ class MemberlistCog(commands.Cog):
                 changed = True
             if memb.new_misc["highest_range"] != memb.old_misc["highest_range"]:
                 if memb.new_misc["highest_range"] == "":
-                    memb.mage_change = f"Lost {memb.new_misc['highest_range']}"
+                    memb.mage_change = f"Lost {memb.old_misc['highest_range']}"
                 elif memb.old_misc["highest_range"] == "":
                     memb.mage_change = f"Gained {memb.new_misc['highest_range']}"
                 else:
@@ -1420,7 +1427,7 @@ class MemberlistCog(commands.Cog):
             wrapped[num] = textwrap.fill(l, width=125)
         stats_str = "\n".join(wrapped)
         f = io.StringIO(stats_str)
-        disc_file = discord.File(f, "reactions.txt")
+        disc_file = discord.File(f, "clanstats.txt")
         await ctx.send(content="More clan statistics:", file=disc_file)
     
     @commands.Cog.listener()

@@ -224,6 +224,10 @@ def runescore_cond(memb_1, memb_2, asc=True):
     if memb_1.activities["runescore"][1] < memb_2.activities["runescore"][1]:
         return asc
     return not asc
+def wildykills_cond(memb_1, memb_2, asc=True):
+    if memb_1.kills < memb_2.kills:
+        return asc
+    return not asc
 def clues_cond(memb_1, memb_2, asc=True):
     if memb_1.total_clues() < memb_2.total_clues():
         return asc
