@@ -3,7 +3,7 @@ Bot module for all the memberlist modifying functions. Also includes the
 scheduled daily update.
 
 How to safely edit the memberlist:
- - access the instance of this module with bot.get_cog('MemberlistCog')
+ - access the instance of this module with bot.get_cog("MemberlistCog")
  - request edit permission to the list with await membcog.lock()
  - make your edits through the list_access dictionary given to you by lock().
    You can use the helper functions in memberlist.py to add, remove or move 
@@ -31,18 +31,52 @@ import zerobot_common
 import utilities
 
 from utilities import send_messages
-from sheet_ops import start_update_warnings, clear_sheets, print_update_in_progress_warnings, color_spreadsheet, load_sheet_changes, memberlist_to_sheet, warnings_from_sheet
-from rankchecks import Todos, TodosInviteIngame, TodosJoinDiscord, TodosUpdateRanks, update_discord_info, parse_discord_rank
+from sheet_ops import (
+    start_update_warnings,
+    clear_sheets,
+    print_update_in_progress_warnings, 
+    color_spreadsheet,
+    load_sheet_changes,
+    memberlist_to_sheet,
+    warnings_from_sheet
+)
+from rankchecks import (
+    Todos,
+    TodosInviteIngame,
+    TodosJoinDiscord,
+    TodosUpdateRanks,
+    update_discord_info,
+    parse_discord_rank
+)
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
 import memberlist
-from memberlist import memberlist_sort_name, memberlist_sort_clan_xp, memberlist_sort_leave_date, memberlist_from_disk, memberlist_to_disk, memberlist_get, memberlist_remove, memberlist_move, memberlist_get_all, memberlist_compare_stats
+from memberlist import (
+    memberlist_sort_name,
+    memberlist_sort_clan_xp,
+    memberlist_sort_leave_date,
+    memberlist_from_disk,
+    memberlist_to_disk,
+    memberlist_get,
+    memberlist_remove,
+    memberlist_move,
+    memberlist_get_all,
+    memberlist_compare_stats
+)
 from member import Member, valid_discord_id, valid_profile_link, notify_role_names
-from exceptions import BannedUserError, ExistingUserWarning, MemberNotFoundError, NotACurrentMemberError, StaffMemberError, NotADiscordId, NotAProfileLink
+from exceptions import (
+    BannedUserError,
+    ExistingUserWarning,
+    MemberNotFoundError,
+    NotACurrentMemberError,
+    StaffMemberError,
+    NotADiscordId,
+    NotAProfileLink
+)
 
 # logfile for clantrack
-memberlist_log = LogFile('logs/memberlist')
+memberlist_log = LogFile("logs/memberlist")
 
 def parse_discord_id(id):
     """
@@ -118,7 +152,7 @@ async def daily_update_scheduler(self):
     update_time_str = zerobot_common.daily_update_time
     update_time = datetime.strptime(update_time_str, utilities.timeformat)
     wait_time = update_time - datetime.utcnow()
-    memberlist_log.log(f'auto_upd in {wait_time.seconds/3600}h')
+    memberlist_log.log(f"auto_upd in {wait_time.seconds/3600}h")
     # async sleep to be able to do other stuff until update time
     await asyncio.sleep(wait_time.seconds)
     await daily_update(self)
@@ -357,9 +391,9 @@ class MemberlistCog(commands.Cog):
             load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
             load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
             await warnings_from_sheet(self)
-        self.list_access['current_members'] = self.current_members
-        self.list_access['old_members'] = self.old_members
-        self.list_access['banned_members'] = self.banned_members
+        self.list_access["current_members"] = self.current_members
+        self.list_access["old_members"] = self.old_members
+        self.list_access["banned_members"] = self.banned_members
         return self.list_access
     async def unlock(self):
         """
@@ -374,9 +408,9 @@ class MemberlistCog(commands.Cog):
         'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
         Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
         """
-        self.list_access['current_members'] = None
-        self.list_access['old_members'] = None
-        self.list_access['banned_members'] = None
+        self.list_access["current_members"] = None
+        self.list_access["old_members"] = None
+        self.list_access["banned_members"] = None
         memberlist_to_disk(self.current_members, zerobot_common.current_members_filename)
         memberlist_to_disk(self.old_members, zerobot_common.old_members_filename)
         memberlist_to_disk(self.banned_members, zerobot_common.banned_members_filename)
@@ -389,8 +423,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def restart(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('restart', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("restart", ctx.channel.id)) : return
 
         # TODO: create an internal restart that does not rely on the server restarting the python script. very tricky with scheduled tasks
         await self.bot.logout()
@@ -398,8 +432,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def updatelist(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('updatelist', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("updatelist", ctx.channel.id)) : return
 
         # check if confirmed
         if self.confirmed_update:
@@ -407,9 +441,9 @@ class MemberlistCog(commands.Cog):
             return
         # not confirmed yet, ask for confirm
         await ctx.send((
-            'Fully updating the memberlist spreadsheet takes a long time! (~30 minutes!)\n' +
-            'The spreadsheet can not be edited while the full update is running.\n' +
-            'If you are sure you want to start the full update, type the command again within 30 seconds'
+            "Fully updating the memberlist spreadsheet takes a long time! (~30 minutes!)\n" +
+            "The spreadsheet can not be edited while the full update is running.\n" +
+            "If you are sure you want to start the full update, type the command again within 30 seconds"
         ))
         self.confirmed_update = True
         await asyncio.sleep(30)
@@ -517,8 +551,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def findmember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('findmember', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("findmember", ctx.channel.id)) : return
 
         use_msg = (
             "Needs to be : -zbot findmember id"
@@ -565,13 +599,13 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def removemember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('removemember', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("removemember", ctx.channel.id)) : return
 
         use_msg = (
-            'Needs to be : -zbot removemember list_name member_id\n'
-            ' - list_name: current_members, old_members or banned_members\n'
-            ' - member_id: name, profile_link or discord_id'
+            "Needs to be : -zbot removemember list_name member_id\n"
+            " - list_name: current_members, old_members or banned_members\n"
+            " - member_id: name, profile_link or discord_id"
         )
         if len(args) != 2:
             await ctx.send(use_msg)
@@ -601,13 +635,13 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def movemember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('movemember', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("movemember", ctx.channel.id)) : return
 
         use_msg = (
-            'Needs to be : -zbot movemember from_list to_list member_id\n'
-            ' - from_list / to_list: current_members, old_members or banned_members\n'
-            ' - member_id: name, profile_link or discord_id'
+            "Needs to be : -zbot movemember from_list to_list member_id\n"
+            " - from_list / to_list: current_members, old_members or banned_members\n"
+            " - member_id: name, profile_link or discord_id"
         )
         if len(args) != 3:
             await ctx.send(use_msg)
@@ -644,14 +678,14 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def editmember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('editmember', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("editmember", ctx.channel.id)) : return
 
         use_msg = (
-            'Needs to be : -zbot editmember list_name member_id attribute = value\n'
-            ' - list_name: current_members, old_members or banned_members'
-            ' - member_id: a valid name, profile_link or discord_id'
-            ' - attribute: name, profile_link, discord_id'
+            "Needs to be : -zbot editmember list_name member_id attribute = value\n"
+            " - list_name: current_members, old_members or banned_members"
+            " - member_id: a valid name, profile_link or discord_id"
+            " - attribute: name, profile_link, discord_id"
         )
 
         # check if command uses the correct form
@@ -736,8 +770,8 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def todos(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('todos', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("todos", ctx.channel.id)) : return
 
         memberlist = memberlist_from_disk(zerobot_common.current_members_filename)
         await ctx.send("Gathering latest info, takes a minute, ingame ranks only update daily and might be outdated")
@@ -747,28 +781,28 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def inactives(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('inactives', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("inactives", ctx.channel.id)) : return
 
         if len(args) != 1:
-            await ctx.send(('Needs to be : -zbot inactives <number of days>'))
+            await ctx.send(("Needs to be : -zbot inactives <number of days>"))
             return
         try:
             days = int(args[0])
         except ValueError:
-            await ctx.send(('Days argument has to be a number!\n Needs to be : -zbot inactives <number of days>'))
+            await ctx.send(("Days argument has to be a number!\n Needs to be : -zbot inactives <number of days>"))
             return
         result = await self.bot.loop.run_in_executor(None, _Inactives, days)
-        await ctx.send('Inactive for ' + str(days) + ' or more days: \n')
+        await ctx.send("Inactive for " + str(days) + " or more days: \n")
         for i in range(0, len(result),10):
             if (i == 0):
-                message = '```\nName         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n'
+                message = "```\nName         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n"
             else:
-                message = '```\n'
+                message = "```\n"
             for memb in range(i,i+10):
                 if (memb >= len(result)) : break
-                message += result[memb].inactiveInfo() + '\n'
-            message += '```'
+                message += result[memb].inactiveInfo() + "\n"
+            message += "```"
             await ctx.send(message)
     
     @commands.command()
@@ -838,8 +872,8 @@ class MemberlistCog(commands.Cog):
         Raises ExistingUserWarning when matches found outside bans.
         """
         name = app.fields_dict["name"]
-        discord_id = app.fields_dict['requester_id']
-        profile_link = app.fields_dict['profile_link']
+        discord_id = app.fields_dict["requester_id"]
+        profile_link = app.fields_dict["profile_link"]
         await self.background_check(ctx, name, discord_id, profile_link)
 
     async def background_check(self, ctx, name, discord_id, profile_link):
@@ -932,15 +966,23 @@ class MemberlistCog(commands.Cog):
         Discord bot command to add a member (name, discord id, profile link)
         """
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('addmember', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("addmember", ctx.channel.id)) : return
 
         # check if command has correct number of arguments
         if len(args) < 4 :
-            await ctx.send(('Needs to be: `-zbot addmember <name> <clan rank> <discord id> <profile link>`\n example: `-zbot addmember Zezima "Full Member" 123456789012345678 https://zer0pvm.com/members/1234567`'))
+            await ctx.send(
+                "Needs to be: `-zbot addmember <name> <clan rank> "
+                "<discord id> <profile link>`\n example: `-zbot addmember "
+                """Zezima "Full Member" 123456789012345678 """
+                "https://zer0pvm.com/members/1234567`"
+            )
             return
         if (len(args) > 4):
-            await ctx.send(('Too many! use \"\" around things with spaces : `-zbot addmember <name> <clan rank> <discord id> <profile link>`'))
+            await ctx.send(
+                "Too many! use \"\" around things with spaces : `-zbot "
+                "addmember <name> <clan rank> <discord id> <profile link>`"
+            )
             return
         
         # check if command arguments are valid
@@ -973,7 +1015,12 @@ class MemberlistCog(commands.Cog):
             try:
                 profile_link = parse_profile_link(profile_link)
             except NotAProfileLink:
-                await ctx.send(f"Could not add, {profile_link} is not a correct profile link\ncheck if the profile link is correct, example: https://zer0pvm.com/members/1234567. Use `no site` if they really can't make a site account.")
+                await ctx.send(
+                    f"Could not add, {profile_link} is not a correct "
+                    f"profile link.\nCheck if the profile link is correct, "
+                    f"example: https://zer0pvm.com/members/1234567. "
+                    f"Use `no site` if they really can't make a site account."
+                )
                 return
         discord_user = zerobot_common.guild.get_member(discord_id)
         
@@ -981,42 +1028,57 @@ class MemberlistCog(commands.Cog):
         try:
             self.background_check(ctx, name, discord_id, profile_link)
         except BannedUserError:
-            await ctx.send(f"You can not add a \uD83D\uDE21 Banned Member \U0001F621, clear their banlist status first.")
+            await ctx.send(
+                f"You can not add a \uD83D\uDE21 Banned Member \U0001F621, "
+                f"clear their banlist status first."
+            )
             return
         except ExistingUserWarning:
-            await ctx.send(f"Adding, but found previous member results above searching for name, discord id, and profile link matches for {name} (might show duplicates). You might want to check / remove them from the sheet")
+            await ctx.send(
+                f"Adding, but found previous member results above searching "
+                f"for name, discord id, and profile link matches for {name} "
+                f"(might show duplicates). You might want to check / remove "
+                f"those entries from the sheet"
+            )
         # add member to memberlist
         await self.add_member(ctx, name, discord_id, profile_link)
         # update rank on site, not needed if no site.
         if (profile_link.lower() != "no site"):
-            zerobot_common.siteops.setrank(profile_link, 'Recruit')
+            zerobot_common.siteops.setrank(profile_link, "Recruit")
         
-        message = ''
+        message = ""
         if (discord_user != None):
-            message += f"Can't find discord user {discord_id}, I can't rank them on discord. I also can't send them the welcome messages."
+            message += (
+                f"Can't find discord user {discord_id}, I can not give them "
+                f"the discord rank. I also can not send them the welcome messages."
+            )
         else:
-            # note: I'm using the name of the actual user and roles removed in the report, not the ones i expect to be removed.
+            # note: I'm using the name of the actual user and roles removed 
+            # in the report, not the ones i expect to be removed.
             # This is to make any unexpected results / possible mistakes visible.
             message += f"Discord User: {discord_user.name}, "
             # remove waiting approval role if present
-            approval_role = zerobot_common.get_named_role('Waiting Approval')
-            await discord_user.remove_roles(approval_role, reason='Adding member')
-            message += f'Removed {approval_role.name} role, '
+            approval_role = zerobot_common.get_named_role("Waiting Approval")
+            await discord_user.remove_roles(approval_role, reason="Adding member")
+            message += f"Removed {approval_role.name} role, "
             # remove guest role if present
-            guest_role = zerobot_common.get_named_role('Guest')
-            await discord_user.remove_roles(guest_role, reason='Adding member')
-            message += f'Removed {guest_role.name} role, '
+            guest_role = zerobot_common.get_named_role("Guest")
+            await discord_user.remove_roles(guest_role, reason="Adding member")
+            message += f"Removed {guest_role.name} role, "
             # add recruit role
-            recruit_role = zerobot_common.get_named_role('Recruit')
-            await discord_user.add_roles(recruit_role, reason='Adding member')
-            message += f'Added {recruit_role.name} role on discord. '
+            recruit_role = zerobot_common.get_named_role("Recruit")
+            await discord_user.add_roles(recruit_role, reason="Adding member")
+            message += f"Added {recruit_role.name} role on discord. "
 
             # send welcome messages
             await send_messages(
                 discord_user,
                 f"application_templates/welcome_messages.json"
             )
-            message += f"\nI have pmed {name} on discord to ask for an invite, sign up for notify tags, and informed them of dps tags. \n"
+            message += (
+                f"\nI have pmed {name} on discord to ask for an invite, "
+                f"sign up for notify tags, and informed them of dps tags. \n"
+            )
 
         message += (
             f"Ranked {name} to Recruit on the website. Also added {name} to "
@@ -1029,11 +1091,18 @@ class MemberlistCog(commands.Cog):
     async def changerank(self, member, new_rank):
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await zerobot_common.bot_channel.send(f"Could not change discord rank of {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(
+                f"Could not change discord rank of {member.name}, "
+                f"not a valid discord id: {discord_id}"
+            )
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await zerobot_common.bot_channel.send(f"Could not change discord rank of {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(
+                f"Could not change discord rank of {member.name}, "
+                f"discord id: {discord_id} does not exist or is not a member "
+                f"of the Zer0 Discord."
+            )
             return
         
         old_rank = member.discord_rank
@@ -1067,11 +1136,17 @@ class MemberlistCog(commands.Cog):
     async def kickmember(self, member):
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await zerobot_common.bot_channel.send(f"Could not kick {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(
+                f"Could not kick {member.name}, "
+                f"not a valid discord id: {discord_id}"
+            )
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await zerobot_common.bot_channel.send(f"Could not kick {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(
+                f"Could not kick {member.name}, discord id: {discord_id} "
+                f"does not exist or is not a member of the Zer0 Discord."
+            )
             return
         
         await discord_user.kick(reason = "kick")
@@ -1084,11 +1159,18 @@ class MemberlistCog(commands.Cog):
         """
         discord_id = member.discord_id
         if not valid_discord_id(discord_id):
-            await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, not a valid discord id: {discord_id}")
+            await zerobot_common.bot_channel.send(
+                f"Could not remove roles for {member.name}, "
+                f"not a valid discord id: {discord_id}"
+            )
             return
         discord_user = zerobot_common.guild.get_member(discord_id)
         if (discord_user == None):
-            await zerobot_common.bot_channel.send(f"Could not remove roles for {member.name}, discord id: {discord_id} does not exist or is not a member of the Zer0 Discord.")
+            await zerobot_common.bot_channel.send(
+                f"Could not remove roles for {member.name}, "
+                f"discord id: {discord_id} does not exist or "
+                f"is not a member of the Zer0 Discord."
+            )
             return
         
         # Remove clan member role and ranked roles below staff
@@ -1105,10 +1187,10 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def respond(self, ctx):
         # log command attempt, allowed everwhere
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
 
-        await ctx.send('Hello!')
-        self.logfile.log(f'responded with hello in {ctx.channel.name}: {ctx.channel.id} ')
+        await ctx.send("Hello!")
+        self.logfile.log(f"responded with hello in {ctx.channel.name}: {ctx.channel.id} ")
     
     @commands.command()
     async def activity(self, ctx, *args):
@@ -1116,8 +1198,8 @@ class MemberlistCog(commands.Cog):
         Tells you your activity status.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('activity', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("activity", ctx.channel.id)) : return
 
         if len(args) == 0:
             id = ctx.author.id
@@ -1176,8 +1258,8 @@ class MemberlistCog(commands.Cog):
         Shows recent stats of the clan by comparing with old memberlist.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(f'{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}')
-        if not(zerobot_common.permissions.is_allowed('clanstats', ctx.channel.id)) : return
+        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        if not(zerobot_common.permissions.is_allowed("clanstats", ctx.channel.id)) : return
 
         # check if command has correct number of arguments
         use_msg = (
@@ -1432,10 +1514,10 @@ class MemberlistCog(commands.Cog):
     
     @commands.Cog.listener()
     async def on_message(self, message):
-        '''
+        """
         This event is triggered for any message received, including our own.
         Must keep this efficient, return asap if irrelevant.
-        '''
+        """
         if len(message.role_mentions) == 0 or self.bot.user.id == message.author.id:
             return
         

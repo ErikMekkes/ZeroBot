@@ -1,5 +1,12 @@
 from math import sqrt, fabs, pow
-from utilities import dateformat, int_0, _dateToStr, _strToDate, bracket_parser, boolstr
+from utilities import (
+    dateformat,
+    int_0,
+    _dateToStr,
+    _strToDate,
+    bracket_parser,
+    boolstr
+)
 import copy
 import ast
 
@@ -29,7 +36,8 @@ misc_labels = [
     "highest_mage",
     "highest_melee",
     "highest_range",
-    "discord_roles"
+    "discord_roles",
+    "events_started"
 ]
 
 # these should match the names of the notify roles that should be tracked.
@@ -147,7 +155,8 @@ class Member:
         self.notify_stats = copy.deepcopy(blank_notify_stats)
         # not stored, based on last active, used for sorting inactives
         self.days_inactive = 0
-        # not stored, only set if member originates from a search result to allow editing.
+        # not stored, only set if member originates from a search result,
+        # allows for easier editing.
         self.result_type = ""
         self.row = None
         self.sheet = None
@@ -239,19 +248,25 @@ class Member:
 
         output: A Member object.
         """
-        memb_info = member_str.split('\t')
-        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[19]), int_0(memb_info[20]))
+        memb_info = member_str.split("\t")
+        memb = Member(
+            memb_info[0],
+            memb_info[1],
+            int_0(memb_info[19]),
+            int_0(memb_info[20])
+        )
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
         memb.join_date = memb_info[4]
-        memb.passed_gem = (memb_info[5] == 'TRUE')
+        memb.passed_gem = (memb_info[5] == "TRUE")
         memb.profile_link = memb_info[6]
         memb.leave_date = memb_info[7]
         memb.leave_reason = memb_info[8]
         memb.referral = memb_info[9]
         memb.discord_id = int_0(memb_info[10])
         memb.discord_name = memb_info[11]
-        # weird case, split empty string = list containing empty string instead of empty list
+        # weird case, split empty string results in a list containing 
+        # empty string instead of empty list
         if (len(memb_info[12]) == 0) :
             memb.old_names = list()
         else :
@@ -270,10 +285,12 @@ class Member:
             memb.activities[activity_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[23])):
             memb.notify_stats[notify_role_names[num]] = x
-        # entries stored in misc with matching label.
-        for i in range(24, len(memb_info)):
-            memb.misc[misc_labels[i-24]] = memb_info[i]
+        # load entries into misc per label.
+        for i in range(len(misc_labels)):
+            memb.misc[misc_labels[i]] = memb_info[i+24]
+        # process misc entries further if needed
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
+        memb.misc["events_started"] = int_0(memb.misc["events_started"])
         return memb
     def loadFromOldName(self, other):
         """
@@ -451,9 +468,24 @@ class Member:
         totalxp_exp = 20000000      # 10M
         hpxp_exp = 4000000          #  3M
         clanxp_diff = float(other.clan_xp - self.clan_xp) / clanxp_exp
-        runescore_diff = fabs(float(other.activities["runescore"][1] - self.activities["runescore"][1])) / runescore_exp
-        totalxp_diff = float(other.skills["overall"][1] - self.skills["overall"][1]) / totalxp_exp
-        hpxp_diff = float(other.skills["constitution"][1] - self.skills["constitution"][1]) / hpxp_exp
+        runescore_diff = (
+            fabs(
+                float(other.activities["runescore"][1] - 
+                self.activities["runescore"][1])
+            ) / runescore_exp
+        )
+        totalxp_diff = (
+            float(
+                other.skills["overall"][1] - 
+                self.skills["overall"][1]
+            ) / totalxp_exp
+        )
+        hpxp_diff = (
+            float(
+                other.skills["constitution"][1] -
+                self.skills["constitution"][1]
+            ) / hpxp_exp
+        )
 
         return (sqrt(
                 pow(clanxp_diff,2) +
@@ -469,7 +501,10 @@ class Member:
         site_rank = self.site_rank
         if (self.site_rank == ""):
             site_rank = "Unknown"
-        message = f"{self.name} - ingame: {self.rank}, discord : {discord_rank}, site: {site_rank}, passed gem: {self.passed_gem}"
+        message = (
+            f"{self.name} - ingame: {self.rank}, discord : {discord_rank}, "
+            f"site: {site_rank}, passed gem: {self.passed_gem}"
+        )
         message += "\n"
         return message
     def bannedInfo(self):
