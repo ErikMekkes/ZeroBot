@@ -353,7 +353,13 @@ class ApplicationsCog(commands.Cog):
         await ctx.channel.purge()
         entry_reqs_img = open(f"application_templates/join_image.png", "rb")
         entry_reqs_img = discord.File(entry_reqs_img)
-        await ctx.channel.send("**To join Zer0 PvM you will need the following entry requirements:** (not required for guest access)", file=entry_reqs_img)
+        await ctx.channel.send(
+            "**Welcome, If you havent already, read and accept (👍) our clan "
+            "rules in <#748523828291960892> first to be able to type here.\n"
+            "\n**To join Zer0 PvM you will need the following entry "
+            "requirements:** (not required for guest access)",
+            file=entry_reqs_img
+        )
         entry_perks_img = open(f"application_templates/join_perks.png", "rb")
         entry_perks_img = discord.File(entry_perks_img)
         entry_perks_text = "**Entry Reqs minimum perks and how to make them:** (not required for guest access)\n"
