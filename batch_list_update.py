@@ -16,6 +16,7 @@ folders = [
 
 from utilities import read_file, write_file, int_0, _strToDate, _dateToStr, bracket_parser, boolstr
 from exceptions import NotAMemberList, NotAMember
+from member import Warning, NotAWarningError
 import copy
 import ast
 from os import listdir
@@ -47,7 +48,8 @@ misc_labels = [
     "highest_mage",
     "highest_melee",
     "highest_range",
-    "discord_roles"
+    "discord_roles",
+    "events_started"
 ]
 
 # these should match the names of the notify roles that should be tracked.
@@ -183,38 +185,49 @@ class Member:
 
         output: A Member object.
         """
-        memb_info = member_str.split('\t')
-        memb = Member(memb_info[0], memb_info[1], int_0(memb_info[18]), int_0(memb_info[19]))
+        memb_info = member_str.split("\t")
+        memb = Member(
+            memb_info[0],
+            memb_info[1],
+            int_0(memb_info[19]),
+            int_0(memb_info[20])
+        )
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
         memb.join_date = memb_info[4]
-        memb.passed_gem = (memb_info[5] == 'TRUE')
+        memb.passed_gem = (memb_info[5] == "TRUE")
         memb.profile_link = memb_info[6]
         memb.leave_date = memb_info[7]
         memb.leave_reason = memb_info[8]
         memb.referral = memb_info[9]
         memb.discord_id = int_0(memb_info[10])
         memb.discord_name = memb_info[11]
-        # weird case, split empty string = list containing empty string instead of empty list
+        # weird case, split empty string results in a list containing 
+        # empty string instead of empty list
         if (len(memb_info[12]) == 0) :
             memb.old_names = list()
         else :
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
         memb.warning_points = int_0(memb_info[14])
-        memb.note1 = memb_info[15]
-        memb.note2 = memb_info[16]
-        memb.note3 = memb_info[17]
-        for num,x in enumerate(ast.literal_eval(memb_info[20])):
-            memb.skills[skill_labels[num]] = x
+        warnings = bracket_parser(memb_info[15])
+        for w in warnings:
+            memb.warnings.append(Warning.from_str(w))
+        memb.note1 = memb_info[16]
+        memb.note2 = memb_info[17]
+        memb.note3 = memb_info[18]
         for num,x in enumerate(ast.literal_eval(memb_info[21])):
-            memb.activities[activity_labels[num]] = x
+            memb.skills[skill_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[22])):
+            memb.activities[activity_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[23])):
             memb.notify_stats[notify_role_names[num]] = x
-        # entries stored in misc with matching label.
-        for i in range(23, len(memb_info)):
-            memb.misc[misc_labels[i-23]] = memb_info[i]
+        # load entries into misc per label.
+        for i in range(len(misc_labels) - 1): # LAST CHANGE : -1 = new events_started does not exist yet
+            memb.misc[misc_labels[i]] = memb_info[i+24]
+        # process misc entries further if needed
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
+        memb.misc["events_started"] = 0 # LAST CHANGE : create dummy value for events_started
         return memb
 
 def memberlist_from_string(memberlist_string):

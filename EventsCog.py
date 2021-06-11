@@ -7,6 +7,7 @@ import zerobot_common
 from logfile import LogFile
 from datetime import datetime, timedelta
 from utilities import load_json, dump_json, _dateToStr, _strToDate, datetimeformat
+from memberlist import memberlist_get
 
 logfile = None
 events_filename = "clan_events.txt"
@@ -243,12 +244,9 @@ class EventsCog(commands.Cog):
         """
         logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
         if not(zerobot_common.permissions.is_allowed("event", ctx.channel.id)) : return
-        member = False
-        for r in ctx.author.roles:
-            if r.id == zerobot_common.clan_member_role_id:
-                member = True
-                break
-        if not member: return
+        if not zerobot_common.is_member(ctx.author):
+            await ctx.send(f"You have to be a clan member to start events.")
+            return
 
         use_str = (
             "Use: `-zbot event <day> <time> name of event`\n"
@@ -293,6 +291,23 @@ class EventsCog(commands.Cog):
         # track event, not used for anything yet, for future use
         event = Event(channel.id, ctx.author.id, date, event_name)
         self.events.append(event)
+
+        # track amount of events hosted per person
+        # find and edit member notify stat in memory
+        # can ignore sheet since it doesnt include these stats.
+        # disk version is updated with the next major memberlist edit.
+        # read/write to disk for each of these is too costly.
+        membcog = self.bot.get_cog("MemberlistCog")
+        list_access = await membcog.lock()
+
+        memb_id = ctx.author.id
+        member = memberlist_get(list_access["current_members"], memb_id)
+        if member is None:
+            return
+        new_value = member.misc["events_started"] + 1
+        member.misc["events_started"] = new_value
+
+        await membcog.unlock()
     
     @commands.command()
     async def _c_list(self, ctx, *args):
