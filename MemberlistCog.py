@@ -131,16 +131,20 @@ async def send_multiple(ctx, str_list, codeblock=False):
     Splits up a list of messages and sends them in batches.
     Right now just does it in a dumb way, 20 strings at a time without checking length.
     """
-    for i in range(0, len(str_list), 20):
-        message = ""
-        if (codeblock):
-            message += "```"
-        for index in range(i, i+20):
-            if (index == len(str_list)): break
-            message += str_list[index]
-        if (codeblock):
-            message += "```"
-        await ctx.send(message)
+    message = ""
+    if (codeblock):
+        message += "```"
+    for i in range(0, len(str_list)):
+        if len(message) + len(str_list[i]) < 1990:
+            message += str_list[i]
+        else:
+            if (codeblock):
+                message += "```"
+            await ctx.send(message)
+            if (codeblock):
+                message = "```"
+            else:
+                message = ""
 
 
 @tasks.loop(hours=23, reconnect=False)
