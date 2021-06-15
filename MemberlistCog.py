@@ -129,7 +129,8 @@ def _Inactives(days):
 async def send_multiple(ctx, str_list, codeblock=False):
     """
     Splits up a list of messages and sends them in batches.
-    Right now just does it in a dumb way, 20 strings at a time without checking length.
+    Ensures a batch of messages doesnt exceed discords 2k character limit.
+    Should still add check to split up individual strings if too long.
     """
     message = ""
     if (codeblock):
