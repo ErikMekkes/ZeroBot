@@ -145,7 +145,9 @@ async def send_multiple(ctx, str_list, codeblock=False):
                 message = "```"
             else:
                 message = ""
-    # print final message if less than max, (until end of list)
+    # send final message if less than max, (until end of list)
+    if (codeblock):
+        message += "```"
     await ctx.send(message)
 
 
