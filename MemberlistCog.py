@@ -145,6 +145,8 @@ async def send_multiple(ctx, str_list, codeblock=False):
                 message = "```"
             else:
                 message = ""
+    # print final message if less than max, (until end of list)
+    await ctx.send(message)
 
 
 @tasks.loop(hours=23, reconnect=False)
