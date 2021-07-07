@@ -56,8 +56,8 @@ def clear_sheet(sheet, clear_bg_colors=False):
         format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
 def clear_sheets():
     clear_sheet(zerobot_common.current_members_sheet, clear_bg_colors=True)
-    clear_sheet(zerobot_common.old_members_sheet)
-    clear_sheet(zerobot_common.banned_members_sheet)
+    clear_sheet(zerobot_common.old_members_sheet, clear_bg_colors=True)
+    clear_sheet(zerobot_common.banned_members_sheet, clear_bg_colors=True)
 def start_update_warnings():
     zerobot_common.drive_connect()
     zerobot_common.current_members_sheet.batch_update(

@@ -224,15 +224,15 @@ async def daily_update(self):
     memberlist_to_disk(ingame_members, ing_backup_name)
     
     # start posting update warnings on spreadsheet
-    await zerobot_common.bot_channel.send("Daily update starting in 5 minutes")
-    if zerobot_common.sheet_memberlist_enabled:
-        await self.bot.loop.run_in_executor(None, start_update_warnings)
+    await zerobot_common.bot_channel.send("Daily update starting")
+    #if zerobot_common.sheet_memberlist_enabled:
+    #    await self.bot.loop.run_in_executor(None, start_update_warnings)
 
     #=== try to obtain editing lock, loads sheet changes ===
     await self.lock()
     if zerobot_common.sheet_memberlist_enabled:
         clear_sheets()
-        print_update_in_progress_warnings()
+        #print_update_in_progress_warnings()
     # compare against new ingame data to find joins, leaves, renames
     comp_res = compare_lists(ingame_members, self.current_members)
     # use result to update our list of current members
