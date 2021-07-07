@@ -287,7 +287,7 @@ if reaction_roles_enabled:
     reaction_messages = load_json(reaction_messages_filename)
 
 # individuals or ranks that dont need dpm knowledge check
-gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists"]
+gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Specialists","Supreme PvMer","MasterClass PvMer"]
 # minimum rank that needs a dpm knowledge check
 gem_req_rank = "Full Member"
 
