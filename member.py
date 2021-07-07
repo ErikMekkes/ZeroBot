@@ -70,6 +70,7 @@ blank_misc = {}
 for i in range(0, len(misc_labels)):
     blank_misc[misc_labels[i]] = ""
 blank_misc["discord_roles"] = []
+blank_misc["events_started"] = 0
 blank_notify_stats = {}
 for i in range(0, len(notify_role_names)):
     blank_notify_stats[notify_role_names[i]] = 0
