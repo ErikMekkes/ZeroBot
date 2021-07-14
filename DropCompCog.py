@@ -11,8 +11,8 @@ from logfile import LogFile
 
 if zerobot_common.dropcomp_enabled:
     # load google sheets document to enter drops on
-    dropcomp_doc_name = zerobot_common.settings.get("dropcomp_doc_name")
-    dropcomp_doc = zerobot_common.drive_client.open(dropcomp_doc_name)
+    dropcomp_doc_key = zerobot_common.settings.get("dropcomp_doc_key")
+    dropcomp_doc = zerobot_common.drive_client.open_by_key(dropcomp_doc_key)
     # load config that describes which channels are for which teams
     teamchannels_filename = zerobot_common.settings.get("teamchannels_filename")
     teamchannels = utilities.load_json(teamchannels_filename)
