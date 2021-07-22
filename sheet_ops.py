@@ -8,31 +8,31 @@ from memberlist import memberlist_sort_name, memberlist_get
 from rankchecks import match_disc_ingame, match_disc_site
 from gspread_formatting import format_cell_range, format_cell_ranges, CellFormat, Color
 
-##TODO modify tosheet
 def memberlist_to_sheet(memberlist, sheet):
-    '''
+    """
     Writes specified memberlist to specified google docs sheet.
     Clears the sheet and sorts the memberlist before writing.
-    '''
+    """
     zerobot_common.drive_connect()
     # clear the spreadsheet
-    clear_sheet(sheet)
+    clear_sheet(sheet, clear_bg_colors=True)
 
-    # re-sort the memberlist in alphabetical order
+    # sort the memberlist to ensure alphabetical order
     memberlist_sort_name(memberlist)
-    # transform member objects back into lists of rows for googledocs
+    # transform member objects into list of rows for googledocs
     memb_list_rows = list()
     for memb in memberlist:
         memb_list_rows.append(memb.to_sheet())
 
+    # enter memberlist data on sheet, skipping header rows
     sheet.batch_update([{
-        'range' : SheetParams.range_no_header(),
-        'values' : memb_list_rows
-        }], value_input_option = 'USER_ENTERED')
+        "range" : SheetParams.range_no_header(list_length=len(memb_list_rows)),
+        "values" : memb_list_rows
+        }], value_input_option = "USER_ENTERED")
 def memberlist_from_sheet(sheet):
-    '''
+    """
     Reads a memberlist from the specified google docs sheet.
-    '''
+    """
     zerobot_common.drive_connect()
     memberlist = list()
     member_matrix = sheet.get_all_values()
@@ -42,79 +42,36 @@ def memberlist_from_sheet(sheet):
     return memberlist
 
 def clear_sheet(sheet, clear_bg_colors=False):
+    """
+    Empties a memberlist sheet, restores header row entries afterwards.
+    Optionally clears formatting as well, excluding header rows.
+    """
     zerobot_common.drive_connect()
     # empty the sheet
     sheet.clear()
     # restore the header entries
     sheet.batch_update([{
-        'range' : SheetParams.header_range,
-        'values' : [SheetParams.header_entries]
-        }], value_input_option = 'USER_ENTERED')
+        "range" : SheetParams.header_range,
+        "values" : [SheetParams.header_entries]
+        }], value_input_option = "USER_ENTERED")
     if clear_bg_colors:
         # clear background colors for non-header
         white_fmt = CellFormat(backgroundColor=Color(1,1,1))
-        format_cell_range(sheet,SheetParams.range_no_header(), white_fmt)
+        format_cell_range(sheet,SheetParams.range_no_header(sheet=sheet), white_fmt)
 def clear_sheets():
+    """
+    Empties all 3 memberlist sheets, including formatting, except for header rows.
+    """
     clear_sheet(zerobot_common.current_members_sheet, clear_bg_colors=True)
     clear_sheet(zerobot_common.old_members_sheet, clear_bg_colors=True)
     clear_sheet(zerobot_common.banned_members_sheet, clear_bg_colors=True)
-def start_update_warnings():
-    zerobot_common.drive_connect()
-    zerobot_common.current_members_sheet.batch_update(
-        [{'range' : SheetParams.header_range,
-        'values' : [SheetParams.update_header]}],
-        value_input_option = 'USER_ENTERED')
-    zerobot_common.old_members_sheet.batch_update(
-        [{'range' : SheetParams.header_range,
-        'values' : [SheetParams.update_header]}],
-        value_input_option = 'USER_ENTERED')
-    zerobot_common.banned_members_sheet.batch_update(
-        [{'range' : SheetParams.header_range,
-        'values' : [SheetParams.update_header]}],
-        value_input_option = 'USER_ENTERED')
-    time.sleep(60)
-    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
-    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
-    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'4 MINUTES')
-    time.sleep(60)
-    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
-    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
-    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'3 MINUTES')
-    time.sleep(60)
-    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
-    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
-    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'2 MINUTES')
-    time.sleep(60)
-    zerobot_common.current_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
-    zerobot_common.old_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTE')
-    zerobot_common.banned_members_sheet.update_cell(SheetParams.header_rows,3,'1 MINUTES')
-    time.sleep(60)
-def print_update_in_progress_warnings():
-    print_update_in_progress_warning(zerobot_common.current_members_sheet)
-    print_update_in_progress_warning(zerobot_common.old_members_sheet)
-    print_update_in_progress_warning(zerobot_common.banned_members_sheet)
-def print_update_in_progress_warning(sheet):
-    zerobot_common.drive_connect()
-    # insert ongoing update warnings
-    warn1 = ['AUTOMATIC','UPDATE','IN PROGRESS']
-    warn2 = ['STARTED:', datetime.utcnow().strftime(utilities.timeformat)]
-    warn3 = ['Update takes about 30 minutes.']
-    warn4 = ['Anything entered on this sheet will']
-    warn5 = ['be overwritten after the update']
-    warn_list = [warn1, warn2, warn3, warn4, warn5]
-
-    sheet.batch_update(
-        [{'range' : SheetParams.range_no_header(),
-        'values' : warn_list}],
-        value_input_option = 'USER_ENTERED'
-    )
 
 def UpdateMember(sheet, row, member):
     """
     Replaces the member details in specified row with details from specified member object
     """
     zerobot_common.drive_connect()
-    sheet.update(f'{SheetParams.start_col}{row}:{SheetParams.end_col}{row}', [member.to_sheet()], value_input_option = 'USER_ENTERED')
+    sheet.update(f"{SheetParams.start_col}{row}:{SheetParams.end_col}{row}", [member.to_sheet()], value_input_option = "USER_ENTERED")
 
 def DeleteMember(sheet, row):
     """
@@ -128,7 +85,7 @@ def InsertMember(sheet, row, member):
     Inserts a member on the sheet.
     """
     zerobot_common.drive_connect()
-    sheet.insert_row(member.to_sheet(), row, value_input_option = 'USER_ENTERED')
+    sheet.insert_row(member.to_sheet(), row, value_input_option = "USER_ENTERED")
 
 def load_sheet_changes(memberlist, sheet):
     """
@@ -195,10 +152,10 @@ async def warnings_from_sheet(self):
         memb.warning_points = points
 
 def color_spreadsheet():
-    '''
+    """
     Checks for mismatches from rank and gem columns and updates the background colors accordingly.
     Does not make other changes to spreadsheet, updates colors only.
-    '''
+    """
     zerobot_common.drive_connect()
     # load the memberlist from google docs
     memberlist = memberlist_from_sheet(zerobot_common.current_members_sheet)
@@ -223,31 +180,31 @@ def color_spreadsheet():
         if not(x.passed_gem) and discord_rank_index is not None:
             if discord_rank_index < zerobot_common.join_rank_index:
                 # push to do gems : no gem, current rank higher than novice
-                passed_gem_ranges.append((f'F{row}', orange_fmt))
+                passed_gem_ranges.append((f"F{row}", orange_fmt))
         # colour discord rank if missing or not auto updating
         if discord_rank_index is None:
             # no discord rank = red for missing
-            discord_rank_ranges.append((f'C{row}', red_fmt))
+            discord_rank_ranges.append((f"C{row}", red_fmt))
         elif not valid_discord_id(x.discord_id):
             # discord rank fine but not autoupdating = grey
-            discord_rank_ranges.append((f'C{row}', gray_fmt))
+            discord_rank_ranges.append((f"C{row}", gray_fmt))
         else:
             if not (x.passed_gem or (x.discord_rank in gem_exceptions or x.name in gem_exceptions)):
                 if discord_rank_index < zerobot_common.join_rank_index:
                     # discord rank higher than recruit and no gem
-                    discord_rank_ranges.append((f'C{row}', orange_fmt))
+                    discord_rank_ranges.append((f"C{row}", orange_fmt))
             # check ingame rank for mismatch with discord
-            if not x.rank in match_disc_ingame[x.discord_rank] : ingame_rank_ranges.append((f'B{row}', orange_fmt))
+            if not x.rank in match_disc_ingame[x.discord_rank] : ingame_rank_ranges.append((f"B{row}", orange_fmt))
             # if no site link, color gray = not autoupdating
             if not valid_profile_link(x.profile_link):
-                site_rank_ranges.append((f'D{row}', gray_fmt))
+                site_rank_ranges.append((f"D{row}", gray_fmt))
             else:
                 # check site rank for mismatch with discord
-                if not x.site_rank in match_disc_site[x.discord_rank] : site_rank_ranges.append((f'D{row}', orange_fmt))
+                if not x.site_rank in match_disc_site[x.discord_rank] : site_rank_ranges.append((f"D{row}", orange_fmt))
         row += 1
 
     # clear all previous formatting
-    format_cell_range(zerobot_common.current_members_sheet,'B5:G510', white_fmt)
+    format_cell_range(zerobot_common.current_members_sheet,"B5:G510", white_fmt)
     # sheets api errors with empty list of changes, only try if a change is needed.
     if (len(ingame_rank_ranges) > 0):
         format_cell_ranges(zerobot_common.current_members_sheet,ingame_rank_ranges)

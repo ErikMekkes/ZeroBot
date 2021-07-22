@@ -231,13 +231,18 @@ class SheetParams:
         )
         return range_str
     @staticmethod
-    def range_no_header(list_length=550):
-        # range string for entire memberlist data, skipping header rows
+    def range_no_header(sheet=None, list_length=525):
+        """
+        Constructs a range string that covers the entire sheet except for the header rows.
+        """
+        if sheet is not None:
+            list_length = sheet.row_count
+        # 1 indexed range string for entire memberlist data, skipping header rows
         range_str = (
             f"{SheetParams.start_col}"
             f"{1+SheetParams.header_rows}:"
             f"{SheetParams.end_col}"
-            f"{1+SheetParams.header_rows+list_length+25}"
+            f"{1+SheetParams.header_rows+list_length}"
         )
         return range_str
 
