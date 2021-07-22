@@ -22,7 +22,6 @@ from discord.ext import tasks, commands
 import io
 import textwrap
 import discord
-import time
 from datetime import datetime, timedelta
 from logfile import LogFile
 import asyncio
@@ -32,9 +31,7 @@ import utilities
 
 from utilities import send_messages
 from sheet_ops import (
-    start_update_warnings,
     clear_sheets,
-    print_update_in_progress_warnings, 
     color_spreadsheet,
     load_sheet_changes,
     memberlist_to_sheet,
