@@ -125,6 +125,43 @@ class ReactionRolesCog(commands.Cog):
         )
     
     @commands.command()
+    async def get_emoji_id(self, ctx, *args):
+        use_str = (
+            "Usage: -zbot get_emoji_id emoji_name"
+        )
+        if len(args) != 1:
+            await ctx.send(use_str)
+        for e in self.bot.emojis:
+            if e.name == args[0]:
+                await ctx.send(f"{e.name} {e.id} {e}")
+    
+    @commands.command()
+    async def react(self, ctx, *args):
+        use_str = (
+            "Usage: -zbot react message_id emoji_name\n"
+            " must be used in the same channel as the message."
+        )
+        if len(args) != 2:
+            await ctx.send(use_str)
+        
+        try:
+            msg_id = int(args[0])
+        except ValueError:
+            await ctx.send("The message_id you added is not a number.\n\n" + use_str)
+            return
+        try:
+            msg = await ctx.channel.fetch_message(msg_id)
+        except Exception:
+            await ctx.send(f"unable to find message: {msg_id} not found.")
+        
+        #add the emoji
+        try:
+            emoji_id = int(args[1])
+            await msg.add_reaction(self.bot.get_emoji(emoji_id))
+        except Exception:
+            await msg.add_reaction(args[1])
+    
+    @commands.command()
     async def listreactions(self, ctx, *args):
         use_str = (
             "Usage: -zbot listreactions message_id\n"
@@ -145,7 +182,7 @@ class ReactionRolesCog(commands.Cog):
         try:
             msg = await ctx.channel.fetch_message(msg_id)
         except Exception:
-            await ctx.sendf("unable to find message: {msg_id} not found.")
+            await ctx.send(f"unable to find message: {msg_id} not found.")
         
         reactions_str = ""
         for reaction in msg.reactions:
