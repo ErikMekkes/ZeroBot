@@ -25,6 +25,7 @@ import discord
 from datetime import datetime, timedelta
 from logfile import LogFile
 import asyncio
+import re
 # custom modules
 import zerobot_common
 import utilities
@@ -452,7 +453,25 @@ class MemberlistCog(commands.Cog):
         else:
             msg = ctx.message.content[cmd_length:]
             target = ctx
-        await target.send(msg)
+        
+        # try to fill in nitro emojis
+        res = ""
+        for w in re.split("([^\w:])", msg):
+            if len(w) > 2 and w[0] == ":" and w[len(w)-1] == ":":
+                e_str = w[1:-1]
+                try:
+                    # if its a number, try finding emoji by id
+                    emoji_id = int(e_str)
+                    res += self.bot.get_emoji(emoji_id)
+                except Exception:
+                    # if by number went wrong, try finding first match by name
+                    for e in self.bot.emojis:
+                        if e.name == e_str:
+                            res += e
+                            break
+            else:
+                res += w
+        await target.send(res)
     
     @commands.command()
     async def updatelist(self, ctx):
