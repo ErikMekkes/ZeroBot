@@ -462,13 +462,17 @@ class MemberlistCog(commands.Cog):
                 try:
                     # if its a number, try finding emoji by id
                     emoji_id = int(e_str)
-                    res += self.bot.get_emoji(emoji_id)
+                    e = self.bot.get_emoji(emoji_id)
+                    # None if not found = good, shows mistake and prevents empty message
+                    res += str(e)
                 except Exception:
                     # if by number went wrong, try finding first match by name
                     for e in self.bot.emojis:
                         if e.name == e_str:
                             res += str(e)
                             break
+                    # None if not found
+                    res += "None"
             else:
                 res += w
         await target.send(res)
