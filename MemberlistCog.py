@@ -438,16 +438,21 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
         if not(zerobot_common.permissions.is_allowed("message", ctx.channel.id)) : return
         
+        cmd_length = len("-zbot message ")
         # try to send to specific channel if first argument is an id
         if "channel:" in args[0]:
             try:
-                    chann_id = int(args[0][8:])
-                    channel = ctx.guild.get_channel(chann_id)
-                    await channel.send(" ".join(args[1:]))
+                chann_id = int(args[0][8:])
+                channel = ctx.guild.get_channel(chann_id)
+                msg = ctx.message.content[cmd_length+len(args[0])+1:]
+                target = channel
             except Exception:
-                await ctx.send(" ".join(args))
+                msg = ctx.message.content[cmd_length:]
+                target = ctx
         else:
-            await ctx.send(" ".join(args))
+            msg = ctx.message.content[cmd_length:]
+            target = ctx
+        await target.send(msg)
     
     @commands.command()
     async def updatelist(self, ctx):
