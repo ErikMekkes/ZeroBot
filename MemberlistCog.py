@@ -467,7 +467,7 @@ class MemberlistCog(commands.Cog):
                     # if by number went wrong, try finding first match by name
                     for e in self.bot.emojis:
                         if e.name == e_str:
-                            res += e
+                            res += str(e)
                             break
             else:
                 res += w
