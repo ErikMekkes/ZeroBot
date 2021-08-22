@@ -91,6 +91,14 @@ class ChannelCog(commands.Cog):
         """
         Reload all the channels the bot knows about.
         """
+        # log command attempt and check if command allowed
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if zerobot_common.permissions.not_allowed(
+            "reloadchannels", ctx.channel.id
+        ) : return
+
         for channel_name in synched_channels:
             await self.reload_channel(channel_name)
 
@@ -100,6 +108,14 @@ class ChannelCog(commands.Cog):
         Reload a single channel by name, must match the spreadsheet name.
         The related channel is found by the bot in synched_channels.
         """
+        # log command attempt and check if command allowed
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if zerobot_common.permissions.not_allowed(
+            "reloadchannel", ctx.channel.id
+        ) : return
+
         await self.reload_channel(channel_name)
         await ctx.send(f"Finished reloading {channel_name}.")
     
