@@ -75,6 +75,11 @@ class Permissions:
                 if (channel_id == chann_id):
                     return True
         return False
+    def not_allowed(self, command, channel):
+        """
+        Returns true if command is not allowed in channel.
+        """
+        return not(self.is_allowed(command,channel))
     def lookup_channel(self, channel):
         '''
         Looks up channel in channel_ids if channel is a string, if channel is a number it just returns it.
