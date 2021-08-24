@@ -92,7 +92,7 @@ class ChannelCog(commands.Cog):
         Reload all the channels the bot knows about.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(
+        logfile.log(
             f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
         )
         if zerobot_common.permissions.not_allowed(
@@ -109,7 +109,7 @@ class ChannelCog(commands.Cog):
         The related channel is found by the bot in synched_channels.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(
+        logfile.log(
             f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
         )
         if zerobot_common.permissions.not_allowed(
