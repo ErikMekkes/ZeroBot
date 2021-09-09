@@ -163,7 +163,7 @@ async def setup_app_channel(ctx, channel, app_type):
     msg = (f"Hello {ctx.author.mention}! "
         + utilities.read_file("application_templates/app_base_message"))
     await channel.send(msg)
-    # send all the messages belonging to the channel
+    # send all the messages belonging to the channel type
     await utilities.send_messages(
         channel,
         f"application_templates/{app_type}_messages.json"
@@ -181,11 +181,10 @@ async def setup_staff_app_channel(ctx, channel):
         zerobot_common.guild.default_role,
         view_channel=False
     )
-    # remove send message permission for staff members
+    # make sure staff can still see the channel
     await channel.set_permissions(
         zerobot_common.guild.get_role(zerobot_common.staff_role_id),
-        send_messages=False,
-        manage_channels=False
+        view_channel=True
     )
     # start the app channel with a basic message
     msg = (
@@ -193,7 +192,7 @@ async def setup_staff_app_channel(ctx, channel):
         f"about your application here."
     )
     await channel.send(msg)
-    # send all the messages belonging to the channel
+    # send all the messages belonging to the channel type
     await utilities.send_messages(
         channel,
         f"application_templates/staff_member_messages.json"
