@@ -131,15 +131,13 @@ channel_creation_message = (
     "server, please go to : "
 )
 
-async def setup_app_channel(ctx, channel, app_type):
+async def set_applicant_permissions(ctx, channel):
     """
-    Set up an application channel. Sets the required permissions and starts it
-    off with a generic message and any messages defined for the app.
+    Allows the applicant to use the channel.
     """
-    # set up permissions for applicant to be able to use channel.
     await channel.set_permissions(
         ctx.author,
-        read_messages=True,
+        view_channel=True,
         send_messages=True,
         embed_links=True,
         attach_files=True,
@@ -147,6 +145,14 @@ async def setup_app_channel(ctx, channel, app_type):
         use_external_emojis=True,
         add_reactions=True
     )
+
+async def setup_app_channel(ctx, channel, app_type):
+    """
+    Set up an application channel. Sets the required permissions and starts it
+    off with a generic message and any messages defined for the app.
+    """
+    # set up permissions for applicant to be able to use channel.
+    await set_applicant_permissions(ctx, channel)
     # set up permissions for bot commands in channel
     permissions.allow("archive", channel.id)
     permissions.allow("accept", channel.id)
@@ -155,13 +161,44 @@ async def setup_app_channel(ctx, channel, app_type):
     permissions.allow("sitelink", channel.id)
     # start the app channel with a basic message
     msg = (f"Hello {ctx.author.mention}! "
-        + open("application_templates/app_base_message").read())
+        + utilities.read_file("application_templates/app_base_message"))
     await channel.send(msg)
     # send all the messages belonging to the channel
     await utilities.send_messages(
         channel,
         f"application_templates/{app_type}_messages.json"
     )
+
+async def setup_staff_app_channel(ctx, channel):
+    """
+    - hides channel from non-staff
+    - disallows typing for staff until opened for comments
+    """
+    # set up permissions for applicant to be able to use channel.
+    await set_applicant_permissions(ctx, channel)
+    # remove channel permissions for @everyone
+    await channel.set_permissions(
+        zerobot_common.guild.default_role,
+        view_channel=False
+    )
+    # remove send message permission for staff members
+    await channel.set_permissions(
+        zerobot_common.guild.get_role(zerobot_common.staff_role_id),
+        send_messages=False,
+        manage_channels=False
+    )
+    # start the app channel with a basic message
+    msg = (
+        f"Hello {ctx.author.mention}! Please ask / answer questions "
+        f"about your application here."
+    )
+    await channel.send(msg)
+    # send all the messages belonging to the channel
+    await utilities.send_messages(
+        channel,
+        f"application_templates/staff_member_messages.json"
+    )
+    permissions.allow("archive", channel.id)
 
 class ApplicationsCog(commands.Cog):
     """
@@ -238,23 +275,23 @@ class ApplicationsCog(commands.Cog):
             category=app_category,
             reason="rankup"
         )
-        await setup_app_channel(ctx, channel, rank_name)
-        await message_ctx(ctx.author, channel_creation_message + channel.mention)
-        # register the application and update copy on disk
-        # TODO track rank id instead of name (or both, but use id)
-        rankup_app = Application(
-            channel.id,
-            ctx.author.id,
-            type = "rankup",
-            rank = discord_rank_name,
-            votes_required = votes_for_rankup
-        )
-        # staff apps can only be handled manually.
-        #TODO use id from settings and any higher rank
+        # staff apps are handled differently.
         if rank_name == "staff_member":
-            permissions.disallow("accept", channel.id)
-            rankup_app.votes_required = 999
-        applications.append(rankup_app)
+            await setup_staff_app_channel(ctx, channel)
+        else:
+            await setup_app_channel(ctx, channel, rank_name)
+            # register the application and update copy on disk
+            # TODO track rank id instead of name (or both, but use id)
+            rankup_app = Application(
+                channel.id,
+                ctx.author.id,
+                type = "rankup",
+                rank = discord_rank_name,
+                votes_required = votes_for_rankup
+            )
+            applications.append(rankup_app)
+        # tell applicant the app is created with link
+        await message_ctx(ctx.author, channel_creation_message + channel.mention)
         # clean the app requests channel for new requests
         await self.clean_app_requests(ctx)
 
@@ -364,7 +401,7 @@ class ApplicationsCog(commands.Cog):
         entry_perks_img = discord.File(entry_perks_img)
         entry_perks_text = "**Entry Reqs minimum perks and how to make them:** (not required for guest access)\n"
         await ctx.channel.send(entry_perks_text, file=entry_perks_img)
-        application_instructions = open("application_templates/application_instructions").read()
+        application_instructions = utilities.read_file("application_templates/application_instructions")
         await ctx.channel.send(application_instructions)
 
     
@@ -448,7 +485,7 @@ class ApplicationsCog(commands.Cog):
 
         app = applications.get_app(ctx.channel.id)
         if (app == None):
-            await ctx.send(app_not_found_msg + "\n I will copy all the posts to the archive, but will not delete the channel.")
+            await ctx.send("I will copy all the posts to the archive, but will not delete the channel.")
         elif (app.fields_dict["status"] == "open"):
             await ctx.send(
                 "This application has not been accepted or rejected yet! "

@@ -10,7 +10,7 @@ datetimeformat = '%Y-%m-%d_%H.%M.%S'
 
 discord_rank_ids = {}
 
-def read_file(filename, type=None):
+def read_file(filename, type=None, create=True):
     """
     A safe wrapper for reading a file from disk as string.
     Creates parent directories and empty file if filepath does not exist.
@@ -19,10 +19,10 @@ def read_file(filename, type=None):
     """
     # ensure directory for file exists if not creating in current directory
     dirname = os.path.dirname(filename)
-    if (dirname != ''):
+    if (create and dirname != ''):
         os.makedirs(os.path.dirname(filename), exist_ok=True)
     # if file does not exist create it.
-    if (not os.path.exists(filename)):
+    if (create and not os.path.exists(filename)):
         file = open(filename, 'w', encoding="utf-8")
         if type == "json":
             file.write('{}')
@@ -118,7 +118,7 @@ async def send_messages(ctx, config_filename, alt_ctx=None):
         split_ext = os.path.splitext(v)
         if len(split_ext) == 2:
             if split_ext[1] == ".txt":
-                message = open(f"application_templates/{v}").read()
+                message = open(f"application_templates/{v}", "r", encoding="utf-8").read()
                 await message_ctx(ctx, message, alt_ctx=alt_ctx)
             if split_ext[1] == ".png":
                 img_file = open(f"application_templates/{v}", "rb")
