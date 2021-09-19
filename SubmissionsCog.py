@@ -107,7 +107,7 @@ class SubmissionsCog(commands.Cog):
             "  link: link to screenshot or video as proof\n"
             "     not needed if you upload directly to discord and type the command as a comment for it.\n"
             "  others: optional, you can add the names of the others for group killtimes\n\n"
-            "Example: -zbot submit 4:26 nex_aod proof=https://www.youtube.com/watch?v=dQw4w9WgXcQ others=Sanshine+African Herb```"
+            "Example: -zbot submit nex_aod 4:26 proof=https://www.youtube.com/watch?v=dQw4w9WgXcQ others=Sanshine+African Herb```"
         )
         xargs = " ".join(args)
         expected_args = 2
