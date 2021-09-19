@@ -33,16 +33,17 @@ problem with imports at program runtime. I currently prefer this over
 splitting this file, and it makes sense from an order of operations view. But
 I might look into decoupling them a bit more in the future.
 """
-import json
-import os
-from datetime import datetime
 # imports for google sheet access
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 # zerobot modules
 import utilities
-from utilities import load_json, dump_json, rank_index
+from utilities import load_json, rank_index
+
 from logfile import LogFile
+# main logfile for the bot
+logfile = LogFile("logs/logfile")
+
 from site_ops import SiteOps
 from permissions import Permissions
 
@@ -257,6 +258,10 @@ forumthread = settings.get("forumthread")
 reaction_roles_enabled = settings.get("reaction_roles_enabled", False)
 funresponses_enabled = settings.get("funresponses_enabled", False)
 channel_manager_enabled = settings.get("channel_manager_enabled", False)
+submissions_enabled = settings.get("submissions_enabled", False)
+
+# channel for killtime or killcount submissions
+submissions_channel_id = settings.get("submissions_channel_id")
 
 # banlist channel where the bot can post banlist info.
 # for memberlist refresh_banlist command, might add to daily update as well
@@ -282,9 +287,6 @@ if site_enabled:
 # channel names and their ids, loaded on bot startup from guild.
 # only used by permissions.py to look up name -> id
 discord_channels = None
-
-# main logfile for the bot
-logfile = LogFile("logs/logfile")
 
 # load messages that should give a role for a reaction from disk
 if reaction_roles_enabled:

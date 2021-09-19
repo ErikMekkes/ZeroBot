@@ -5,7 +5,6 @@ Starts up the bot using the discord credentials.
 Loads up any modules (Cogs) that have been enabled in settings.json
 """
 import zerobot_common
-import discord
 import traceback
 from discord import Intents
 from discord.ext import commands
@@ -17,6 +16,7 @@ from DropCompCog import DropCompCog
 from ForumThreadCog import ForumThreadCog
 from FunResponsesCog import FunResponsesCog
 from EventsCog import EventsCog
+from SubmissionsCog import SubmissionsCog
 
 intents = Intents.default()
 intents.members = True
@@ -89,6 +89,9 @@ async def on_ready():
     if bot.get_cog("FunResponsesCog") == None:
         if zerobot_common.funresponses_enabled:
             bot.add_cog(FunResponsesCog(bot))
+    if bot.get_cog("SubmissionsCog") == None:
+        if zerobot_common.submissions_enabled:
+            bot.add_cog(SubmissionsCog(bot))
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -96,7 +99,7 @@ async def on_command_error(ctx, error):
     This event executes whenever the bot encounters an unhandled error.
     """
     # send simple message to location the error came from.
-    if isinstance(error, discord.ext.commands.errors.CommandNotFound):
+    if isinstance(error, commands.errors.CommandNotFound):
         await ctx.send(error)
     else:
         await ctx.send("An error occured.")
