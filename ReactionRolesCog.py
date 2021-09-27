@@ -138,19 +138,30 @@ class ReactionRolesCog(commands.Cog):
     @commands.command()
     async def react(self, ctx, *args):
         use_str = (
-            "Usage: -zbot react message_id emoji_name\n"
+            "Usage: -zbot react channel_id:message_id emoji_name\n"
             " must be used in the same channel as the message."
         )
         if len(args) != 2:
             await ctx.send(use_str)
         
+        msg_id = None
+        chann_id = None
         try:
             msg_id = int(args[0])
         except ValueError:
-            await ctx.send("The message_id you added is not a number.\n\n" + use_str)
-            return
+            try:
+                loc = args[0].split(':')
+                chann_id = int(loc[0])
+                msg_id = int(loc[1])
+            except Exception:
+                await ctx.send("invalid channel:message_id combo.\n\n" + use_str)
+                return
         try:
-            msg = await ctx.channel.fetch_message(msg_id)
+            if chann_id is not None:
+                channel = zerobot_common.guild.get_channel(chann_id)
+            else:
+                channel = ctx.channel
+            msg = await channel.fetch_message(msg_id)
         except Exception:
             await ctx.send(f"unable to find message: {msg_id} not found.")
         
