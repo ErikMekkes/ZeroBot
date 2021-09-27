@@ -361,7 +361,7 @@ class ApplicationsCog(commands.Cog):
                     f"\n\n☝ You may have been a previous member. I tried to post info that could help in the staff bot channel. ☝\n"
                     f"If you were a previous member you also need to post these gear reqs and unlocks for the full member rank:"
                 )
-                img_file = open(f"application_templates/full_member_image.png", "rb")
+                img_file = open(f"application_templates/2-full_member_image.png", "rb")
                 img = discord.File(img_file)
                 await channel.send("", file=img)
                 await channel.send(
@@ -387,7 +387,7 @@ class ApplicationsCog(commands.Cog):
         if not(ctx.channel.id == app_req_channel_id) : return
 
         await ctx.channel.purge()
-        entry_reqs_img = open(f"application_templates/join_image.png", "rb")
+        entry_reqs_img = open(f"application_templates/1-join_image.png", "rb")
         entry_reqs_img = discord.File(entry_reqs_img)
         await ctx.channel.send(
             "**Welcome, If you havent already, read and accept (👍) our clan "
@@ -396,7 +396,7 @@ class ApplicationsCog(commands.Cog):
             "requirements:** (not required for guest access)",
             file=entry_reqs_img
         )
-        entry_perks_img = open(f"application_templates/join_perks.png", "rb")
+        entry_perks_img = open(f"application_templates/1-join_perks.png", "rb")
         entry_perks_img = discord.File(entry_perks_img)
         entry_perks_text = "**Entry Reqs minimum perks and how to make them:** (not required for guest access)\n"
         await ctx.channel.send(entry_perks_text, file=entry_perks_img)
