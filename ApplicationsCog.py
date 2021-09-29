@@ -899,8 +899,8 @@ async def send_accepted_messages(discord_user, ctx):
     await ctx.send(
         f"Application to join accepted, ready for an ingame invite? :)\n"
         f"You can continue to talk in this channel until it is archived.\n\n"
-        f"**Reminder: The clan is nearly always at maximum capicity, you have 3 months from this moment to work towards the full member rank.**"
-        f"**You might get removed for clan space if you have not ranked up by then, or if you go inactive for a month without notifying us."
+        f"**Reminder: The clan is nearly always at maximum capicity, you have 3 months from this moment to work towards the full member rank.**\n"
+        f"You might get removed for clan space if you have not ranked up by then, or if you go inactive for a month without notifying us."
     )
     # send customizable welcome messages
     await utilities.send_messages(
