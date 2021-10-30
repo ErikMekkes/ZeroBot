@@ -12,7 +12,7 @@ class LogFile:
     """
     Logfile (ZeroBot implementation).
     """
-    def __init__(self, filename, parent=None, parent_prefix=None):
+    def __init__(self, filename, parent=None, parent_prefix=""):
         """
         Sets up a logfile with specified filename. Ensures directory structure
         exists if filename has subfolders. Current date is appended to
@@ -20,6 +20,7 @@ class LogFile:
 
         parent - Optional parent LogFile where anything logged by this 
         LogFile should be logged as well.
+        parent_prefix - sets a prefix for text logged to parent.
         """
         filename += f"_{datetime.utcnow().strftime(utilities.dateformat)}"
         # ensure directory for file exists if filename specifies subfolders
@@ -30,12 +31,14 @@ class LogFile:
         if (not os.path.exists(filename)):
             open(filename, "w")
         self.filename = filename
-        self.parent=parent
-        self.parent_prefix=parent_prefix
-    def log(self, text):
+        self.parent = parent
+        self.parent_prefix = parent_prefix
+    def log(self, text, prefix=""):
         """
         Appends text to this logfile, with "datetime : " prepended to it.
         """
+        if prefix != "":
+            text = f"{prefix} : {text}"
         if (isinstance(text, list)):
             err_string = ""
             for errstr in text:
@@ -47,11 +50,8 @@ class LogFile:
         file.write((timestamp + " : " + text + "\n"))
         file.close()
         if self.parent is not None:
-            if self.parent_prefix is not None:
-                self.parent.log(f"{self.parent_prefix} : {text}")
-            else:
-                self.parent.log(text)
-    def log_exception(self, error, ctx=None):
+            self.parent.log(text, self.parent_prefix + prefix)
+    def log_exception(self, error, ctx=None, prefix=""):
         """
         Logs an exception with its stacktrace.
         """
@@ -67,4 +67,6 @@ class LogFile:
             )
         )
         if self.parent is not None:
-            parent.log_exception(error, ctx)
+            self.parent.log_exception(
+                error, ctx, prefix=self.parent_prefix
+            )

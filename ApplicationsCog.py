@@ -29,8 +29,7 @@ Config required for this module:
 """
 from discord.ext import commands
 import discord
-from pathlib import Path
-import os
+import chat_exporter
 
 import zerobot_common
 import utilities
@@ -491,25 +490,10 @@ class ApplicationsCog(commands.Cog):
                 "Use `-zbot accept` or `-zbot reject`"
             )
             return
-
+        
         filedir = f"applications/{ctx.channel.id}-{ctx.channel.name}/"
-        Path(filedir).mkdir(parents=True, exist_ok=True)
-        messages = []
-        async for msg in ctx.channel.history(limit=None):
-            message = ""
-            time = msg.created_at.strftime(utilities.datetimeformat)
-            message +=f"{time}:{msg.author}:{msg.content}"
-            for attach in msg.attachments:
-                message += f"\n - {attach.filename} - {attach.url}"
-                filename = f"{filedir}{time}_{attach.filename}"
-                await attach.save(filename)
-            # handle embeds too
-            #for emb in message.embeds:
-            messages.append(message)
-        messages_file = open(filedir + "messages.txt", "w", encoding="utf-8")
-        for msg in reversed(messages):
-            messages_file.write(msg + "\n")
-        messages_file.close()
+        await chat_exporter.local_export(ctx.channel, zerobot_common.guild, None, "UTC", filedir)
+
         if (app == None):
             await ctx.send("Finished archiving all the posts!")
             # clear permissions for channel (archive once)
