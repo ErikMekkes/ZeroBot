@@ -5,7 +5,6 @@ Starts up the bot using the discord credentials.
 Loads up any modules (Cogs) that have been enabled in settings.json
 """
 import zerobot_common
-import traceback
 from discord import Intents
 from discord.ext import commands
 from MemberlistCog import MemberlistCog
@@ -63,35 +62,11 @@ async def on_ready():
     for chann in channels:
         chann_dict[chann.name] = chann.id
     zerobot_common.discord_channels = chann_dict
-    
-    # start the different command modules of the bot.
-    if bot.get_cog("MemberlistCog") == None:
-        if zerobot_common.memberlist_enabled:
-            bot.add_cog(MemberlistCog(bot))
-    if bot.get_cog("ReactionRolesCog") == None:
-        if zerobot_common.reaction_roles_enabled:
-            bot.add_cog(ReactionRolesCog(bot))
-    if bot.get_cog("ApplicationsCog") == None:
-        if zerobot_common.applications_enabled:
-            bot.add_cog(ApplicationsCog(bot))
-    if bot.get_cog("ChannelCog") == None:
-        if zerobot_common.channel_manager_enabled:
-            bot.add_cog(ChannelCog(bot))
-    if bot.get_cog("EventsCog") == None:
-        if zerobot_common.events_enabled:
-            bot.add_cog(EventsCog(bot))
-    if bot.get_cog("DropCompCog") == None:
-        if zerobot_common.dropcomp_enabled:
-            bot.add_cog(DropCompCog(bot))
-    if bot.get_cog("ForumThreadCog") == None:
-        if zerobot_common.forumthread_enabled:
-            bot.add_cog(ForumThreadCog(bot))
-    if bot.get_cog("FunResponsesCog") == None:
-        if zerobot_common.funresponses_enabled:
-            bot.add_cog(FunResponsesCog(bot))
-    if bot.get_cog("SubmissionsCog") == None:
-        if zerobot_common.submissions_enabled:
-            bot.add_cog(SubmissionsCog(bot))
+
+    # start loading all enabled modules e.g. "MemberlistCog"
+    for module_name in zerobot_common.enabled_modules:
+        if bot.get_cog(module_name) == None:
+            bot.add_cog(globals()[module_name](bot))
 
 @bot.event
 async def on_command_error(ctx, error):
@@ -103,11 +78,7 @@ async def on_command_error(ctx, error):
         await ctx.send(error)
     else:
         await ctx.send("An error occured.")
-    # write down full error trace in log files on disk.
-    zerobot_common.logfile.log(f"Error in command : {ctx.command}")
-    zerobot_common.logfile.log(
-        traceback.format_exception(type(error), error, error.__traceback__)
-    )
+    zerobot_common.logfile.log_exception(error)
 
 # logging connection status for debugging
 @bot.event

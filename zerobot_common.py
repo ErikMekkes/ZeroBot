@@ -298,8 +298,16 @@ gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Spec
 # minimum rank that needs a dpm knowledge check
 gem_req_rank = "Full Member"
 
-
-
+enabled_modules = []
+if memberlist_enabled : enabled_modules.append("MemberlistCog")
+if reaction_roles_enabled : enabled_modules.append("ReactionRolesCog")
+if applications_enabled : enabled_modules.append("ApplicationsCog")
+if channel_manager_enabled : enabled_modules.append("ChannelCog")
+if events_enabled : enabled_modules.append("EventsCog")
+if dropcomp_enabled : enabled_modules.append("DropCompCog")
+if forumthread_enabled : enabled_modules.append("ForumThreadCog")
+if funresponses_enabled : enabled_modules.append("FunResponsesCog")
+if submissions_enabled : enabled_modules.append("SubmissionsCog")
 
 # recommended not to touch the functions below
 
