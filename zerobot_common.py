@@ -298,7 +298,7 @@ gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Spec
 # minimum rank that needs a dpm knowledge check
 gem_req_rank = "Full Member"
 
-enabled_modules = []
+enabled_modules = ["ServerWatchCog"]
 if memberlist_enabled : enabled_modules.append("MemberlistCog")
 if reaction_roles_enabled : enabled_modules.append("ReactionRolesCog")
 if applications_enabled : enabled_modules.append("ApplicationsCog")
@@ -308,6 +308,47 @@ if dropcomp_enabled : enabled_modules.append("DropCompCog")
 if forumthread_enabled : enabled_modules.append("ForumThreadCog")
 if funresponses_enabled : enabled_modules.append("FunResponsesCog")
 if submissions_enabled : enabled_modules.append("SubmissionsCog")
+
+archive_blacklist = [
+    755473609342058619, #tag request
+
+    307827188634353665, #announcement
+    818941995531632670, #game news
+    419347383021862912, #streamers
+
+    307827203171811339, #general
+    755485394778194000, #pvm advice
+    695403997464494131, #specialist hub
+    338076302684848131, #achievments
+    434016697687474186, #off-topic
+    727562380980125716, #other games
+    763208637660266578, #pof borrow / trade
+
+    755487300741234778, # event suggestion
+    381062945041285121, # team finding
+
+    775363362787295255, #submissions
+
+    892047321603395654, #achievements tracker
+    307827142534889472, #bot commands
+    591801230213382145, #price check channel
+    815661081208160337, #dank memes bot
+
+    349320454382682118, # warbands
+    192316399413231616, #nsfw staff
+    699940703748489246, #staff bot
+    411673295201501184, #clan issues
+    311870323634995201, #leaders
+
+    192299572607844352, #server members
+    536539435702157312, #rework discuss
+    632273628326789150, #event command
+    450518786529951765, #skyenet command
+    783206091222810644, #admin logs
+
+    347712635149484042, #music bots
+    802687845462573086, #respond to voice
+]
 
 # recommended not to touch the functions below
 

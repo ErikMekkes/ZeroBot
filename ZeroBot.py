@@ -16,6 +16,7 @@ from ForumThreadCog import ForumThreadCog
 from FunResponsesCog import FunResponsesCog
 from EventsCog import EventsCog
 from SubmissionsCog import SubmissionsCog
+from ServerWatchCog import ServerWatchCog
 
 intents = Intents.default()
 intents.members = True
@@ -32,6 +33,9 @@ bot = commands.Bot(
 # remove the default help command to hide commands that shouldnt be seen.
 bot.remove_command("help")
 # TODO create our own help command instead...
+
+# setup callback structure for event handler.
+bot.channel_delete_callbacks = []
 
 @bot.event
 async def on_ready():
@@ -79,6 +83,11 @@ async def on_command_error(ctx, error):
     else:
         await ctx.send("An error occured.")
     zerobot_common.logfile.log_exception(error)
+
+@bot.event
+async def on_guild_channel_delete(channel):
+    for callback in bot.channel_delete_callbacks:
+        await callback(channel)
 
 # logging connection status for debugging
 @bot.event
