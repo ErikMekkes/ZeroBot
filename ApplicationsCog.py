@@ -505,7 +505,7 @@ class ApplicationsCog(commands.Cog):
             permissions.is_allowed("archive", ctx.channel.id) or 
             zerobot_common.permissions.is_allowed("archive", ctx.channel.id) or
             (
-                zerobot_common.highest_role(ctx.author).id == zerobot_common.staff_role_id and
+                zerobot_common.is_staff_member(ctx.author) and
                 ctx.channel.id not in zerobot_common.archive_blacklist
             )
         ):
@@ -752,10 +752,8 @@ class ApplicationsCog(commands.Cog):
         """
         discord_id = app.fields_dict["requester_id"]
         discord_user = zerobot_common.guild.get_member(discord_id)
-        # find current role and new role
-        current_role = zerobot_common.highest_role(discord_user)
-        current_rank_index = rank_index(discord_role_id=current_role.id)
-        if current_rank_index <= zerobot_common.staff_rank_index:
+        # check against editing staff
+        if zerobot_common.is_staff_member(discord_user):
             await ctx.send(
                 f"Trying to edit a Staff Member, "
                 f"bot is not allowed to edit Staff Members"
@@ -764,9 +762,9 @@ class ApplicationsCog(commands.Cog):
         new_rank_name = app.fields_dict["rank"]
         new_rank_id = zerobot_common.get_rank_id(new_rank_name)
         new_rank_index = rank_index(discord_role_id=new_rank_id)
-        if new_rank_index <= zerobot_common.staff_rank_index:
+        if new_rank_index >= zerobot_common.staff_rank_index:
             await ctx.send(
-                f"Trying to make someone a Staff Member, "
+                f"Trying to give someone a Staff Rank, "
                 f"bot is not allowed to edit Staff Members"
             )
             return

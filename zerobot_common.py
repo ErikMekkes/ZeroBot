@@ -397,6 +397,14 @@ def is_member(discord_user):
         if r.id == clan_member_role_id:
             return True
     return False
+def is_staff_member(discord_user):
+    """
+    Checks if discord user has the staff member role.
+    """
+    for r in discord_user.roles:
+        if r.id == staff_role_id:
+            return True
+    return False
 def get_rank_id(discord_role_name):
     """
     Look up id for a discord rank name
