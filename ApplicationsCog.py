@@ -198,6 +198,31 @@ async def setup_staff_app_channel(ctx, channel):
     )
     permissions.allow("archive", channel.id)
 
+async def on_guild_channel_delete(channel):
+    """
+    This event is triggered for every channel deletion.
+    If the channel that got deleted was an open application, close it.
+    """
+    app = applications.get_app(channel.id)
+    if (app == None):
+        # not an app channel
+        return
+    if (app.fields_dict.get("status") != "open"):
+        # already accepted or closed
+        return
+    # is still open app channel, close it
+    app.set_status("closed")
+    # clear app permissions for channel
+    permissions.disallow("archive", channel.id)
+    permissions.disallow("accept", channel.id)
+    permissions.disallow("cancel", channel.id)
+    permissions.disallow("reject", channel.id)
+    permissions.disallow("sitelink", channel.id)
+    # notify applicant of closing channel
+    app_type = app.fields_dict["type"]
+    discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
+    await message_ctx(discord_user, f"Your application for {app_type} has been closed. Reason: The channel was removed.")
+
 class ApplicationsCog(commands.Cog):
     """
     Handles all the commands for applications.
@@ -212,6 +237,8 @@ class ApplicationsCog(commands.Cog):
             if cat.id == app_category_id:
                 global app_category
                 app_category = cat
+        
+        bot.channel_delete_callbacks.append(on_guild_channel_delete)
     
     @commands.command()
     async def rankup(self, ctx, *args):
@@ -476,7 +503,11 @@ class ApplicationsCog(commands.Cog):
         app_log.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
         if not(
             permissions.is_allowed("archive", ctx.channel.id) or 
-            zerobot_common.permissions.is_allowed("archive", ctx.channel.id)
+            zerobot_common.permissions.is_allowed("archive", ctx.channel.id) or
+            (
+                zerobot_common.highest_role(ctx.author).id == zerobot_common.staff_role_id and
+                ctx.channel.id not in zerobot_common.archive_blacklist
+            )
         ):
             await ctx.send("Not allowed in this channel!")
             return
@@ -849,34 +880,6 @@ class ApplicationsCog(commands.Cog):
         discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
         await message_ctx(discord_user, f"Your application for {app_type} has been closed. {reason}")
         await self.archive(ctx)
-
-
-    
-    @commands.Cog.listener()
-    async def on_guild_channel_delete(self, channel):
-        """
-        This event is triggered for every channel deletion.
-        If the channel that got deleted was an open application, close it.
-        """
-        app = applications.get_app(channel.id)
-        if (app == None):
-            # not an app channel
-            return
-        if (app.fields_dict.get("status") != "open"):
-            # already accepted or closed
-            return
-        # is still open app channel, close it
-        app.set_status("closed")
-        # clear permissions for channel
-        permissions.disallow("archive", channel.id)
-        permissions.disallow("accept", channel.id)
-        permissions.disallow("cancel", channel.id)
-        permissions.disallow("reject", channel.id)
-        permissions.disallow("sitelink", channel.id)
-        # notify applicant of closing channel
-        app_type = app.fields_dict["type"]
-        discord_user = zerobot_common.guild.get_member(app.fields_dict["requester_id"])
-        await message_ctx(discord_user, f"Your application for {app_type} has been closed. Reason: The channel was removed.")
     
 async def send_accepted_messages(discord_user, ctx):
     # send acception message in app channel
