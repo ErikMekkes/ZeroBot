@@ -7,6 +7,7 @@ Loads up any modules (Cogs) that have been enabled in settings.json
 import zerobot_common
 from discord import Intents
 from discord.ext import commands
+from discord_slash import SlashCommand
 from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
@@ -30,6 +31,8 @@ bot = commands.Bot(
     fetch_offline_members = True,
     guild_subscriptions = True
 )
+slash = SlashCommand(bot, sync_commands=True)
+bot.load_extension("slash_commands")
 # remove the default help command to hide commands that shouldnt be seen.
 bot.remove_command("help")
 # TODO create our own help command instead...

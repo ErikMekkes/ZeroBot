@@ -2,7 +2,7 @@ from discord.ext import commands
 import zerobot_common
 
 logfile = None
-log_prefix = "serverwatch : "
+log_prefix = "serverwatch"
 
     
 async def on_guild_channel_delete(channel):
@@ -23,6 +23,6 @@ class ServerWatchCog(commands.Cog):
         self.bot = bot
         global logfile
         logfile = zerobot_common.logfile
-        logfile.log(f"Server watch module loaded and ready.", log_prefix)
+        logfile.log(f"server watch module loaded and ready.", log_prefix)
 
         bot.channel_delete_callbacks.append(on_guild_channel_delete)
