@@ -762,7 +762,8 @@ class ApplicationsCog(commands.Cog):
         new_rank_name = app.fields_dict["rank"]
         new_rank_id = zerobot_common.get_rank_id(new_rank_name)
         new_rank_index = rank_index(discord_role_id=new_rank_id)
-        if new_rank_index >= zerobot_common.staff_rank_index:
+        # lower staff rank index = higher rank
+        if new_rank_index <= zerobot_common.staff_rank_index:
             await ctx.send(
                 f"Trying to give someone a Staff Rank, "
                 f"bot is not allowed to edit Staff Members"
