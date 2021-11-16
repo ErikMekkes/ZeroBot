@@ -153,15 +153,19 @@ class ChannelCog(commands.Cog):
                     )
                     post.msg = msg
                     continue
-            else:
-                # no img_url, just send text.
-                msg = await channel.send(post.text)
+            # no img_url, just send text.
+            if post.text is None or post.text == "":
+                # no img and missing text (cant send empty message)
+                msg = await channel.send(f"{post.row} : no text or img")
                 post.msg = msg
+                continue
+            msg = await channel.send(post.text)
+            post.msg = msg
         
         # loop over all posts to insert reference links
         for post in posts:
-            if post.text == "" or post.text is None:
-                # empty post or just image -> no need to edit
+            if post.text is None or post.text == "":
+                # empty text / just an image -> no need to edit
                 continue
             old_text = post.text
             # loop over post numbers
