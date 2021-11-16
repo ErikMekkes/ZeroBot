@@ -14,11 +14,13 @@ from logfile import LogFile
 logfile = None
 
 if zerobot_common.channel_manager_enabled:
-    # load google sheets document that contains the actual channel sheets (tabs)
+    # load google sheets document that contains the channel info sheets (tabs)
     channels_doc_name = zerobot_common.settings.get("channels_doc_name")
     channels_doc = zerobot_common.drive_client.open(channels_doc_name)
     # load config that describes which channels should be synched with what
-    synched_channels_filename = zerobot_common.settings.get("synched_channels_filename")
+    synched_channels_filename = zerobot_common.settings.get(
+        "synched_channels_filename"
+    )
     synched_channels = utilities.load_json(synched_channels_filename)
 
 class Post():
@@ -130,33 +132,50 @@ class ChannelCog(commands.Cog):
         channel = zerobot_common.guild.get_channel(channel_id)
         posts = read_channel_sheet(channel_name)
         await channel.purge()
-        # create empty posts
+        # create initial posts with text and image if img_url is present
         for post in posts:
-            # is an image post, only post image.
             if post.img_url is not None:
-                #TODO post and delete img
+                # post has img_url, try to post image.
                 found = utilities.download_img(post.img_url, "zbottemp.png")
                 if found:
                     img_file = open("zbottemp.png", "rb")
                     img = discord.File(img_file)
-                    msg = await channel.send(post.row, file=img)
+                    msg = await channel.send(post.text, file=img)
                     post.msg = msg
                     img.close()
                     img_file.close()
                     utilities.delete_file("zbottemp.png")
                     continue
-            msg = await channel.send(post.row)
-            post.msg = msg
-        # loop over all posts to edit references in them
+                else:
+                    msg = await channel.send(
+                        f"{post.row} : {post.img_url} not found\n"
+                        f"{post.text}"
+                    )
+                    post.msg = msg
+                    continue
+            else:
+                # no img_url, just send text.
+                msg = await channel.send(post.text)
+                post.msg = msg
+        
+        # loop over all posts to insert reference links
         for post in posts:
-            # loop over # of posts, create a link to post #, if [#] is used in
-            # the text replace it with the link.
+            if post.text == "" or post.text is None:
+                # empty post or just image -> no need to edit
+                continue
+            old_text = post.text
+            # loop over post numbers
             for i in range(1,len(posts)+1):
+                # create a link to post number, 
+                # TODO: could create once outside posts loop for efficiency
                 referenced_post = find_post(posts, i)
                 mention = (
                     f"https://discordapp.com/channels/"
                     f"{zerobot_common.clan_server_id}/{channel_id}/"
                     f"{referenced_post.msg.id}"
                 )
+                # if post # is referenced, replace it in text with the link.
                 post.text = post.text.replace(f"[{i}]", mention)
-            await post.msg.edit(content=post.text)
+            # only send text edit request to discord if text actually changed.
+            if post.text != old_text:
+                await post.msg.edit(content=post.text)
