@@ -62,7 +62,12 @@ from memberlist import (
     memberlist_get_all,
     memberlist_compare_stats
 )
-from member import Member, valid_discord_id, valid_profile_link, notify_role_names
+from member import (
+    Member,
+    valid_discord_id,
+    valid_profile_link,
+    notify_role_names
+)
 from exceptions import (
     BannedUserError,
     ExistingUserWarning,
@@ -113,8 +118,12 @@ def _Inactives(days):
         if (memb.name in zerobot_common.inactive_exceptions.keys()):
             continue
         if (memb.last_active == None):
-            days_inactive = today - datetime.strptime("2020-04-14", utilities.dateformat)
-            memb.last_active = datetime.strptime("2020-04-14", utilities.dateformat)
+            days_inactive = today - datetime.strptime(
+                "2020-04-14", utilities.dateformat
+            )
+            memb.last_active = datetime.strptime(
+                "2020-04-14", utilities.dateformat
+            )
         else:
             days_inactive = today - memb.last_active
         if (days_inactive.days >= days):
@@ -148,21 +157,6 @@ async def send_multiple(ctx, str_list, codeblock=False):
     if (codeblock):
         message += "```"
     await ctx.send(message)
-
-
-@tasks.loop(hours=23, reconnect=False)
-async def daily_update_scheduler(self):
-    """
-    Schedules the daily updates at the time specified in settings.
-    """
-    # wait remaining time until update after 23h task loop wakes up
-    update_time_str = zerobot_common.daily_update_time
-    update_time = datetime.strptime(update_time_str, utilities.timeformat)
-    wait_time = update_time - datetime.utcnow()
-    memberlist_log.log(f"auto_upd in {wait_time.seconds/3600}h")
-    # async sleep to be able to do other stuff until update time
-    await asyncio.sleep(wait_time.seconds)
-    await daily_update(self)
 
 async def warn_duplicates(self):
     dupes = ["duplicates in memberlists:\n"]
@@ -210,7 +204,9 @@ async def daily_update(self):
      - print todo lists
     """
     # start posting update warnings on spreadsheet
-    await zerobot_common.bot_channel.send("Starting to collect ingame data for update")
+    await zerobot_common.bot_channel.send(
+        "Starting to collect ingame data for update"
+    )
 
     # retrieve the latest ingame data as a new concurrent ask
     ingame_members = await self.bot.loop.run_in_executor(
@@ -218,7 +214,9 @@ async def daily_update(self):
     )
     # backup ingame members right away, nice for testing
     date_str = datetime.utcnow().strftime(utilities.dateformat)
-    ing_backup_name = "memberlists/current_members/ingame_membs_" + date_str + ".txt"
+    ing_backup_name = (
+        "memberlists/current_members/ingame_membs_" + date_str + ".txt"
+    )
     memberlist_to_disk(ingame_members, ing_backup_name)
     
     # post update warning on discord
@@ -231,7 +229,9 @@ async def daily_update(self):
     # compare against new ingame data to find joins, leaves, renames
     comp_res = compare_lists(ingame_members, self.current_members)
     # use result to update our list of current members
-    self.current_members = comp_res.staying + comp_res.joining + comp_res.renamed
+    self.current_members = (
+        comp_res.staying + comp_res.joining + comp_res.renamed
+    )
     # get site updates, send list to siteops func that updates it
     update_discord_info(self.current_members)
     self.logfile.log("retrieved discord user changes...")
@@ -239,7 +239,7 @@ async def daily_update(self):
         zerobot_common.siteops.update_site_info(self.current_members)
     self.logfile.log("retrieved site user changes...")
     # for leaving members remove discord roles, set site rank to retired
-    await process_leaving(self, comp_res.leaving)
+    await process_leaving_members(self, comp_res.leaving)
     self.logfile.log("updated discord accounts of leaving members...")
 
     # sort updated lists
@@ -251,9 +251,15 @@ async def daily_update(self):
     self.logfile.log("checked the memberlists for duplicates...")
 
     # write updated memberlists to disk as backup
-    cur_backup_name = "memberlists/current_members/current_membs_" + date_str + ".txt"
-    old_backup_name = "memberlists/old_members/old_membs_" + date_str + ".txt"
-    ban_backup_name = "memberlists/banned_members/banned_membs_" + date_str + ".txt"
+    cur_backup_name = (
+        "memberlists/current_members/current_membs_" + date_str + ".txt"
+    )
+    old_backup_name = (
+        "memberlists/old_members/old_membs_" + date_str + ".txt"
+    )
+    ban_backup_name = (
+        "memberlists/banned_members/banned_membs_" + date_str + ".txt"
+    )
     memberlist_to_disk(self.current_members, cur_backup_name)
     memberlist_to_disk(self.old_members, old_backup_name)
     memberlist_to_disk(self.banned_members, ban_backup_name)
@@ -274,8 +280,47 @@ async def daily_update(self):
     await send_multiple(zerobot_common.bot_channel, to_join_discord)
     to_update_rank = TodosUpdateRanks(self.current_members)
     await send_multiple(zerobot_common.bot_channel, to_update_rank)
-    
-async def process_leaving(self, leaving_list):
+
+async def process_leaving_member(self, memb):
+    self.logfile.log(
+        f" - {memb.name} is leaving, updating discord and site ranks..."
+    )
+    today_date = datetime.utcnow().strftime(utilities.dateformat)
+    # update leave date and reason
+    if (memb.leave_date == ""):
+        memb.leave_date = today_date
+    if (memb.leave_reason == ""):
+        memb.leave_reason = "left or inactive kick"
+    self.old_members.append(memb)
+    rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
+    if rank_index is None:
+        await zerobot_common.bot_channel.send(
+            f"Unknown rank for leaving member: {memb.name}, skipped for "
+            "automatic rank removal. You will have to update their "
+            "discord roles and site rank manually."
+        )
+        return
+    if rank_index <= zerobot_common.staff_rank_index:
+        await zerobot_common.bot_channel.send(
+            f"Can not do automatic deranks for leaving member: "
+            f"{memb.name}, bot isn't allowed to change staff ranks. "
+            f"You will have to update their discord roles and site "
+            f"rank manually."
+        )
+        return
+    # remove discord roles
+    await self.removeroles(memb)
+    # set site rank to retired member
+    if zerobot_common.site_enabled:
+        if valid_profile_link(memb.profile_link):
+            zerobot_common.siteops.setrank_member(memb, "Retired member")
+        else:
+            await zerobot_common.bot_channel.send(
+                f"Could not remove site rank for {memb.name}, profile link : "
+                f"{memb.profile_link}"
+            )
+
+async def process_leaving_members(self, leaving_list):
     """
     Process the leaving members, removes their discord roles, sets their
     site rank to retired. 
@@ -291,42 +336,8 @@ async def process_leaving(self, leaving_list):
         )
         return
     
-    today_date = datetime.utcnow().strftime(utilities.dateformat)
     for memb in leaving_list:
-        self.logfile.log(f" - {memb.name} is leaving, updating discord and site ranks...")
-        # update leave date and reason
-        if (memb.leave_date == ""):
-            memb.leave_date = today_date
-        if (memb.leave_reason == ""):
-            memb.leave_reason = "left or inactive kick"
-        self.old_members.append(memb)
-        rank_index = utilities.rank_index(discord_role_name=memb.discord_rank)
-        if rank_index is None:
-            await zerobot_common.bot_channel.send(
-                f"Unknown rank for leaving member: {memb.name}, skipped for "
-                "automatic rank removal. You will have to update their "
-                "discord roles and site rank manually."
-            )
-            continue
-        if rank_index <= zerobot_common.staff_rank_index:
-            await zerobot_common.bot_channel.send(
-                f"Can not do automatic deranks for leaving member: "
-                f"{memb.name}, bot isn't allowed to change staff ranks. "
-                f"You will have to update their discord roles and site "
-                f"rank manually."
-            )
-            continue
-        # remove discord roles
-        await self.removeroles(memb)
-        # set site rank to retired member
-        if zerobot_common.site_enabled:
-            if valid_profile_link(memb.profile_link):
-                zerobot_common.siteops.setrank_member(memb, "Retired member")
-            else:
-                await zerobot_common.bot_channel.send(
-                    f"Could not remove site rank for {memb.name}, profile link : "
-                    f"{memb.profile_link}"
-                )
+        process_leaving_member(memb, self)
 
 class MemberlistCog(commands.Cog):
     """
@@ -341,19 +352,20 @@ class MemberlistCog(commands.Cog):
         self.confirmed_update = False
         self.ingame_update_result = None
 
-        self.current_members = memberlist_from_disk(zerobot_common.current_members_filename)
-        self.old_members = memberlist_from_disk(zerobot_common.old_members_filename)
-        self.banned_members = memberlist_from_disk(zerobot_common.banned_members_filename)
+        self.current_members = memberlist_from_disk(
+            zerobot_common.current_members_filename
+        )
+        self.old_members = memberlist_from_disk(
+            zerobot_common.old_members_filename
+        )
+        self.banned_members = memberlist_from_disk(
+            zerobot_common.banned_members_filename
+        )
 
         self.list_access = {}
 
-        # start daily update loop
         if zerobot_common.daily_mlist_update_enabled:
-            try:
-                daily_update_scheduler.start(self)
-            except RuntimeError:
-                # loop already running, happens when reconnecting.
-                pass
+            bot.daily_callbacks.append((daily_update, [self]))
     
     async def lock(self, interval=60, message=None, ctx=None):
         """
@@ -375,9 +387,11 @@ class MemberlistCog(commands.Cog):
         BAD example, replaces list reference but wont affect the actual list:
          - list_access["banned_members"] = my_new_list
 
-        Acts as an imperfect mutex, locks access to the memberlist to prevent simultanious editing.
-        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
-        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
+        Acts as an imperfect mutex, locks access to the memberlist to prevent 
+        simultanious editing. 'Imperfect' as it's not purely atomic, there 
+        could be an interrupt between checking self.updating and locking it 
+        as true. Time between lock() and unlock() should be kept to a minimum 
+        to prevent waiting time / having to resend commands.
 
         Retries obtaining the lock at interval times until succesful. Default
         interval between attempts is 60 seconds. No fifo / other scheduling.
@@ -391,9 +405,15 @@ class MemberlistCog(commands.Cog):
             await asyncio.sleep(interval)
         self.updating = True
         if zerobot_common.sheet_memberlist_enabled:
-            load_sheet_changes(self.current_members, zerobot_common.current_members_sheet)
-            load_sheet_changes(self.old_members, zerobot_common.old_members_sheet)
-            load_sheet_changes(self.banned_members, zerobot_common.banned_members_sheet)
+            load_sheet_changes(
+                self.current_members, zerobot_common.current_members_sheet
+            )
+            load_sheet_changes(
+                self.old_members, zerobot_common.old_members_sheet
+            )
+            load_sheet_changes(
+                self.banned_members, zerobot_common.banned_members_sheet
+            )
             await warnings_from_sheet(self)
         self.list_access["current_members"] = self.current_members
         self.list_access["old_members"] = self.old_members
@@ -408,36 +428,62 @@ class MemberlistCog(commands.Cog):
         dictionary. As long as the function calling lock() did not make copies
         of the references it will no longer be able to edit.
 
-        Acts as an imperfect mutex, unlocks access to the spreadsheet to prevent simultanious editing.
-        'Imperfect' as it's not purely atomic, there could be an interrupt between checking self.updating and locking it as true.
-        Time between lock() and unlock() should be kept to a minimum to prevent waiting time / having to resend commands.
+        Acts as an imperfect mutex, unlocks access to the spreadsheet to 
+        prevent simultanious editing. 'Imperfect' as it's not purely atomic, 
+        there could be an interrupt between checking self.updating and locking 
+        it as true. Time between lock() and unlock() should be kept to a 
+        minimum to prevent waiting time / having to resend commands.
         """
         self.list_access["current_members"] = None
         self.list_access["old_members"] = None
         self.list_access["banned_members"] = None
-        memberlist_to_disk(self.current_members, zerobot_common.current_members_filename)
-        memberlist_to_disk(self.old_members, zerobot_common.old_members_filename)
-        memberlist_to_disk(self.banned_members, zerobot_common.banned_members_filename)
+
+        memberlist_to_disk(
+            self.current_members, zerobot_common.current_members_filename
+        )
+        memberlist_to_disk(
+            self.old_members, zerobot_common.old_members_filename
+        )
+        memberlist_to_disk(
+            self.banned_members, zerobot_common.banned_members_filename
+        )
+
         if zerobot_common.sheet_memberlist_enabled:
-            memberlist_to_sheet(self.current_members, zerobot_common.current_members_sheet)
-            memberlist_to_sheet(self.old_members, zerobot_common.old_members_sheet)
-            memberlist_to_sheet(self.banned_members, zerobot_common.banned_members_sheet)
+            memberlist_to_sheet(
+                self.current_members, zerobot_common.current_members_sheet
+            )
+            memberlist_to_sheet(
+                self.old_members, zerobot_common.old_members_sheet
+            )
+            memberlist_to_sheet(
+                self.banned_members, zerobot_common.banned_members_sheet
+            )
+        
         self.updating = False
     
     @commands.command()
     async def restart(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("restart", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("restart", ctx.channel.id)
+        ): return
 
-        # TODO: create an internal restart that does not rely on the server restarting the python script. very tricky with scheduled tasks
+        # TODO: create an internal restart that does not rely on the server 
+        # restarting the python script. very tricky with scheduled tasks
         await self.bot.logout()
     
     @commands.command()
     async def message(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("message", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("message", ctx.channel.id)
+        ): return
         
         cmd_length = len("-zbot message ")
         # try to send to specific channel if first argument is an id
@@ -463,7 +509,8 @@ class MemberlistCog(commands.Cog):
                     # if its a number, try finding emoji by id
                     emoji_id = int(e_str)
                     e = self.bot.get_emoji(emoji_id)
-                    # None if not found = good, shows mistake and prevents empty message
+                    # None if not found = good
+                    # shows mistake and prevents empty message
                     res += str(e)
                 except Exception:
                     # if by number went wrong, try finding first match by name
@@ -480,19 +527,24 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def updatelist(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("updatelist", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("updatelist", ctx.channel.id)
+        ): return
 
         # check if confirmed
         if self.confirmed_update:
             await daily_update(self)
             return
         # not confirmed yet, ask for confirm
-        await ctx.send((
-            "Fully updating the memberlist spreadsheet takes a long time! (~30 minutes!)\n" +
-            "The spreadsheet can not be edited while the full update is running.\n" +
-            "If you are sure you want to start the full update, type the command again within 30 seconds"
-        ))
+        await ctx.send(
+            "Fully updating the memberlist spreadsheet can take a long time! "
+            "(~30 minutes!)\n The spreadsheet can not be edited while the "
+            "update is running.\n If you are sure you want to start the "
+            "update, type the command again within 30 seconds"
+        )
         self.confirmed_update = True
         await asyncio.sleep(30)
         self.confirmed_update = False
@@ -504,9 +556,15 @@ class MemberlistCog(commands.Cog):
         Results may have outdated Discord roles / Site ranks / Ingame stats.
         """
         result = SearchResult()
-        current_members = memberlist_from_disk(zerobot_common.current_members_filename)
-        old_members = memberlist_from_disk(zerobot_common.old_members_filename)
-        banned_members = memberlist_from_disk(zerobot_common.banned_members_filename)
+        current_members = memberlist_from_disk(
+            zerobot_common.current_members_filename
+        )
+        old_members = memberlist_from_disk(
+            zerobot_common.old_members_filename
+        )
+        banned_members = memberlist_from_disk(
+            zerobot_common.banned_members_filename
+        )
         result.current_results = memberlist_get_all(current_members, id)
         result.old_results = memberlist_get_all(old_members, id)
         result.banned_results = memberlist_get_all(banned_members, id)
@@ -535,7 +593,11 @@ class MemberlistCog(commands.Cog):
         else:
             id_results = await self.search_all(discord_id)
         # find results for profile link matches (non-empty)
-        if profile_link == "" or profile_link is None or profile_link == "no site":
+        if (
+            profile_link == "" or 
+            profile_link is None or 
+            profile_link == "no site"
+        ):
             link_results = SearchResult()
         else:
             link_results = await self.search_all(profile_link)
@@ -549,7 +611,9 @@ class MemberlistCog(commands.Cog):
         if zerobot_common.banlist_channel_id is None:
             await ctx.send("Banlist channel isnt set up in settings.json.")
             return
-        channel = zerobot_common.guild.get_channel(zerobot_common.banlist_channel_id)
+        channel = zerobot_common.guild.get_channel(
+            zerobot_common.banlist_channel_id
+        )
         await channel.purge()
         # fetch latest from sheet with lock -> unlock
         await self.lock()
@@ -561,11 +625,13 @@ class MemberlistCog(commands.Cog):
         today = datetime.utcnow().strftime(utilities.dateformat)
         msg = (
             "**=== Zer0 PvM Banlist ===**\n\n"
-            "We strongly suggest to NOT invite these people to your pvm teams.\n"
-            "We may hold you responsible for any drama caused if you bring them into anything Zer0 related.\n\n"
+            "We strongly suggest to NOT invite these people to pvm teams.\n"
+            "We may also hold you responsible for any drama caused if you "
+            "bring them into anything Zer0 related.\n\n"
 
             "This list only shows the 25 most recent Zer0 bans.\n"
-            "The full Zer0 PvM banlist can be found here: <http://tiny.cc/Zer0PvMBanList>\n\n"
+            "The full Zer0 PvM banlist can be found here: "
+            "<http://tiny.cc/Zer0PvMBanList>\n\n"
             f"Last Updated: {today}"
         )
         await channel.send(msg)
@@ -599,8 +665,12 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def findmember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("findmember", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("findmember", ctx.channel.id)
+        ): return
 
         use_msg = (
             "Needs to be : -zbot findmember id"
@@ -635,8 +705,11 @@ class MemberlistCog(commands.Cog):
             "info for those is from the last daily update:"
         )
         for memb in results.combined_list():
-            if (memb.discord_id == 0 or memb.discord_name == "Left clan discord"):
-                # no role, or did not have / dont know their discord.
+            # no role, or did not have / dont know their discord.
+            if (
+                memb.discord_id == 0 or 
+                memb.discord_name == "Left clan discord"
+            ):
                 memb.discord_rank = ""
             await ctx.send(embed=member_embed(memb))
     
@@ -647,8 +720,14 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def removemember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("removemember", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed(
+                "removemember", ctx.channel.id
+            )
+        ): return
 
         use_msg = (
             "Needs to be : -zbot removemember list_name member_id\n"
@@ -680,15 +759,21 @@ class MemberlistCog(commands.Cog):
             await ctx.send(f"No member found for {id} in {args[0]}.")
             return
         await ctx.send(f"Removed {memb.name} from {args[0]}.")
+    
     @commands.command()
     async def movemember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("movemember", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("movemember", ctx.channel.id)
+        ): return
 
         use_msg = (
             "Needs to be : -zbot movemember from_list to_list member_id\n"
-            " - from_list / to_list: current_members, old_members or banned_members\n"
+            " - from_list / to_list: current_members, old_members or "
+            "banned_members\n"
             " - member_id: name, profile_link or discord_id"
         )
         if len(args) != 3:
@@ -726,14 +811,19 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def editmember(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("editmember", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+            )
+        if not(
+            zerobot_common.permissions.is_allowed("editmember", ctx.channel.id)
+        ): return
 
         use_msg = (
-            "Needs to be : -zbot editmember list_name member_id attribute = value\n"
-            " - list_name: current_members, old_members or banned_members"
-            " - member_id: a valid name, profile_link or discord_id"
-            " - attribute: name, profile_link, discord_id"
+            "Needs to be : -zbot editmember list_name member_id attribute = "
+            "value\n"
+            " - list_name: current_members, old_members or banned_members\n"
+            " - member_id: a valid name, profile_link or discord_id\n"
+            " - attribute: name, profile_link, discord_id\n"
         )
 
         # check if command uses the correct form
@@ -813,24 +903,42 @@ class MemberlistCog(commands.Cog):
         if memb is None:
             await ctx.send(f"No member found for {id} in {args[0]}.")
             return
-        await ctx.send(f"Edited {attribute} of {memb.name} from {old_value} to {new_value}.")
+        await ctx.send(
+            f"Edited {attribute} of {memb.name} from "
+            f"{old_value} to {new_value}."
+        )
 
     @commands.command()
     async def todos(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("todos", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("todos", ctx.channel.id)
+        ): return
 
-        memberlist = memberlist_from_disk(zerobot_common.current_members_filename)
-        await ctx.send("Gathering latest info, takes a minute, ingame ranks only update daily and might be outdated")
-        result = await self.bot.loop.run_in_executor(None, Todos, memberlist, *args)
+        memberlist = memberlist_from_disk(
+            zerobot_common.current_members_filename
+        )
+        await ctx.send(
+            "Gathering latest info, takes a minute, "
+            "ingame ranks only update daily and might be outdated"
+        )
+        result = await self.bot.loop.run_in_executor(
+            None, Todos, memberlist, *args
+        )
         await send_multiple(ctx, result)
     
     @commands.command()
     async def inactives(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("inactives", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("inactives", ctx.channel.id)
+        ): return
 
         if len(args) != 1:
             await ctx.send(("Needs to be : -zbot inactives <number of days>"))
@@ -838,13 +946,20 @@ class MemberlistCog(commands.Cog):
         try:
             days = int(args[0])
         except ValueError:
-            await ctx.send(("Days argument has to be a number!\n Needs to be : -zbot inactives <number of days>"))
+            await ctx.send(
+                "Days argument has to be a number!\n Needs to be : "
+                "-zbot inactives <number of days>"
+            )
             return
         result = await self.bot.loop.run_in_executor(None, _Inactives, days)
         await ctx.send("Inactive for " + str(days) + " or more days: \n")
         for i in range(0, len(result),10):
             if (i == 0):
-                message = "```\nName         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n"
+                message = (
+                    "```\nName         Rank              Join Date  Clan xp"
+                    "    Last Active  Site Profile Link                   "
+                    "Discord Name   \n"
+                )
             else:
                 message = "```\n"
             for memb in range(i,i+10):
@@ -856,8 +971,12 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def exceptions(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("exceptions", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("exceptions", ctx.channel.id)
+        ) : return
 
         msg = "```Ingame name - Reason\n"
         for k,v in zerobot_common.inactive_exceptions.items():
@@ -867,24 +986,15 @@ class MemberlistCog(commands.Cog):
         msg += "```"
         await ctx.send(msg)
     
-    async def get_discord_user(self, member):
-        # check format of member's id
-        discord_id = member.discord_id
-        if not valid_discord_id(discord_id):
-            return None
-        # can still be None if id is valid but no member of discord (anymore).
-        return zerobot_common.guild.get_member(discord_id)
-    
-    @commands.command()
-    async def add(self, ctx, *args):
-        # alias for addmember, no checks needed here.
-        await self.addmember(ctx, *args)
-    
     @commands.command()
     async def welcome(self, ctx, *args):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("welcome", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("welcome", ctx.channel.id)
+        ) : return
 
         if len(args) == 1 and args[0] == "me":
             await send_messages(
@@ -901,10 +1011,16 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def banlist(self, ctx):
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("banlist", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("banlist", ctx.channel.id)
+        ) : return
 
-        memberlist = memberlist_from_disk(zerobot_common.banned_members_filename)
+        memberlist = memberlist_from_disk(
+            zerobot_common.banned_members_filename
+        )
 
         res = ["Name         | Ban reason\n", "-------------------------\n"]
         for memb in memberlist:
@@ -939,17 +1055,26 @@ class MemberlistCog(commands.Cog):
         # if result in bans, post results and refuse to add
         if (search_result.has_ban()):
             for memb in search_result.banned_results:
-                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
+                if (
+                    memb.discord_id == 0 or 
+                    memb.discord_name == "Left clan discord" or 
+                    memb.discord_name == "Not in clan discord"
+                ):
                     memb.discord_rank = ""
                 if (memb.profile_link == "no site"):
                     memb.site_rank = ""
                 await ctx.send(embed=member_embed(memb))
             raise BannedUserError("This person is banned.")
         
-        # if already known as member some other way, just post results, warn that they might need a check and continue adding
+        # if already known as member some other way, just post results, 
+        # warn that they might need a check and continue adding
         if (search_result.has_result()):
             for memb in search_result.combined_list():
-                if (memb.discord_id == 0 or memb.discord_name == "Left clan discord" or memb.discord_name == "Not in clan discord"):
+                if (
+                    memb.discord_id == 0 or 
+                    memb.discord_name == "Left clan discord" or 
+                    memb.discord_name == "Not in clan discord"
+                ):
                     memb.discord_rank = ""
                 if (memb.profile_link == "no site"):
                     memb.site_rank = ""
@@ -963,8 +1088,13 @@ class MemberlistCog(commands.Cog):
          - number_of_inactives: size of list to post, ordered by least active.
         """
         message = "\nSuggested inactives to kick if you need to make room:\n"
-        message += "```Name         Rank              Join Date  Clan xp    Last Active  Site Profile Link                   Discord Name   \n"
-        inactives = await self.bot.loop.run_in_executor(None, _Inactives, days_inactive)
+        message += (
+            "```Name         Rank              Join Date  Clan xp    Last "
+            "Active  Site Profile Link                   Discord Name   \n"
+        )
+        inactives = await self.bot.loop.run_in_executor(
+            None, _Inactives, days_inactive
+        )
         for i in range(0, number_of_inactives):
             if (i >= len(inactives)) : break
             message += inactives[i].inactiveInfo() + "\n"
@@ -1008,198 +1138,6 @@ class MemberlistCog(commands.Cog):
         # finished with updating, can release lock
         await self.unlock()
 
-    @commands.command()
-    async def addmember(self, ctx, *args):
-        """
-        Discord bot command to add a member (name, discord id, profile link)
-        """
-        # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("addmember", ctx.channel.id)) : return
-
-        # check if command has correct number of arguments
-        if len(args) < 4 :
-            await ctx.send(
-                "Needs to be: `-zbot addmember <name> <clan rank> "
-                "<discord id> <profile link>`\n example: `-zbot addmember "
-                """Zezima "Full Member" 123456789012345678 """
-                "https://zer0pvm.com/members/1234567`"
-            )
-            return
-        if (len(args) > 4):
-            await ctx.send(
-                "Too many! use \"\" around things with spaces : `-zbot "
-                "addmember <name> <clan rank> <discord id> <profile link>`"
-            )
-            return
-        
-        # check if command arguments are valid
-        name = args[0]
-        rank = args[1].lower()
-        rank = parse_discord_rank.get(rank, rank)
-        discord_id = args[2]
-        profile_link = args[3].replace("http:", "https:")
-        # should be a valid rank, no staff rank changes allowed
-        rank_index = utilities.rank_index(discord_role_name=rank)
-        if rank_index is None:
-            await ctx.send(f"Could not add, {rank} is not a correct rank\ncheck for spaces, use \"\" around something with a space in it")
-            return
-        if rank_index <= zerobot_common.staff_rank_index:
-            await ctx.send(f"Could not add, can't give {rank} to {name}, bot currently isn't allowed to change staff ranks")
-            return
-        # should be an 18 length number, or "0" as explicit 'doesnt use discord' case
-        if (discord_id == "0"):
-            discord_id = 0
-        else:
-            try:
-                discord_id = parse_discord_id(discord_id)
-            except NotADiscordId:
-                await ctx.send(f"Could not add, {discord_id} is not a valid discord id\ncheck if the discord id is correct, example: 12345678901234567. Use `0` if they really can't join discord.")
-                return
-        #should be a valid profile link, or "no site" as explicit 'doesnt use site' case
-        if (profile_link.lower() == "no site"):
-            profile_link = "no site"
-        else:
-            try:
-                profile_link = parse_profile_link(profile_link)
-            except NotAProfileLink:
-                await ctx.send(
-                    f"Could not add, {profile_link} is not a correct "
-                    f"profile link.\nCheck if the profile link is correct, "
-                    f"example: https://zer0pvm.com/members/1234567. "
-                    f"Use `no site` if they really can't make a site account."
-                )
-                return
-        discord_user = zerobot_common.guild.get_member(discord_id)
-        
-        # do background check
-        try:
-            self.background_check(ctx, name, discord_id, profile_link)
-        except BannedUserError:
-            await ctx.send(
-                f"You can not add a \uD83D\uDE21 Banned Member \U0001F621, "
-                f"clear their banlist status first."
-            )
-            return
-        except ExistingUserWarning:
-            await ctx.send(
-                f"Adding, but found previous member results above searching "
-                f"for name, discord id, and profile link matches for {name} "
-                f"(might show duplicates). You might want to check / remove "
-                f"those entries from the sheet"
-            )
-        # add member to memberlist
-        await self.add_member(ctx, name, discord_id, profile_link)
-        # update rank on site, not needed if no site.
-        if (profile_link.lower() != "no site"):
-            zerobot_common.siteops.setrank(profile_link, "Recruit")
-        
-        message = ""
-        if (discord_user != None):
-            message += (
-                f"Can't find discord user {discord_id}, I can not give them "
-                f"the discord rank. I also can not send them the welcome messages."
-            )
-        else:
-            # note: I'm using the name of the actual user and roles removed 
-            # in the report, not the ones i expect to be removed.
-            # This is to make any unexpected results / possible mistakes visible.
-            message += f"Discord User: {discord_user.name}, "
-            # remove waiting approval role if present
-            approval_role = zerobot_common.get_named_role("Waiting Approval")
-            await discord_user.remove_roles(approval_role, reason="Adding member")
-            message += f"Removed {approval_role.name} role, "
-            # remove guest role if present
-            guest_role = zerobot_common.get_named_role("Guest")
-            await discord_user.remove_roles(guest_role, reason="Adding member")
-            message += f"Removed {guest_role.name} role, "
-            # add recruit role
-            recruit_role = zerobot_common.get_named_role("Recruit")
-            await discord_user.add_roles(recruit_role, reason="Adding member")
-            message += f"Added {recruit_role.name} role on discord. "
-
-            # send welcome messages
-            await send_messages(
-                discord_user,
-                f"application_templates/welcome_messages.json"
-            )
-            message += (
-                f"\nI have pmed {name} on discord to ask for an invite, "
-                f"sign up for notify tags, and informed them of dps tags. \n"
-            )
-
-        message += (
-            f"Ranked {name} to Recruit on the website. Also added {name} to "
-            f"the memberlist spreadsheet. \n\nYou still need to invite them "
-            f"ingame. Check if their gear is augmented."
-        )
-        await ctx.send(message)
-        await self.post_inactives(ctx, 30, 6)
-    
-    async def changerank(self, member, new_rank):
-        discord_id = member.discord_id
-        if not valid_discord_id(discord_id):
-            await zerobot_common.bot_channel.send(
-                f"Could not change discord rank of {member.name}, "
-                f"not a valid discord id: {discord_id}"
-            )
-            return
-        discord_user = zerobot_common.guild.get_member(discord_id)
-        if (discord_user == None):
-            await zerobot_common.bot_channel.send(
-                f"Could not change discord rank of {member.name}, "
-                f"discord id: {discord_id} does not exist or is not a member "
-                f"of the Zer0 Discord."
-            )
-            return
-        
-        old_rank = member.discord_rank
-        old_role = None
-        message = f"{discord_user.mention}: "
-        for role in discord_user.roles:
-            # found waiting approval role, remove
-            if role.name == "Waiting Approval":
-                await discord_user.remove_roles(role, reason="Adding member")
-                message += f"Removed Waiting Approval role. "
-            # found guest role, remove
-            if role.name == "Guest":
-                await discord_user.remove_roles(role, reason="Adding member")
-                message += f"Removed Guest role. "
-            # found old role, remove
-            if role.name == old_rank:
-                await discord_user.remove_roles(role, reason="Adding member")
-                message += f"Removed old rank: {old_rank} on discord. "
-                old_role = role
-        # old role still None = did not have old role
-        if (old_role == None) :
-            message += f"Did not have old rank: {old_rank} on discord. "
-        
-        # add new role
-        new_role = zerobot_common.get_named_role(new_rank)
-        await discord_user.add_roles(new_role, reason="rank change command")
-        message += f"Added {new_role.name} role on discord. "
-        await zerobot_common.bot_channel.send(message)
-        member.discord_rank = new_rank
-    
-    async def kickmember(self, member):
-        discord_id = member.discord_id
-        if not valid_discord_id(discord_id):
-            await zerobot_common.bot_channel.send(
-                f"Could not kick {member.name}, "
-                f"not a valid discord id: {discord_id}"
-            )
-            return
-        discord_user = zerobot_common.guild.get_member(discord_id)
-        if (discord_user == None):
-            await zerobot_common.bot_channel.send(
-                f"Could not kick {member.name}, discord id: {discord_id} "
-                f"does not exist or is not a member of the Zer0 Discord."
-            )
-            return
-        
-        await discord_user.kick(reason = "kick")
-        member.discord_rank = ""
-
     async def removeroles(self, member):
         """
         Removes any ranked roles below staff rank, removes clan member role
@@ -1222,8 +1160,12 @@ class MemberlistCog(commands.Cog):
             return
         
         # Remove clan member role and ranked roles below staff
-        roles_to_remove = zerobot_common.get_lower_ranks(discord_user, zerobot_common.staff_rank_index)
-        clan_member_role = zerobot_common.guild.get_role(zerobot_common.clan_member_role_id)
+        roles_to_remove = zerobot_common.get_lower_ranks(
+            discord_user, zerobot_common.staff_rank_index
+        )
+        clan_member_role = zerobot_common.guild.get_role(
+            zerobot_common.clan_member_role_id
+        )
         roles_to_remove.append(clan_member_role)
         await discord_user.remove_roles(*roles_to_remove, reason="left clan")
         # add guest role
@@ -1235,10 +1177,15 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def respond(self, ctx):
         # log command attempt, allowed everwhere
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
 
         await ctx.send("Hello!")
-        self.logfile.log(f"responded with hello in {ctx.channel.name}: {ctx.channel.id} ")
+
+        self.logfile.log(
+            f"responded with hello in {ctx.channel.name}: {ctx.channel.id} "
+        )
     
     @commands.command()
     async def activity(self, ctx, *args):
@@ -1246,8 +1193,12 @@ class MemberlistCog(commands.Cog):
         Tells you your activity status.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("activity", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("activity", ctx.channel.id)
+        ) : return
 
         if len(args) == 0:
             id = ctx.author.id
@@ -1269,7 +1220,8 @@ class MemberlistCog(commands.Cog):
         inactive_date = today - memb.last_active
         inactive_datestr = memb.last_active.strftime(utilities.dateformat)
         days_inactive = inactive_date.days
-        inactive = days_inactive > zerobot_common.inactive_days
+        max_days = zerobot_common.inactive_days
+        inactive = days_inactive > max_days
         if inactive:
             status = (
                 f"{memb.name} is on our list of inactive members! "
@@ -1283,7 +1235,7 @@ class MemberlistCog(commands.Cog):
         else:
             status = f"{memb.name} is not on our list of inactive members. "
             resp = (
-                f"{memb.name} has {zerobot_common.inactive_days - days_inactive} "
+                f"{memb.name} has {max_days - days_inactive} "
                 f"days left before we consider them inactive.\n"
                 f"If {memb.name} will be away for longer than that and wants "
                 f"to avoid inactivity kicks, tell a staff member.\n"
@@ -1293,7 +1245,7 @@ class MemberlistCog(commands.Cog):
             f"{status}"
             f"{memb.name} was last active ingame {days_inactive} days ago on "
             f"{inactive_datestr}.\n{resp}\n"
-            f"Anyone inactive for more than {zerobot_common.inactive_days} "
+            f"Anyone inactive for more than {max_days} "
             f"days may be kicked when we need to make space for new members. "
             f"Lower ranks / newer members in clan are first up, so stay "
             f"active or rankup in clan!"
@@ -1306,8 +1258,12 @@ class MemberlistCog(commands.Cog):
         Shows recent stats of the clan by comparing with old memberlist.
         """
         # log command attempt and check if command allowed
-        self.logfile.log(f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}")
-        if not(zerobot_common.permissions.is_allowed("clanstats", ctx.channel.id)) : return
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("clanstats", ctx.channel.id)
+        ) : return
 
         # check if command has correct number of arguments
         use_msg = (
@@ -1351,7 +1307,9 @@ class MemberlistCog(commands.Cog):
                 date_2 = datetime.strptime(args[1], utilities.dateformat)
             except ValueError:
                 # one of the dates did not parse successfully
-                await ctx.send(f"Incorrect dateformat: {args[0]} {args[1]}\n" + use_msg)
+                await ctx.send(
+                    f"Incorrect dateformat: {args[0]} {args[1]}\n" + use_msg
+                )
                 return
         date_string_1 = date_1.strftime(utilities.dateformat)
         base_memblist_name = "memberlists/current_members/current_membs_"
@@ -1366,7 +1324,9 @@ class MemberlistCog(commands.Cog):
             newlist_filename = base_memblist_name + date_string_2 + ".txt"
             newlist = memberlist_from_disk(newlist_filename)
             if len(newlist) == 0:
-                await ctx.send(f"No archived memberlist found for {date_string_2}")
+                await ctx.send(
+                    f"No archived memberlist found for {date_string_2}"
+                )
                 return
         else:
             newlist = memberlist_from_disk("memberlists/current_members.txt")
@@ -1404,7 +1364,9 @@ class MemberlistCog(commands.Cog):
         memberlist.memberlist_sort(stats, memberlist.runescore_cond, asc=False)
         top10runescore = f"**Most runescore gained:**\n"
         for i in range(0,10):
-            top10runescore += f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
+            top10runescore += (
+                f"{stats[i].name} : {stats[i].activities['runescore'][1]}\n"
+            )
         
         memberlist.memberlist_sort(stats, memberlist.wildykills_cond, asc=False)
         top10pks = f"**Most Wildy PKs:**\n"
@@ -1440,9 +1402,10 @@ class MemberlistCog(commands.Cog):
         )
         await ctx.send(embed=embed)
         inactives_str = (
-            f"Members that are inactive ingame since {date_string_1}: {len(inactives)}\n"
-            "If you are near the top of this list it is very likely that you will get "
-            "kicked when we need to make space for new members:\n"
+            f"Members that are inactive ingame since {date_string_1}: "
+            f"{len(inactives)}\n If you are near the top of this list it is "
+            f"very likely that you will get kicked when we need to make space "
+            f"for new members:\n"
         )
         inactives_str += (
             "Name         Rank              Join Date  Clan xp    Last "
@@ -1466,9 +1429,13 @@ class MemberlistCog(commands.Cog):
         for memb in stats:
             if memb.old_rank != memb.new_rank:
                 changed_ranks.append(memb)
-        changed_ranks_str = f"{len(changed_ranks)} members changed rank {stat_range}:"
+        changed_ranks_str = (
+            f"{len(changed_ranks)} members changed rank {stat_range}:"
+        )
         for memb in changed_ranks:
-            changed_ranks_str += f"\n - {memb.name}: {memb.old_rank} -> {memb.new_rank}"
+            changed_ranks_str += (
+                f"\n - {memb.name}: {memb.old_rank} -> {memb.new_rank}"
+            )
         changed_dpm = []
         for memb in stats:
             memb.mage_change = ""
@@ -1477,34 +1444,58 @@ class MemberlistCog(commands.Cog):
             changed = False
             if memb.new_misc["highest_mage"] != memb.old_misc["highest_mage"]:
                 if memb.new_misc["highest_mage"] == "":
-                    memb.mage_change = f"Lost {memb.old_misc['highest_mage']}"
+                    memb.mage_change = (
+                        f"Lost {memb.old_misc['highest_mage']}"
+                    )
                 elif memb.old_misc["highest_mage"] == "":
-                    memb.mage_change = f"Gained {memb.new_misc['highest_mage']}"
+                    memb.mage_change = (
+                        f"Gained {memb.new_misc['highest_mage']}"
+                    )
                 else:
-                    memb.mage_change = f"{memb.old_misc['highest_mage']} -> {memb.new_misc['highest_mage']}"
+                    memb.mage_change = (
+                        f"{memb.old_misc['highest_mage']} -> "
+                        f"{memb.new_misc['highest_mage']}"
+                    )
                 changed = True
             if memb.new_misc["highest_melee"] != memb.old_misc["highest_melee"]:
                 if memb.new_misc["highest_melee"] == "":
-                    memb.mage_change = f"Lost {memb.old_misc['highest_melee']}"
+                    memb.melee_change = (
+                        f"Lost {memb.old_misc['highest_melee']}"
+                    )
                 elif memb.old_misc["highest_melee"] == "":
-                    memb.mage_change = f"Gained {memb.new_misc['highest_melee']}"
+                    memb.melee_change = (
+                        f"Gained {memb.new_misc['highest_melee']}"
+                    )
                 else:
-                    memb.melee_change = f"{memb.old_misc['highest_melee']} -> {memb.new_misc['highest_melee']}"
+                    memb.melee_change = (
+                        f"{memb.old_misc['highest_melee']} -> "
+                        f"{memb.new_misc['highest_melee']}"
+                    )
                 changed = True
             if memb.new_misc["highest_range"] != memb.old_misc["highest_range"]:
                 if memb.new_misc["highest_range"] == "":
-                    memb.mage_change = f"Lost {memb.old_misc['highest_range']}"
+                    memb.range_change = (
+                        f"Lost {memb.old_misc['highest_range']}"
+                    )
                 elif memb.old_misc["highest_range"] == "":
-                    memb.mage_change = f"Gained {memb.new_misc['highest_range']}"
+                    memb.range_change = (
+                        f"Gained {memb.new_misc['highest_range']}"
+                    )
                 else:
-                    memb.range_change = f"{memb.old_misc['highest_range']} -> {memb.new_misc['highest_range']}"
+                    memb.range_change = (
+                        f"{memb.old_misc['highest_range']} -> "
+                        f"{memb.new_misc['highest_range']}"
+                    )
                 changed = True
             if changed:
                 changed_dpm.append(memb)
-        changed_dpm_str = f"{len(changed_dpm)} members changed dpm {stat_range}:"
+        changed_dpm_str = (
+            f"{len(changed_dpm)} members changed dpm {stat_range}:"
+        )
         for memb in changed_dpm:
             changed_dpm_str += (
-                f"\n - {memb.name}: {memb.mage_change}    {memb.melee_change}    {memb.range_change}"
+                f"\n - {memb.name}: {memb.mage_change}    "
+                f"{memb.melee_change}    {memb.range_change}"
             )
         changed_tags = []
         for memb in stats:
@@ -1529,13 +1520,19 @@ class MemberlistCog(commands.Cog):
                     changed = True
             if changed:
                 changed_tags.append(memb)
-        changed_tags_str = f"{len(changed_tags)} members changed discord tags {stat_range}:"
+        changed_tags_str = (
+            f"{len(changed_tags)} members changed discord tags {stat_range}:"
+        )
         for memb in changed_tags:
             changed_tags_str += f"\n - {memb.name}"
             if len(memb.new_tags) != 0:
-                changed_tags_str += f"\n    New Tags: {','.join(memb.new_tags)}"
+                changed_tags_str += (
+                    f"\n    New Tags: {','.join(memb.new_tags)}"
+                )
             if len(memb.lost_tags) != 0:
-                changed_tags_str += f"\n    Lost Tags: {','.join(memb.lost_tags)}"
+                changed_tags_str += (
+                    f"\n    Lost Tags: {','.join(memb.lost_tags)}"
+                )
 
         stats_str = (
             f"{new_membs}\n"
@@ -1566,7 +1563,9 @@ class MemberlistCog(commands.Cog):
         This event is triggered for any message received, including our own.
         Must keep this efficient, return asap if irrelevant.
         """
-        if len(message.role_mentions) == 0 or self.bot.user.id == message.author.id:
+        if len(message.role_mentions) == 0:
+            return
+        if self.bot.user.id == message.author.id:
             return
         
         for role in message.role_mentions:

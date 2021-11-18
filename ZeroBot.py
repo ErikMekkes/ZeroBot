@@ -6,8 +6,11 @@ Loads up any modules (Cogs) that have been enabled in settings.json
 """
 import zerobot_common
 from discord import Intents
-from discord.ext import commands
+from discord.ext import tasks, commands
 from discord_slash import SlashCommand
+from datetime import datetime
+from utilities import timeformat
+import asyncio
 from MemberlistCog import MemberlistCog
 from ApplicationsCog import ApplicationsCog
 from ReactionRolesCog import ReactionRolesCog
@@ -37,8 +40,30 @@ bot.load_extension("slash_commands")
 bot.remove_command("help")
 # TODO create our own help command instead...
 
-# setup callback structure for event handler.
+# callback structure for channel delete event handler.
+# just takes functions, no args available other than channel from event.
 bot.channel_delete_callbacks = []
+
+# callback structure for daily functions, can be used by other modules 
+# to run functions at the daily update time specified in settings
+# takes (func, arglist) pairs, arglist = [arg1, ... , argn]
+bot.daily_callbacks = []
+
+@tasks.loop(hours=23, reconnect=False)
+async def daily_update_scheduler():
+    """
+    Schedules the daily updates at the time specified in settings.
+    """
+    # wait remaining time until update after 23h task loop wakes up
+    update_time_str = zerobot_common.daily_update_time
+    update_time = datetime.strptime(update_time_str, timeformat)
+    wait_time = update_time - datetime.utcnow()
+    zerobot_common.logfile.log(f"daily update in {wait_time.seconds/3600}h")
+    # async sleep to be able to do other stuff until update time
+    await asyncio.sleep(wait_time.seconds)
+
+    for func, args in bot.daily_callbacks:
+        await func(*args)
 
 @bot.event
 async def on_ready():
@@ -74,6 +99,13 @@ async def on_ready():
     for module_name in zerobot_common.enabled_modules:
         if bot.get_cog(module_name) == None:
             bot.add_cog(globals()[module_name](bot))
+
+    # make sure daily update loop is running
+    try:
+        daily_update_scheduler.start()
+    except RuntimeError:
+        # loop already running, happens when reconnecting.
+        pass
 
 @bot.event
 async def on_command_error(ctx, error):

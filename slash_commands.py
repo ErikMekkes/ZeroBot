@@ -89,7 +89,7 @@ class Slash(commands.Cog):
         await memblist.unlock()
 
         await ctx.send(
-            f"I have set the last active date of {memb.name} to {days} days"
+            f"I have set the last active date of {memb.name} to {days} days "
             f"from now ({newdate.strftime(utilities.dateformat)}). They "
             f"will not show up on the inactives list until after this date."
         )
