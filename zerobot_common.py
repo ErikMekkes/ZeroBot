@@ -258,6 +258,10 @@ forumthread = settings.get("forumthread")
 reaction_roles_enabled = settings.get("reaction_roles_enabled", False)
 funresponses_enabled = settings.get("funresponses_enabled", False)
 channel_manager_enabled = settings.get("channel_manager_enabled", False)
+daily_channel_reload_enabled = settings.get(
+    "daily_channel_reload_enabled", False
+)
+daily_reload_channels = settings.get("daily_reload_channels", [])
 submissions_enabled = settings.get("submissions_enabled", False)
 
 # channel for killtime or killcount submissions

@@ -73,6 +73,25 @@ def read_channel_sheet(channel_name):
         num += 1
     return posts
 
+async def daily_channel_reload(channel_cog):
+    """
+    Callback function for daily update loop.
+    """
+    # notify that daily channel reloading is starting
+    await zerobot_common.bot_channel.send(
+        "Starting daily channel reloading..."
+    )
+    
+    for name in zerobot_common.daily_reload_channels:
+        await zerobot_common.bot_channel.send(
+            f"reloading {name} channel..."
+        )
+        await channel_cog.reload_channel(name)
+    # notify that daily channel reloading has finished.
+    await zerobot_common.bot_channel.send(
+        "Daily channel reloading finished."
+    )
+
 class ChannelCog(commands.Cog):
     """
     Handles synched channels and commands related to synching.
@@ -86,6 +105,10 @@ class ChannelCog(commands.Cog):
             parent = zerobot_common.logfile,
             parent_prefix = "channelslog"
         )
+
+        if zerobot_common.daily_channel_reload_enabled:
+            bot.daily_callbacks.append((daily_channel_reload, [self]))
+        
         logfile.log(f"Channels cog loaded and ready.")
 
     @commands.command()
@@ -137,6 +160,8 @@ class ChannelCog(commands.Cog):
             if post.img_url is not None:
                 # post has img_url, try to post image.
                 found = utilities.download_img(post.img_url, "zbottemp.png")
+                #TODO ^ check if found is image, could be some kind of 
+                # 'not found' html page, wont crash, just blank tempfile.png
                 if found:
                     img_file = open("zbottemp.png", "rb")
                     img = discord.File(img_file)

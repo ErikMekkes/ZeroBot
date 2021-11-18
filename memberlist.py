@@ -56,7 +56,7 @@ def memberlist_add(memberlist, member):
     element can still be modified after being added.
     """
     if not isinstance(member, Member):
-        text = f"Object to append to memberlist is not of Member: {str(member)}"
+        text = f"Object to append to list is not of Member: {str(member)}"
         raise NotAMember(text)
     memberlist.append(member)
 def memberlist_remove(memberlist, member):
@@ -123,7 +123,7 @@ def memberlist_from_string(memberlist_string):
             try:
                 result.append(Member.from_string(memb_str))
             except Exception as ex:
-                text = f"String to be read as member is not a Member: {memb_str}"
+                text = f"String to be read is not a Member: {memb_str}"
                 raise NotAMember(text)
         return result
     except Exception as ex:
@@ -203,6 +203,10 @@ def memberlist_sort(mlist, sort_cond, asc=True):
 
 def clan_xp_cond(memb_1, memb_2, asc=True):
     if memb_1.clan_xp < memb_2.clan_xp:
+        return asc
+    return not asc
+def total_xp_cond(memb_1, memb_2, asc=True):
+    if memb_1.skills["overall"][1] < memb_2.skills["overall"][1]:
         return asc
     return not asc
 
