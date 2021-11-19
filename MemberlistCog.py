@@ -132,7 +132,32 @@ def _Inactives(days):
     
     memberlist_sort_clan_xp(results)
     return results
+
+async def on_message_hostcounter(message, memblistcog):
+    """
+    callback function for on message event to checks if message is to host 
+    something. Used to track of player host stats.
+
+    This is triggered for any message received, including our own.
+    Must keep this efficient, return asap if irrelevant.
+    """
+    if len(message.role_mentions) == 0:
+        return
+    if memblistcog.bot.user.id == message.author.id:
+        return
     
+    list_access = await memblistcog.lock(skip_sheet=True)
+    member = memberlist_get(list_access["current_members"], message.author.id)
+    if member is None:
+        await memblistcog.unlock(skip_sheet=True)
+        return
+
+    for role in message.role_mentions:
+        if role.name in notify_role_names:
+            new_value = member.notify_stats[role.name] + 1
+            member.notify_stats[role.name] = new_value
+    await memblistcog.unlock(skip_sheet=True)
+
 async def send_multiple(ctx, str_list, codeblock=False):
     """
     Splits up a list of messages and sends them in batches.
@@ -366,8 +391,9 @@ class MemberlistCog(commands.Cog):
 
         if zerobot_common.daily_mlist_update_enabled:
             bot.daily_callbacks.append((daily_update, [self]))
+        bot.on_message_callbacks.append((on_message_hostcounter, [self]))
     
-    async def lock(self, interval=60, message=None, ctx=None):
+    async def lock(self, interval=60, message=None, ctx=None, skip_sheet=False):
         """
         Signals that you wish to access and edit the memberlist.
         Returns a list_access dictionary with references to each memberlist.
@@ -404,7 +430,7 @@ class MemberlistCog(commands.Cog):
                     await zerobot_common.bot_channel.send(message)
             await asyncio.sleep(interval)
         self.updating = True
-        if zerobot_common.sheet_memberlist_enabled:
+        if not skip_sheet and zerobot_common.sheet_memberlist_enabled:
             load_sheet_changes(
                 self.current_members, zerobot_common.current_members_sheet
             )
@@ -419,7 +445,7 @@ class MemberlistCog(commands.Cog):
         self.list_access["old_members"] = self.old_members
         self.list_access["banned_members"] = self.banned_members
         return self.list_access
-    async def unlock(self):
+    async def unlock(self, skip_sheet = False):
         """
         Signals that you finished accessing and editing the memberlist.
         Writes the current version of the memberlist to drive / sheet.
@@ -448,7 +474,7 @@ class MemberlistCog(commands.Cog):
             self.banned_members, zerobot_common.banned_members_filename
         )
 
-        if zerobot_common.sheet_memberlist_enabled:
+        if not skip_sheet and zerobot_common.sheet_memberlist_enabled:
             memberlist_to_sheet(
                 self.current_members, zerobot_common.current_members_sheet
             )
@@ -1556,27 +1582,3 @@ class MemberlistCog(commands.Cog):
         f = io.StringIO(stats_str)
         disc_file = discord.File(f, "clanstats.txt")
         await ctx.send(content="More clan statistics:", file=disc_file)
-    
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        """
-        This event is triggered for any message received, including our own.
-        Must keep this efficient, return asap if irrelevant.
-        """
-        if len(message.role_mentions) == 0:
-            return
-        if self.bot.user.id == message.author.id:
-            return
-        
-        for role in message.role_mentions:
-            if role.name in notify_role_names:
-                # find and edit member notify stat in memory
-                # can ignore sheet since it doesnt include these stats.
-                # disk version is updated with the next major memberlist edit.
-                # read/write to disk for each of these is too costly.
-                memb_id = message.author.id
-                member = memberlist_get(self.current_members, memb_id)
-                if member is None:
-                    return
-                new_value = member.notify_stats[role.name] + 1
-                member.notify_stats[role.name] = new_value

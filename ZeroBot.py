@@ -43,6 +43,7 @@ bot.remove_command("help")
 # callback structure for channel delete event handler.
 # just takes functions, no args available other than channel from event.
 bot.channel_delete_callbacks = []
+bot.on_message_callbacks = []
 
 # callback structure for daily functions, can be used by other modules 
 # to run functions at the daily update time specified in settings
@@ -123,6 +124,10 @@ async def on_command_error(ctx, error):
 async def on_guild_channel_delete(channel):
     for callback in bot.channel_delete_callbacks:
         await callback(channel)
+@bot.event
+async def on_message(message):
+    for callback, args in bot.on_message_callbacks:
+        await(callback(message, *args))
 
 # logging connection status for debugging
 @bot.event

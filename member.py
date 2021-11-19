@@ -57,7 +57,10 @@ notify_role_names = [
     "Notify ROTS",
     "Notify Elite Dungeon (specify ED1, 2 or 3)",
     "Notify Nex",
-    "Notify Raksha"
+    "Notify Raksha",
+    "Notify Dungeoneering Party",
+    "Notify Kerapac",
+    "Notify Croesus"
 ]
 # blank skills and activities to ensure one is always present
 blank_skills = {}

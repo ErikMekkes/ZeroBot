@@ -8,7 +8,7 @@ from discord_slash.model import SlashCommandPermissionType
 from datetime import datetime, timedelta
 import zerobot_common
 import utilities
-from memberlist import memberlist_get
+from memberlist import memberlist_from_disk, memberlist_get
 
 logfile = None
 log_prefix = "slash_commands"
@@ -20,6 +20,59 @@ class Slash(commands.Cog):
         global logfile
         logfile = zerobot_common.logfile
         logfile.log(f"slash commands module loaded and ready.", log_prefix)
+    @cog_ext.cog_slash(
+        name = "host_stats",
+        description = (
+            "Check your hosting stats in clan or add @someone to check theirs."
+        ),
+        guild_ids = [zerobot_common.clan_server_id],
+        default_permission = True,
+        options = [
+            create_option(
+                name = "member",
+                description = "@ a clan member if you want to check theirs",
+                required = False,
+                option_type = 6,
+            )
+        ],
+        permissions = {},
+    )
+    async def host_stats(
+        self, ctx: SlashContext, member: discord.User = None
+    ):
+        # signal to discord that our response might take time
+        await ctx.defer()
+
+        if member is None:
+            msg = "Your hosting stats "
+            member = ctx.author
+        else:
+            msg = f"Hosting stats of {member.display_name} "
+        msg += "according to my information: ```"
+
+        memblist = memberlist_from_disk(zerobot_common.current_members_filename)
+        memb = memberlist_get(memblist, member.id)
+        skip_listing = [
+            "Nex Learner",
+            "Raksha Learner",
+            "Notify Dungeoneering Party",
+        ]
+        total = 0
+        for type, num in memb.notify_stats.items():
+            if type in skip_listing:
+                continue
+            msg += f"{type} : {num}\n"
+            total += num
+        events_started = memb.misc["events_started"]
+        msg += f"\nevents started with -zbot host : {events_started}\n"
+        total += events_started
+        msg += f"\ntotal : {total}```\n"
+            
+        msg += (
+            "(zbot only knows how often you used Notify Tags and "
+            "the `-zbot host` command in the clan discord) "
+        )
+        await ctx.send(msg)
     
     @cog_ext.cog_slash(
         name = "known_inactive",
