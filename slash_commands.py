@@ -26,7 +26,7 @@ class Slash(commands.Cog):
             "Check your hosting stats in clan or add @someone to check theirs."
         ),
         guild_ids = [zerobot_common.clan_server_id],
-        default_permission = True,
+        default_permission = False,
         options = [
             create_option(
                 name = "member",
@@ -35,11 +35,28 @@ class Slash(commands.Cog):
                 option_type = 6,
             )
         ],
-        permissions = {},
+        permissions = {
+            zerobot_common.clan_server_id: [
+                create_permission(
+                    zerobot_common.clan_member_role_id,
+                    SlashCommandPermissionType.ROLE,
+                    True)
+            ]
+        }
     )
     async def host_stats(
         self, ctx: SlashContext, member: discord.User = None
     ):
+        # log command attempt and check if command allowed
+        zerobot_common.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:slashcommand:host_stats"
+        )
+        if zerobot_common.permissions.not_allowed(
+            "host_stats", ctx.channel.id
+        ):
+            await ctx.send("Not allowed in this channel.")
+            return
+
         # signal to discord that our response might take time
         await ctx.defer()
 
