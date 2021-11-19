@@ -128,6 +128,7 @@ async def on_guild_channel_delete(channel):
 async def on_message(message):
     for callback, args in bot.on_message_callbacks:
         await(callback(message, *args))
+    await bot.process_commands(message)
 
 # logging connection status for debugging
 @bot.event
