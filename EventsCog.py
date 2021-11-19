@@ -293,21 +293,16 @@ class EventsCog(commands.Cog):
         self.events.append(event)
 
         # track amount of events hosted per person
-        # find and edit member notify stat in memory
-        # can ignore sheet since it doesnt include these stats.
-        # disk version is updated with the next major memberlist edit.
-        # read/write to disk for each of these is too costly.
         membcog = self.bot.get_cog("MemberlistCog")
-        list_access = await membcog.lock()
-
+        list_access = await membcog.lock(skip_sheet=True)
+        
         memb_id = ctx.author.id
         member = memberlist_get(list_access["current_members"], memb_id)
-        if member is None:
-            return
-        new_value = member.misc["events_started"] + 1
-        member.misc["events_started"] = new_value
+        if member is not None:
+            new_value = member.misc["events_started"] + 1
+            member.misc["events_started"] = new_value
 
-        await membcog.unlock()
+        await membcog.unlock(skip_sheet=True)
     
     @commands.command()
     async def _c_list(self, ctx, *args):

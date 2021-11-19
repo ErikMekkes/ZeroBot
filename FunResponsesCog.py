@@ -22,7 +22,8 @@ memers = [
     "Sanshine",
     "zbot!",
     "Pepelicious!",
-    "Ectarax!"
+    "Ectarax!",
+    "Phagowocyte"
 ]
 def nbr(channel):
     if zerobot_common.memberlist_enabled:
@@ -138,47 +139,46 @@ def who(self, channel):
     if val <= 1:
         return f"{name}!"
 
+async def on_message_funresponse(message, funresponsecog):
+    """
+    This event is triggered for any message received, including our own.
+    Must keep this efficient, return asap if irrelevant.
+    """
+    if funresponsecog.bot.user.id == message.author.id:
+        return
+    name = message.author.display_name
+    text = message.content.lower()
+    channel = message.channel
+    if "zbot" in text:
+        if " ade" in text or "ade " in text:
+            await channel.send(ade(message.channel))
+            return
+        if " nbr" in text:
+            await channel.send(nbr(message.channel))
+            return
+        if " who" in text:
+            await channel.send(who(funresponsecog,channel))
+            return
+        if " when" in text:
+            await channel.send(when(message.channel))
+            return
+        if " will" in text or "should" in text:
+            await channel.send(will(message.channel))
+            return
+        if " you" in text:
+            await channel.send(retaliate(channel, name))
+            return
+        if (
+            " are " in text or 
+            " is " in text
+        ):
+            await channel.send(ask(channel, name))
+            return
 
 class FunResponsesCog(commands.Cog):
     """
-    Handles all the commands for applications.
+    Activates random fun responses to messages.
     """
     def __init__(self, bot):
         self.bot = bot
-    
-    @commands.Cog.listener()
-    async def on_message(self, message):
-        '''
-        This event is triggered for any message received, including our own.
-        Must keep this efficient, return asap if irrelevant.
-        '''
-        if self.bot.user.id == message.author.id:
-            return
-        name = message.author.display_name
-        text = message.content.lower()
-        channel = message.channel
-        if "zbot" in text:
-            if " ade" in text or "ade " in text:
-                await channel.send(ade(message.channel))
-                return
-            if " nbr" in text:
-                await channel.send(nbr(message.channel))
-                return
-            if " who" in text:
-                await channel.send(who(self,channel))
-                return
-            if " when" in text:
-                await channel.send(when(message.channel))
-                return
-            if " will" in text or "should" in text:
-                await channel.send(will(message.channel))
-                return
-            if " you" in text:
-                await channel.send(retaliate(channel, name))
-                return
-            if (
-                " are " in text or 
-                " is " in text
-            ):
-                await channel.send(ask(channel, name))
-                return
+        bot.on_message_callbacks.append((on_message_funresponse, [self]))
