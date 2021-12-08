@@ -9,8 +9,6 @@ def log(msg):
     logfile.log(msg, log_prefix)
 
 reaper_msg = read_file("reaper_message.txt")
-img_file_bytes = open(f"enable_channel_pings.png", "rb")
-discord_img = discord.File(img_file_bytes)
 
 ticket_tool_name = "Zer0Ticket tool"
 
@@ -25,17 +23,16 @@ async def watch_reaper_ticket(message):
     if not "Reaper" in message.content:
         return
     # try to rename channel to ticket opener name
-    try:
-        content = message.content.splitlines()
-        id = int(content[0][8:-1])
-        username = zerobot_common.guild.get_member(id).display_name
-        channel = message.channel
-        await channel.edit(name=username)
-    except:
-        # could not find user
-        pass
+    channel = message.channel
+    content = message.content.splitlines()
+    id = int(content[0][8:-1])
+    username = zerobot_common.guild.get_member(id).display_name
+    await channel.edit(name=username)
     # send extra info
+    img_file_bytes = open(f"enable_channel_pings.png", "rb")
+    discord_img = discord.File(img_file_bytes)
     await channel.send(reaper_msg, file=discord_img)
+    img_file_bytes.close()
 
 class ReaperCrewCog(commands.Cog):
     """
