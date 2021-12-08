@@ -1,4 +1,5 @@
 from discord.ext import commands
+import discord
 from utilities import read_file
 import zerobot_common
 
@@ -8,6 +9,9 @@ def log(msg):
     logfile.log(msg, log_prefix)
 
 reaper_msg = read_file("reaper_message.txt")
+img_file_bytes = open(f"enable_channel_pings.png", "rb")
+discord_img = discord.File(img_file_bytes)
+
 ticket_tool_name = "Zer0Ticket tool"
 
 
@@ -31,7 +35,7 @@ async def watch_reaper_ticket(message):
         # could not find user
         pass
     # send extra info
-    await channel.send(reaper_msg)
+    await channel.send(reaper_msg, file=discord_img)
 
 class ReaperCrewCog(commands.Cog):
     """
