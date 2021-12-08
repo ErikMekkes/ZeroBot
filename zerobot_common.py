@@ -302,7 +302,7 @@ gem_exceptions = ["Alexanderke","Skye","Veteran Member","Elite Member","PvM Spec
 # minimum rank that needs a dpm knowledge check
 gem_req_rank = "Full Member"
 
-enabled_modules = ["ServerWatchCog"]
+enabled_modules = ["ServerWatchCog", "ReaperCrewCog"]
 if memberlist_enabled : enabled_modules.append("MemberlistCog")
 if reaction_roles_enabled : enabled_modules.append("ReactionRolesCog")
 if applications_enabled : enabled_modules.append("ApplicationsCog")

@@ -21,6 +21,7 @@ from FunResponsesCog import FunResponsesCog
 from EventsCog import EventsCog
 from SubmissionsCog import SubmissionsCog
 from ServerWatchCog import ServerWatchCog
+from ReaperCrewCog import ReaperCrewCog
 
 intents = Intents.default()
 intents.members = True
