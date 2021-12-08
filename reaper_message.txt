@@ -12,4 +12,3 @@ Notify pings and friendlybot -host templates are allowed in here, but please don
 
 You should enable discord pings for all messages in your channel. This way you wont miss it if others are interested in helping you.
 You can do this by right clicking your channel and selecting 'All Messages' under Notification Settings:
-https://cdn.discordapp.com/attachments/756056911417311333/918197225182613574/unknown.png
