@@ -362,7 +362,7 @@ async def process_leaving_members(self, leaving_list):
         return
     
     for memb in leaving_list:
-        process_leaving_member(memb, self)
+        await process_leaving_member(self, memb)
 
 class MemberlistCog(commands.Cog):
     """
