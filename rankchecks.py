@@ -11,6 +11,8 @@ match_disc_ingame = {
 	"Supreme PvMer" : ["General"],
 	"PvM Specialists" : ["Captain"],
 	"Elite Member" : ["Captain"],
+	"Zer0 Legend" : ["Lieutenant"],
+	"Zer0 OG" : ["Lieutenant"],
 	"Veteran Member" : ["Lieutenant"],
 	"Advanced Member" : ["Sergeant"],
 	"Full Member" : ["Corporal"],
@@ -34,6 +36,10 @@ parse_discord_rank = {
     "masterclass pvmer" : "MasterClass PvMer",
     "supreme pvmer" : "Supreme PvMer",
     "pvm specialist" : "PvM Specialists",
+	"zer0 legend" : "Zer0 Legend",
+	"legend" : "Zer0 Legend",
+	"zer0 og" : "Zer0 OG",
+	"og" : "Zer0 OG",
     "elite member" : "Elite Member",
     "veteran member" : "Veteran Member",
     "advanced member" : "Advanced Member",
@@ -76,6 +82,8 @@ match_disc_site = {
 	"Supreme PvMer" : ["","Supreme PvMer"],
 	"PvM Specialists" : ["","PvM Specialists"],
 	"Elite Member" : ["","Elite Member"],
+	"Zer0 Legend" : ["","Veteran Member"],
+	"Zer0 OG" : ["","Veteran Member"],
 	"Veteran Member" : ["","Veteran Member"],
 	"Advanced Member" : ["","Advanced Member"],
 	"Full Member" : ["","Full Member"],
@@ -105,7 +113,59 @@ range_dpm_tags = {
     590923403377246208: "Master Range DPM",
     590924088852217856: "Extreme Range DPM"
 }
+extreme_dps_discord_id = 668543463322812451
 
+boss_tags = {
+    674321943247192075,
+    674321787886239779,
+    674322127125479429,
+    808332092823961641,
+    674321305495142452,
+    674321662669488128,
+    674321502082170881,
+    538377429891153920,
+    538377295799386122,
+    538377787803697162,
+    538377081097289730,
+    796009482613162014,
+    796009708275236904,
+    796009893249286195,
+    786653923174907935,
+    538377910533226536,
+    538377553753407488,
+    893774649035468810,
+    893774207337521182,
+    620706392352751627,
+    620706827855986698,
+    634848100900405248,
+    786653717029847060,
+    474659531847237662,
+    761563102697095168,
+    761563422457593876,
+    761562722520268810,
+    761563345370873877,
+    796009428561166376,
+    796009634867052564,
+    796009809367269416,
+    761564324777951272,
+    761564190120476682,
+    893774431120412673,
+    893774921015111690,
+    786653656438931486,
+    761563185026826270,
+    761562491892400138,
+    761563005778526218,
+    761562895669788692,
+    761563271677214730,
+    761563508289962024,
+    796009326095368202,
+    796009582744698940,
+    796009760926203944,
+    761564244901888000,
+    761564152468078632,
+    893774487294734336,
+    893774925976977430,
+}
 
 def update_discord_info(_memberlist):
     """
@@ -134,7 +194,7 @@ def update_discord_info(_memberlist):
         memb.misc["highest_melee"] = ""
         memb.misc["highest_range"] = ""
         for r in usr.roles:
-            if r.id == 668543463322812451:
+            if r.id == extreme_dps_discord_id:
                 memb.misc["highest_mage"] = r.name
                 memb.misc["highest_melee"] = r.name
                 memb.misc["highest_range"] = r.name
