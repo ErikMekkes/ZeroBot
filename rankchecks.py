@@ -256,9 +256,10 @@ def TodosUpdateRanks(memberlist):
                 _need_rank_update.append(memb)
                 continue
         # site rank does not match discord rank
-        if not memb.site_rank in match_disc_site[memb.discord_rank]:
-            _need_rank_update.append(memb)
-            continue
+        if zerobot_common.site_enabled:
+            if not memb.site_rank in match_disc_site[memb.discord_rank]:
+                _need_rank_update.append(memb)
+                continue
         # ingame rank does not match discord rank
         if not memb.rank in match_disc_ingame[memb.discord_rank]:
             _need_rank_update.append(memb)
