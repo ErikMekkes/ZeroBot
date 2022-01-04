@@ -725,7 +725,8 @@ class MemberlistCog(commands.Cog):
 
         # get latest information
         update_discord_info(results.combined_list())
-        zerobot_common.siteops.update_site_info(results.combined_list())
+        if zerobot_common.site_enabled:
+            zerobot_common.siteops.update_site_info(results.combined_list())
         await ctx.send(
             "Found these results, Ingame stats may be outdated, "
             "info for those is from the last daily update:"

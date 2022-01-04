@@ -422,10 +422,6 @@ class ApplicationsCog(commands.Cog):
             "requirements:** (not required for guest access)",
             file=entry_reqs_img
         )
-        entry_perks_img = open(f"application_templates/1-join_perks.png", "rb")
-        entry_perks_img = discord.File(entry_perks_img)
-        entry_perks_text = "**Entry Reqs minimum perks and how to make them:** (not required for guest access)\n"
-        await ctx.channel.send(entry_perks_text, file=entry_perks_img)
         application_instructions = utilities.read_file("application_templates/application_instructions")
         await ctx.channel.send(application_instructions)
 
