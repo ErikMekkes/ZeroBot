@@ -116,9 +116,11 @@ def _Inactives(days):
     today = datetime.utcnow()
     results = list()
     for memb in memberlist:
-        if (memb.name in zerobot_common.inactive_exceptions.keys()):
+        if memb.discord_rank in zerobot_common.inactive_exceptions.keys():
             continue
-        if (memb.last_active == None):
+        if memb.name in zerobot_common.inactive_exceptions.keys():
+            continue
+        if memb.last_active == None:
             days_inactive = today - datetime.strptime(
                 "2020-04-14", utilities.dateformat
             )
@@ -127,7 +129,7 @@ def _Inactives(days):
             )
         else:
             days_inactive = today - memb.last_active
-        if (days_inactive.days >= days):
+        if days_inactive.days >= days:
             memb.days_inactive = days_inactive.days
             results.append(memb)
     
