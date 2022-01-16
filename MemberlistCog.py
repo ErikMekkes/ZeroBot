@@ -30,7 +30,7 @@ import re
 import zerobot_common
 import utilities
 
-from utilities import send_messages
+from utilities import _strToDate, send_messages
 from sheet_ops import (
     clear_sheets,
     color_spreadsheet,
@@ -43,14 +43,15 @@ from rankchecks import (
     TodosInviteIngame,
     TodosJoinDiscord,
     TodosUpdateRanks,
-    update_discord_info,
-    parse_discord_rank
+    update_discord_info
 )
 from clantrack import get_ingame_memberlist, compare_lists
 from searchresult import SearchResult
 from memberembed import member_embed
 import memberlist
 from memberlist import (
+    join_date_cond,
+    memberlist_sort,
     memberlist_sort_name,
     memberlist_sort_clan_xp,
     memberlist_sort_leave_date,
@@ -133,6 +134,92 @@ def _Inactives(days):
     memberlist_sort_clan_xp(results)
     return results
 
+def _Need_Full_Reqs():
+    """
+    Returns a list of players that should have the full member rank by now.
+    Req introduced: 2021-09-27, time given: 3 months
+    """
+    req_start_date = _strToDate("2021-09-27")
+    req_time_days = 90
+    today = datetime.utcnow()
+    mlist = memberlist_from_disk(zerobot_common.current_members_filename)
+    need_full = []
+
+    for memb in mlist:
+        # stored as string
+        join_date = _strToDate(memb.join_date)
+        # skip if memb joined before new reqs
+        if join_date < req_start_date:
+            continue
+        # skip if memb is not a recruit
+        if memb.rank != "Recruit":
+            continue
+        days_elapsed = (today - join_date).days
+        if days_elapsed > req_time_days:
+            need_full.append(memb)
+    
+    # sort results by join date, sort after = less work
+    memberlist_sort(need_full, join_date_cond)
+    return need_full
+    
+def need_full_req_formatter(memb):
+    leng = 12 - len(memb.name)
+    while leng > 0:
+        memb.name += " "
+        leng -= 1
+    return f"{memb.name}  {memb.join_date}  {memb.rank}\n"
+    
+async def post_need_full_reqs(self, ctx):
+    """
+    Posts a list of members who should have the full member rank by now.
+    """
+    pre_msg = [(
+        "These new members have been in the clan for more than 3 months "
+        "and have not shown the full member reqs yet:\n\n"
+    )]
+    post_msg = (
+        "\nThis means they are at risk of being removed for inactivity if "
+        "there is not enough clan space for new members.\n"
+    )
+    need_full = await self.bot.loop.run_in_executor(
+        None, _Need_Full_Reqs
+    )
+    res = (
+        pre_msg
+        + list(map(need_full_req_formatter, need_full))
+        + [post_msg]
+    )
+    await send_multiple(ctx, res, codeblock=True)
+    
+async def post_inactives(self, ctx, days_inactive=30, num_of_inactives=None):
+    """
+    Posts a list of currently inactive members to the specified context.
+        - days_inactive: minimum days without activity to show up in list.
+        - number_of_inactives: size of list to post, ordered by least active.
+    """
+    # get already sorted list of inactives, keep first n, format as line
+    inactives = await self.bot.loop.run_in_executor(
+        None, _Inactives, days_inactive
+    )
+    if num_of_inactives:
+        inactives = inactives[:num_of_inactives]
+    inactives = list(map(lambda memb: memb.inactiveInfo() + "\n", inactives))
+    #create pre msg and header, squish lines into as few msgs as possible
+    pre_msg = [(
+        f"These members have been inactive for {days_inactive} or more days: \n\n"
+    )]
+    post_msg = [(
+        "\nThis means they are at risk of being removed for inactivity if "
+        "there is not enough clan space for new members.\n"
+    )]
+    header = [(
+        "Name         Rank              Join Date  Clan xp    Last "
+        "Active  Site Profile Link                   Discord Name   \n"
+    )]
+    res = (pre_msg + header + inactives + post_msg)
+    # send result in codeblock for looks
+    await send_multiple(ctx, res, codeblock=True)
+
 async def on_message_hostcounter(message, memblistcog):
     """
     callback function for on message event to checks if message is to host 
@@ -158,30 +245,52 @@ async def on_message_hostcounter(message, memblistcog):
             member.notify_stats[role.name] = new_value
     await memblistcog.unlock(skip_sheet=True)
 
-async def send_multiple(ctx, str_list, codeblock=False):
+def split_multiple(content, codeblock=False):
+    """
+    Tries to fit content in as few strings under 2k length as possible.
+    content can be a single string or a list of strings.
+    """
+    #TODO: list case could fit nicer, append whats possible first
+    #TODO: splits are random, could try to respect codeblocks / breaks etc
+    messages = []
+    # single string case
+    if type(content) == str:
+        index = 0
+        while index < len(content):
+            block = content[index:index+1990]
+            messages.append(block)
+            index += 1990
+        if codeblock:
+            return list(map(lambda msg: f"```{msg}```", messages))
+        return messages
+    # list of strings case
+    index = 0
+    while index < len(content):
+        # single message is too large and needs splitting
+        if len(content[index]) > 1990:
+            messages += split_multiple(content[index])
+            index += 1
+        else:
+            msg = ""
+            while (len(msg) + len(content[index])) < 1990:
+                msg += content[index]
+                index += 1
+                if index >= len(content):
+                    break 
+            messages.append(msg)
+    if codeblock:
+        return list(map(lambda msg: f"```{msg}```", messages))
+    return messages
+
+async def send_multiple(ctx, content, codeblock=False):
     """
     Splits up a list of messages and sends them in batches.
     Ensures a batch of messages doesnt exceed discords 2k character limit.
     Should still add check to split up individual strings if too long.
     """
-    message = ""
-    if (codeblock):
-        message += "```"
-    for i in range(0, len(str_list)):
-        if len(message) + len(str_list[i]) < 1990:
-            message += str_list[i]
-        else:
-            if (codeblock):
-                message += "```"
-            await ctx.send(message)
-            if (codeblock):
-                message = "```"
-            else:
-                message = ""
-    # send final message if less than max, (until end of list)
-    if (codeblock):
-        message += "```"
-    await ctx.send(message)
+    messages = split_multiple(content, codeblock)
+    for msg in messages:
+        await ctx.send(msg)
 
 async def warn_duplicates(self):
     dupes = ["duplicates in memberlists:\n"]
@@ -392,6 +501,18 @@ class MemberlistCog(commands.Cog):
         if zerobot_common.daily_mlist_update_enabled:
             bot.daily_callbacks.append((daily_update, [self]))
         bot.on_message_callbacks.append((on_message_hostcounter, [self]))
+        bot.daily_callbacks.append(
+            (
+                post_inactives,
+                [self, zerobot_common.bot_channel2]
+            )
+        )
+        bot.daily_callbacks.append(
+            (
+                post_need_full_reqs,
+                [self, zerobot_common.bot_channel2]
+            )
+        )
     
     async def lock(self, interval=60, message=None, ctx=None, skip_sheet=False):
         """
@@ -963,37 +1084,39 @@ class MemberlistCog(commands.Cog):
         self.logfile.log(
             f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
         )
-        if not(
-            zerobot_common.permissions.is_allowed("inactives", ctx.channel.id)
-        ): return
-
-        if len(args) != 1:
-            await ctx.send(("Needs to be : -zbot inactives <number of days>"))
+        if zerobot_common.permissions.not_allowed("inactives", ctx.channel.id):
             return
-        try:
-            days = int(args[0])
-        except ValueError:
-            await ctx.send(
-                "Days argument has to be a number!\n Needs to be : "
-                "-zbot inactives <number of days>"
-            )
-            return
-        result = await self.bot.loop.run_in_executor(None, _Inactives, days)
-        await ctx.send("Inactive for " + str(days) + " or more days: \n")
-        for i in range(0, len(result),10):
-            if (i == 0):
-                message = (
-                    "```\nName         Rank              Join Date  Clan xp"
-                    "    Last Active  Site Profile Link                   "
-                    "Discord Name   \n"
+        use_msg = (
+            "Shows a list of currently inactive members. "
+            "\n `zbot inactives <number_of_days> <max_amount>`"
+            "\nnumber_of_days : optional, minimum days inactive before being on"
+            " the list. default is 30."
+            "\nmax_amount : optional, max number of people to show. default is "
+            "to show all."
+        )
+        days = 30
+        number = None
+        if len(args) > 0:
+            try:
+                days = int(args[0])
+            except ValueError:
+                await ctx.send(
+                    "number_of_days has to be a number!\n" + use_msg
                 )
-            else:
-                message = "```\n"
-            for memb in range(i,i+10):
-                if (memb >= len(result)) : break
-                message += result[memb].inactiveInfo() + "\n"
-            message += "```"
-            await ctx.send(message)
+                return
+        if len(args) > 1:
+            try:
+                number = int(args[1])
+            except ValueError:
+                await ctx.send("max_amount has to be a number!\n" + use_msg)
+                return
+        if len(args) > 2:
+            await ctx.send(
+                f"{len(args)} arguments added, only using first 2\n" + use_msg
+            )
+        
+        await post_inactives(self, ctx, days, number)
+        await post_need_full_reqs(self, ctx)
     
     @commands.command()
     async def exceptions(self, ctx, *args):
@@ -1107,28 +1230,7 @@ class MemberlistCog(commands.Cog):
                     memb.site_rank = ""
                 await ctx.send(embed=member_embed(memb))
             raise ExistingUserWarning("This person was a member before")
-    
-    async def post_inactives(self, ctx, days_inactive, number_of_inactives):
-        """
-        Posts a list of currently inactive members to the specified context.
-         - days_inactive: minimum days without activity to show up in list.
-         - number_of_inactives: size of list to post, ordered by least active.
-        """
-        message = "\nSuggested inactives to kick if you need to make room:\n"
-        message += (
-            "```Name         Rank              Join Date  Clan xp    Last "
-            "Active  Site Profile Link                   Discord Name   \n"
-        )
-        inactives = await self.bot.loop.run_in_executor(
-            None, _Inactives, days_inactive
-        )
-        for i in range(0, number_of_inactives):
-            if (i >= len(inactives)) : break
-            message += inactives[i].inactiveInfo() + "\n"
-        message += "```"
 
-        await ctx.send(message)
-    
     async def add_member_app(self, ctx, app):
         """
         Adds the member from the application to the memberlist.

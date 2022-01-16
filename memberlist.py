@@ -220,6 +220,10 @@ def hosts_cond(memb1, memb2, asc=True):
     if hosts1 < hosts2:
         return asc
     return not asc
+def join_date_cond(memb_1, memb_2, asc=True):
+    if memb_1.join_date < memb_2.join_date:
+        return asc
+    return not asc
 def leave_date_cond(memb_1, memb_2, asc=True):
     if memb_1.leave_date < memb_2.leave_date:
         return asc
