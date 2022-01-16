@@ -90,6 +90,9 @@ async def on_ready():
     zerobot_common.bot_channel = zerobot_common.guild.get_channel(
         zerobot_common.bot_channel_id
     )
+    zerobot_common.bot_channel2 = zerobot_common.guild.get_channel(
+        zerobot_common.bot_channel2_id
+    )
     # store a lookup dictionary for channel names and ids
     channels = zerobot_common.guild.channels
     chann_dict = {}

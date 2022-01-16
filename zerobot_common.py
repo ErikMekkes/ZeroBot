@@ -84,6 +84,9 @@ guild = None
 # update it in settings.json, ID can be found with right click on channel.
 bot_channel_id = settings.get("bot_channel_id")
 bot_channel = None
+# regular bot commands channel for all members
+bot_channel2_id = settings.get("bot_channel2_id")
+bot_channel2 = None
 
 # You can tell the bot where commands are allowed to be used, do this in this 
 # file by adding channel names or channel ids to the list of a command.
