@@ -170,57 +170,6 @@ def need_full_req_formatter(memb):
         memb.name += " "
         leng -= 1
     return f"{memb.name}  {memb.join_date}  {memb.rank}\n"
-    
-async def post_need_full_reqs(self, ctx):
-    """
-    Posts a list of members who should have the full member rank by now.
-    """
-    pre_msg = [(
-        "These new members have been in the clan for more than 3 months "
-        "and have not shown the full member reqs yet:\n\n"
-    )]
-    post_msg = (
-        "\nThis means they are at risk of being removed for inactivity if "
-        "there is not enough clan space for new members.\n"
-    )
-    need_full = await self.bot.loop.run_in_executor(
-        None, _Need_Full_Reqs
-    )
-    res = (
-        pre_msg
-        + list(map(need_full_req_formatter, need_full))
-        + [post_msg]
-    )
-    await send_multiple(ctx, res, codeblock=True)
-    
-async def post_inactives(self, ctx, days_inactive=30, num_of_inactives=None):
-    """
-    Posts a list of currently inactive members to the specified context.
-        - days_inactive: minimum days without activity to show up in list.
-        - number_of_inactives: size of list to post, ordered by least active.
-    """
-    # get already sorted list of inactives, keep first n, format as line
-    inactives = await self.bot.loop.run_in_executor(
-        None, _Inactives, days_inactive
-    )
-    if num_of_inactives:
-        inactives = inactives[:num_of_inactives]
-    inactives = list(map(lambda memb: memb.inactiveInfo() + "\n", inactives))
-    #create pre msg and header, squish lines into as few msgs as possible
-    pre_msg = [(
-        f"These members have been inactive for {days_inactive} or more days: \n\n"
-    )]
-    post_msg = [(
-        "\nThis means they are at risk of being removed for inactivity if "
-        "there is not enough clan space for new members.\n"
-    )]
-    header = [(
-        "Name         Rank              Join Date  Clan xp    Last "
-        "Active  Site Profile Link                   Discord Name   \n"
-    )]
-    res = (pre_msg + header + inactives + post_msg)
-    # send result in codeblock for looks
-    await send_multiple(ctx, res, codeblock=True)
 
 async def on_message_hostcounter(message, memblistcog):
     """
@@ -505,14 +454,14 @@ class MemberlistCog(commands.Cog):
         bot.on_message_callbacks.append((on_message_hostcounter, [self]))
         bot.daily_callbacks.append(
             (
-                post_inactives,
-                [self, zerobot_common.bot_channel2]
+                self.post_inactives,
+                [zerobot_common.bot_channel2]
             )
         )
         bot.daily_callbacks.append(
             (
-                post_need_full_reqs,
-                [self, zerobot_common.bot_channel2]
+                self.post_need_full_reqs,
+                [zerobot_common.bot_channel2]
             )
         )
     
@@ -1117,8 +1066,59 @@ class MemberlistCog(commands.Cog):
                 f"{len(args)} arguments added, only using first 2\n" + use_msg
             )
         
-        await post_inactives(self, ctx, days, number)
-        await post_need_full_reqs(self, ctx)
+        await self.post_inactives(ctx, days, number)
+        await self.post_need_full_reqs(ctx)
+    
+    async def post_need_full_reqs(self, ctx):
+        """
+        Posts a list of members who should have the full member rank by now.
+        """
+        pre_msg = [(
+            "These new members have been in the clan for more than 3 months "
+            "and have not shown the full member reqs yet:\n\n"
+        )]
+        post_msg = (
+            "\nThis means they are at risk of being removed for inactivity if "
+            "there is not enough clan space for new members.\n"
+        )
+        need_full = await self.bot.loop.run_in_executor(
+            None, _Need_Full_Reqs
+        )
+        res = (
+            pre_msg
+            + list(map(need_full_req_formatter, need_full))
+            + [post_msg]
+        )
+        await send_multiple(ctx, res, codeblock=True)
+        
+    async def post_inactives(self, ctx, days=30, num_of_inactives=None):
+        """
+        Posts a list of currently inactive members to the specified context.
+            - days_inactive: minimum days without activity to show up in list.
+            - number_of_inactives: how many to post, sorted by least active.
+        """
+        # get already sorted list of inactives, keep first n, format as line
+        inactvs = await self.bot.loop.run_in_executor(
+            None, _Inactives, days
+        )
+        if num_of_inactives:
+            inactvs = inactvs[:num_of_inactives]
+        inactvs = list(map(lambda memb: memb.inactiveInfo() + "\n", inactvs))
+        #create pre msg and header, squish lines into as few msgs as possible
+        pre_msg = [(
+            f"These members have been inactive for {days} or more days: \n\n"
+        )]
+        post_msg = [(
+            "\nThis means they are at risk of being removed for inactivity if "
+            "there is not enough clan space for new members.\n"
+        )]
+        header = [(
+            "Name         Rank              Join Date  Clan xp    Last "
+            "Active  Site Profile Link                   Discord Name   \n"
+        )]
+        res = (pre_msg + header + inactvs + post_msg)
+        # send result in codeblock for looks
+        await send_multiple(ctx, res, codeblock=True)
     
     @commands.command()
     async def exceptions(self, ctx, *args):
