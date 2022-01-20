@@ -424,6 +424,19 @@ async def process_leaving_members(self, leaving_list):
     for memb in leaving_list:
         await process_leaving_member(self, memb)
 
+def get_highest_id(self):
+    highest_id = 0
+    for memb in self.current_members:
+        if memb.id > highest_id:
+            highest_id = memb.id
+    for memb in self.old_members:
+        if memb.id > highest_id:
+            highest_id = memb.id
+    for memb in self.banned_members:
+        if memb.id > highest_id:
+            highest_id = memb.id
+    self.highest_id = highest_id
+
 class MemberlistCog(commands.Cog):
     """
     Handles commands related to memberlist changes and starts the daily update.
@@ -446,6 +459,9 @@ class MemberlistCog(commands.Cog):
         self.banned_members = memberlist_from_disk(
             zerobot_common.banned_members_filename
         )
+        # init highest used member id state
+        self.highest_id = 0
+        get_highest_id(self)
 
         self.list_access = {}
 
@@ -513,6 +529,8 @@ class MemberlistCog(commands.Cog):
                 self.banned_members, zerobot_common.banned_members_sheet
             )
             await warnings_from_sheet(self)
+            # check if highest id state changed on sheet
+            get_highest_id(self)
         self.list_access["current_members"] = self.current_members
         self.list_access["old_members"] = self.old_members
         self.list_access["banned_members"] = self.banned_members
@@ -1009,6 +1027,10 @@ class MemberlistCog(commands.Cog):
                     memb.old_names.remove(new_value)
                 if not old_value in memb.old_names:
                     memb.old_names.append(old_value)
+            # verify highest id state if changing id
+            if attribute == "id":
+                if new_value > self.highest_id:
+                    self.highest_id = new_value
         await self.unlock()
 
         if memb is None:
@@ -1276,6 +1298,9 @@ class MemberlistCog(commands.Cog):
         new_member.discord_id = discord_id
         new_member.join_date = today_str
         new_member.last_active = currentDT
+        # set member id and increment state
+        new_member.id = self.highest_id + 1
+        self.highest_id += 1
         list_access["current_members"].append(new_member)
 
         # finished with updating, can release lock
