@@ -113,7 +113,6 @@ async def warnings_from_sheet(self):
     """
     Checks the warnings on the sheet and adds them to the correct member.
     """
-    memberlist = list()
     today = datetime.utcnow()
     zerobot_common.drive_connect()
     warnings_matrix = zerobot_common.warnings_sheet.get_all_values()
