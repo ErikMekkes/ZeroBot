@@ -6,12 +6,13 @@ with some additional highscore stats like clues and wildy kills.
 Is able to very accurately identify new names for people in clan that renamed.
 Does so by comparing ingame memberlist changes and individual member stats.
 """
+import os
 import zerobot_common
 import utilities
 from utilities import int_0
 from logfile import LogFile
 from member import Member, skill_labels, activity_labels
-from memberlist import CompareResult
+from memberlist import CompareResult, memberlist_from_disk
 from exceptions import NotAMember, NotAMemberList
 # external imports
 import requests
@@ -70,6 +71,7 @@ def compare_lists(ingame_members, current_members):
             
             # load old data from last memberlist
             ingame_memb.loadFromOldName(existing_member)
+            #TODO: if not on hiscores also load ingame stats from old name, loadfromold doesnt.
 
             # if last active is not set in future...
             if (
@@ -94,20 +96,23 @@ def compare_lists(ingame_members, current_members):
         except ValueError:
             # not found = member left or renamed to one in joining
             leaving_members.append(current_memb)
-        # found = stayed in clan, already markes as staying with new data.
+        # found = stayed in clan, already handled by PART1 loop.
 
     ## PART 3: Compare leaving and joining to find renames
     # lower than this is a decent chance of a match
     chance_threshold = 2
     for leave in leaving_members:
-        #TODO: check if no runescore = no data found? nothing else to use?
+        # this is a check on current member data, if there was no ingame data before then
+        # there is no information to use to find their new name.
+        #TODO: perhaps there might be some limited info to use, 
+        #    like (previous) name similarity / rank / comments / clan list stats.
+        #TODO: use not(.on_hiscores) after adding it to disk save part of member
         if leave.activities["runescore"][1] == 0:
-            # already know nobody stayed in clan with same name, they wouldnt
-            # be in leaving members if there was. no data to compare, so they
-            # stay assigned to leaving members.
+            # already know nobody stayed in clan with the same name, they wouldnt
+            # be in leaving members if there was. No old data = cant find new name.
             clantrack_log.log(
-                f"Missing data for leaving member : {leave.name}. "
-                "Can not check for renames, assigned as potential leaving member."
+                f"Current member marked as leaving has no stats data : {leave.name}. "
+                "Can not compare with new members for renames, removing from clan."
             )
             continue
         # calculate match chances
@@ -115,11 +120,12 @@ def compare_lists(ingame_members, current_members):
         best_chance = 1000
         non_matches = 0
         for join in joining_members:
-            #TODO: again check if no runescore = no data?
+            #TODO: use not(.on_hiscores) after making it stored on disk
             if join.activities["runescore"][1] == 0:
+                # TODO: this case does have some data from clan list: name, rank, clanxp, kills
                 clantrack_log.log(
                     f"Missing data for {join.name}. Can not check if this is"
-                    f" new name of {leave.name}, skipping this comparison"
+                    f" new name of {leave.name}, skipping this comparison option."
                 )
                 non_matches += 1
                 continue
@@ -274,6 +280,17 @@ def _get_clanmembers(session, ingame_members_list):
         clantrack_log.log("Failed to retrieve clan member list.")
 
 def get_ingame_memberlist():
+    #TODO: should remain disabled until .on_hiscores is disk saved
+    if zerobot_common.use_cached_ingame_data:
+        date_str = datetime.utcnow().strftime(utilities.dateformat)
+        cached_data_file = (
+            "memberlists/current_members/ingame_membs_" + date_str + ".txt"
+        )
+        if os.path.exists(cached_data_file):
+            clantrack_log.log(
+                f"Using cached ingame data from {date_str}..."
+            )
+            return memberlist_from_disk(cached_data_file)
     zerobot_common.drive_connect()
     # start session to try to speed up rs api requests
     session = requests.session()

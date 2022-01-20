@@ -14,6 +14,7 @@ folders = [
     "memberlists/old_members/"
 ]
 
+import traceback
 from utilities import read_file, write_file, int_0, _strToDate, _dateToStr, bracket_parser, boolstr
 from exceptions import NotAMemberList, NotAMember
 from member import Warning, NotAWarningError
@@ -69,7 +70,10 @@ notify_role_names = [
     "Notify ROTS",
     "Notify Elite Dungeon (specify ED1, 2 or 3)",
     "Notify Nex",
-    "Notify Raksha"
+    "Notify Raksha",
+    "Notify Dungeoneering Party",
+    "Notify Kerapac",
+    "Notify Croesus"
 ]
 
 # blank skills and activities to ensure one is always present
@@ -106,6 +110,7 @@ class Member:
         self.discord_name = ""
         self.old_names = list()
         self.last_active = None
+        self.id = 0
         self.warning_points = 0
         self.warnings = list()
         self.note1 = ""
@@ -159,7 +164,9 @@ class Member:
             f"\t{self.profile_link}\t{self.leave_date}"
             f"\t{self.leave_reason}\t{self.referral}\t{str(self.discord_id)}"
             f"\t{self.discord_name}\t{old_names}"
-            f"\t{_dateToStr(self.last_active)}\t{str(self.warning_points)}"
+            f"\t{_dateToStr(self.last_active)}"
+            f"\t{str(self.id)}"
+            f"\t{str(self.warning_points)}"
             f"\t{warnings}"
             f"\t{self.note1}\t{self.note2}\t{self.note3}"
             f"\t{str(self.clan_xp)}\t{str(self.kills)}"
@@ -182,7 +189,6 @@ class Member:
         """
         Reads a member from a string. Used for reading from memberlist on disk.
         member_str: Single line string with member attributes separated by tabs.
-
         output: A Member object.
         """
         memb_info = member_str.split("\t")
@@ -223,11 +229,11 @@ class Member:
         for num,x in enumerate(ast.literal_eval(memb_info[23])):
             memb.notify_stats[notify_role_names[num]] = x
         # load entries into misc per label.
-        for i in range(len(misc_labels) - 1): # LAST CHANGE : -1 = new events_started does not exist yet
+        for i in range(len(misc_labels)):
             memb.misc[misc_labels[i]] = memb_info[i+24]
         # process misc entries further if needed
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
-        memb.misc["events_started"] = 0 # LAST CHANGE : create dummy value for events_started
+        memb.misc["events_started"] = int_0(memb.misc["events_started"])
         return memb
 
 def memberlist_from_string(memberlist_string):
@@ -279,6 +285,7 @@ def batch_update():
             print(f"updated {filename}")
         except Exception:
             print(f"unable to update {filename}")
+            #print(traceback.format_exc())
     #folders
     for folder in folders:
         onlyfiles = [f for f in listdir(folder) if isfile(join(folder, f))]

@@ -1,3 +1,4 @@
+import traceback
 import utilities
 from utilities import read_file, write_file
 from member import Member
@@ -56,7 +57,7 @@ def memberlist_add(memberlist, member):
     element can still be modified after being added.
     """
     if not isinstance(member, Member):
-        text = f"Object to append to list is not of Member: {str(member)}"
+        text = f"Object to append to list is not of Member: {str(member)}\n"
         raise NotAMember(text)
     memberlist.append(member)
 def memberlist_remove(memberlist, member):
@@ -94,7 +95,7 @@ def memberlist_to_disk(memberlist, filename):
     (\n) characters with attributes separated by tabs.
     """
     if not isinstance(memberlist, list):
-        text = f"Object to be written to disk is not of list[Member]."
+        text = f"Object to be written to disk is not of list[Member].\n"
         raise NotAMemberList(text)
     return write_file(memberlist_to_string(memberlist), filename)
 def memberlist_from_disk(filename):
@@ -123,11 +124,12 @@ def memberlist_from_string(memberlist_string):
             try:
                 result.append(Member.from_string(memb_str))
             except Exception as ex:
-                text = f"String to be read is not a Member: {memb_str}"
+                text = f"String to be read is not a Member: {memb_str}\n"
+                print(traceback.format_exc())
                 raise NotAMember(text)
         return result
     except Exception as ex:
-        text = f"String to be read as memberlist is not of list[Member]. {ex}"
+        text = f"String to be read as memberlist is not of list[Member]. {ex}\n"
         raise NotAMemberList(text)
 def memberlist_to_string(memberlist):
     """
@@ -140,7 +142,7 @@ def memberlist_to_string(memberlist):
     if not isinstance(memberlist, list):
         text = (
             f"Object to be converted to a memberlist string is not of "
-            f"list[Member]."
+            f"list[Member].\n"
         )
         raise NotAMemberList(text)
     mlist = []
@@ -148,7 +150,7 @@ def memberlist_to_string(memberlist):
         if not isinstance(memb, Member):
             text = (
                 f"Object in memberlist to be converted to a member string is "
-                f"not of Member: {str(memb)}"
+                f"not of Member: {str(memb)}\n"
             )
             raise NotAMember(text)
         mlist.append(memb.to_string())
