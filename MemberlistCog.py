@@ -621,6 +621,18 @@ class MemberlistCog(commands.Cog):
             else:
                 res += w
         await target.send(res)
+
+    @commands.command()
+    async def reload_data(self, ctx):
+        """
+        Very simple reload to get sheet changes.
+
+        disk data is only loaded on bot startup, should not edit,
+        maybe only when bot is down
+        """
+        await self.lock()
+        await self.unlock()
+        await ctx.send("Done")
     
     @commands.command()
     async def updatelist(self, ctx):
