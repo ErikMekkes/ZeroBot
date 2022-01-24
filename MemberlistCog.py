@@ -424,18 +424,27 @@ async def process_leaving_members(self, leaving_list):
     for memb in leaving_list:
         await process_leaving_member(self, memb)
 
-def get_highest_id(self):
+def get_highest_ids(self):
+    # could switch to highest unused id but thats unnecessary complexity atm
     highest_id = 0
+    highest_entry_id = 0
     for memb in self.current_members:
         if memb.id > highest_id:
             highest_id = memb.id
+        if memb.entry_id > highest_entry_id:
+            highest_entry_id = memb.entry_id
     for memb in self.old_members:
         if memb.id > highest_id:
             highest_id = memb.id
+        if memb.entry_id > highest_entry_id:
+            highest_entry_id = memb.entry_id
     for memb in self.banned_members:
         if memb.id > highest_id:
             highest_id = memb.id
+        if memb.entry_id > highest_entry_id:
+            highest_entry_id = memb.entry_id
     self.highest_id = highest_id
+    self.highest_entry_id = highest_entry_id
 
 class MemberlistCog(commands.Cog):
     """
@@ -461,7 +470,8 @@ class MemberlistCog(commands.Cog):
         )
         # init highest used member id state
         self.highest_id = 0
-        get_highest_id(self)
+        self.highest_entry_id = 0
+        get_highest_ids(self)
 
         self.list_access = {}
 
@@ -529,8 +539,8 @@ class MemberlistCog(commands.Cog):
                 self.banned_members, zerobot_common.banned_members_sheet
             )
             await warnings_from_sheet(self)
-            # check if highest id state changed on sheet
-            get_highest_id(self)
+            # check if highest id states changed on sheet
+            get_highest_ids(self)
         self.list_access["current_members"] = self.current_members
         self.list_access["old_members"] = self.old_members
         self.list_access["banned_members"] = self.banned_members
@@ -1031,6 +1041,9 @@ class MemberlistCog(commands.Cog):
             if attribute == "id":
                 if new_value > self.highest_id:
                     self.highest_id = new_value
+            if attribute == "entry_id":
+                if new_value > self.highest_entry_id:
+                    self.highest_entry_id = new_value
         await self.unlock()
 
         if memb is None:
@@ -1301,6 +1314,8 @@ class MemberlistCog(commands.Cog):
         # set member id and increment state
         new_member.id = self.highest_id + 1
         self.highest_id += 1
+        new_member.entry_id = self.highest_entry_id + 1
+        self.highest_entry_id += 1
         list_access["current_members"].append(new_member)
 
         # finished with updating, can release lock

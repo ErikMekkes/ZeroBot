@@ -111,6 +111,7 @@ class Member:
         self.old_names = list()
         self.last_active = None
         self.id = 0
+        self.entry_id = 0
         self.warning_points = 0
         self.warnings = list()
         self.note1 = ""
@@ -166,6 +167,7 @@ class Member:
             f"\t{self.discord_name}\t{old_names}"
             f"\t{_dateToStr(self.last_active)}"
             f"\t{str(self.id)}"
+            f"\t{str(self.entry_id)}"
             f"\t{str(self.warning_points)}"
             f"\t{warnings}"
             f"\t{self.note1}\t{self.note2}\t{self.note3}"
@@ -189,14 +191,15 @@ class Member:
         """
         Reads a member from a string. Used for reading from memberlist on disk.
         member_str: Single line string with member attributes separated by tabs.
+
         output: A Member object.
         """
         memb_info = member_str.split("\t")
         memb = Member(
             memb_info[0],
             memb_info[1],
-            int_0(memb_info[19]),
-            int_0(memb_info[20])
+            int_0(memb_info[20]),
+            int_0(memb_info[21])
         )
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
@@ -215,22 +218,23 @@ class Member:
         else :
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
-        memb.warning_points = int_0(memb_info[14])
-        warnings = bracket_parser(memb_info[15])
+        memb.id = int_0(memb_info[14])
+        memb.warning_points = int_0(memb_info[15])
+        warnings = bracket_parser(memb_info[16])
         for w in warnings:
             memb.warnings.append(Warning.from_str(w))
-        memb.note1 = memb_info[16]
-        memb.note2 = memb_info[17]
-        memb.note3 = memb_info[18]
-        for num,x in enumerate(ast.literal_eval(memb_info[21])):
-            memb.skills[skill_labels[num]] = x
+        memb.note1 = memb_info[17]
+        memb.note2 = memb_info[18]
+        memb.note3 = memb_info[19]
         for num,x in enumerate(ast.literal_eval(memb_info[22])):
-            memb.activities[activity_labels[num]] = x
+            memb.skills[skill_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[23])):
+            memb.activities[activity_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[24])):
             memb.notify_stats[notify_role_names[num]] = x
         # load entries into misc per label.
         for i in range(len(misc_labels)):
-            memb.misc[misc_labels[i]] = memb_info[i+24]
+            memb.misc[misc_labels[i]] = memb_info[i+25]
         # process misc entries further if needed
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         memb.misc["events_started"] = int_0(memb.misc["events_started"])

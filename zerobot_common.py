@@ -213,7 +213,7 @@ if sheet_memberlist_enabled:
 # sheet_ops.py to read the sheet. This is why you're careful with the layout.
 class SheetParams:
     start_col = "A"
-    end_col = "S"
+    end_col = "T"
     # number of header rows on the memberlist sheets
     header_rows = 1
     # range for header data
@@ -221,11 +221,11 @@ class SheetParams:
     # header entries for the memberlist sheets
     header_entries = [
             "Name","Ingame Rank","Discord Rank","Site Rank","Join Date","Passed Gem","Site Profile","Leave Date",
-            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","ID","Warning Points","Note1","Note2","Note3"]
+            "Leave Reason","Referral","Discord ID","Discord Name","Old Names","Last Active","ID","Entry ID","Warning Points","Note1","Note2","Note3"]
     update_header = [
         "AUTOMATIC", "UPDATE IN", "5 MINUTES", "S T O P", "EDITING!",
         "! - ! - !", "!", "!", "!", "S T O P", "EDITING!", "! - ! - !", "!", "!",
-        "!", "!", "S T O P", "EDITING!", "! - ! - !"
+        "!", "!", "!", "S T O P", "EDITING!", "! - ! - !"
     ]
     @staticmethod
     def range_full(list_length=550):

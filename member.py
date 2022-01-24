@@ -150,6 +150,7 @@ class Member:
         self.note2 = ""
         self.note3 = ""
         self.id = 0
+        self.entry_id = 0
         self.clan_xp = clan_xp
         self.kills = kills
         # skill xp and activity score dicts, guarantees presence.
@@ -228,6 +229,7 @@ class Member:
             f"\t{self.discord_name}\t{old_names}"
             f"\t{_dateToStr(self.last_active)}"
             f"\t{str(self.id)}"
+            f"\t{str(self.entry_id)}"
             f"\t{str(self.warning_points)}"
             f"\t{warnings}"
             f"\t{self.note1}\t{self.note2}\t{self.note3}"
@@ -258,8 +260,8 @@ class Member:
         memb = Member(
             memb_info[0],
             memb_info[1],
-            int_0(memb_info[20]),
-            int_0(memb_info[21])
+            int_0(memb_info[21]),
+            int_0(memb_info[22])
         )
         memb.discord_rank = memb_info[2]
         memb.site_rank = memb_info[3]
@@ -279,22 +281,23 @@ class Member:
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
         memb.id = int_0(memb_info[14])
-        memb.warning_points = int_0(memb_info[15])
-        warnings = bracket_parser(memb_info[16])
+        memb.entry_id = int_0(memb_info[15])
+        memb.warning_points = int_0(memb_info[16])
+        warnings = bracket_parser(memb_info[17])
         for w in warnings:
             memb.warnings.append(Warning.from_str(w))
-        memb.note1 = memb_info[17]
-        memb.note2 = memb_info[18]
-        memb.note3 = memb_info[19]
-        for num,x in enumerate(ast.literal_eval(memb_info[22])):
-            memb.skills[skill_labels[num]] = x
+        memb.note1 = memb_info[18]
+        memb.note2 = memb_info[19]
+        memb.note3 = memb_info[20]
         for num,x in enumerate(ast.literal_eval(memb_info[23])):
-            memb.activities[activity_labels[num]] = x
+            memb.skills[skill_labels[num]] = x
         for num,x in enumerate(ast.literal_eval(memb_info[24])):
+            memb.activities[activity_labels[num]] = x
+        for num,x in enumerate(ast.literal_eval(memb_info[25])):
             memb.notify_stats[notify_role_names[num]] = x
         # load entries into misc per label.
         for i in range(len(misc_labels)):
-            memb.misc[misc_labels[i]] = memb_info[i+25]
+            memb.misc[misc_labels[i]] = memb_info[i+26]
         # process misc entries further if needed
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         memb.misc["events_started"] = int_0(memb.misc["events_started"])
@@ -321,6 +324,7 @@ class Member:
         self.old_names = other.old_names
         self.last_active = other.last_active
         self.id = other.id
+        self.entry_id = other.entry_id
         self.warning_points = other.warning_points
         self.warnings = other.warnings
         self.note1 = other.note1
@@ -359,12 +363,13 @@ class Member:
             memb.old_names = memb_info[12].split(',')
         memb.last_active = _strToDate(memb_info[13])
         memb.id = int_0(memb_info[14])
+        memb.entry_id = int_0(memb_info[15])
         # might not be up to date anymore, is updated separately while
         # loading their actual warnings from another sheet.
-        memb.warning_points = int_0(memb_info[15])
-        memb.note1 = memb_info[16]
-        memb.note2 = memb_info[17]
-        memb.note3 = memb_info[18]
+        memb.warning_points = int_0(memb_info[16])
+        memb.note1 = memb_info[17]
+        memb.note2 = memb_info[18]
+        memb.note3 = memb_info[19]
         return memb
     def to_sheet(self):
         """
@@ -394,6 +399,7 @@ class Member:
             old_names_str,
             _dateToStr(self.last_active),
             str(self.id),
+            str(self.entry_id),
             str(self.warning_points),
             self.note1,
             self.note2,
@@ -402,8 +408,8 @@ class Member:
         return memb_info
     def load_sheet_changes(self, other):
         """
-        Load all the sheet data.
-        Assumes there was a match on name, profile link or discord_id.
+        Load all the sheet data from other into self.
+        Does not check if member matches, assumes its the one you want.
         """
         self.name = other.name
         self.rank = other.rank
@@ -420,6 +426,7 @@ class Member:
         self.old_names = other.old_names
         self.last_active = other.last_active
         self.id = other.id
+        self.entry_id = other.entry_id
         # might not be up to date anymore, is updated separately while
         # loading their actual warnings from another sheet.
         self.warning_points = other.warning_points
