@@ -279,7 +279,7 @@ async def warn_duplicates(self):
                     f"entry id {m.entry_id}\n"
                 )
     res.append(
-        "It is possible to remove memberlist entries with /remove_member."
+        "It is possible to remove memberlist entries with /remove_member.\n"
     )
 
     # unmarked rejoiner check
