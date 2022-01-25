@@ -95,19 +95,14 @@ def load_sheet_changes(memberlist, sheet):
     """
     sheet_list = memberlist_from_sheet(sheet)
     for x in sheet_list:
-        # try name matching
-        member = memberlist_get(memberlist, x.name)
-        # try profile link matching if no result yet
-        if member is None and valid_profile_link(x.profile_link):
-            member = memberlist_get(memberlist, x.profile_link)
-        # try discord id matching if no result yet
-        if member is None and valid_discord_id(x.discord_id):
-            member = memberlist_get(memberlist, x.discord_id)
-        # if no existing match found at all, add to memberlist
+        # for existing members there should be an entry with matching id
+        member = memberlist_get(memberlist, x.entry_id, type="entry_id")
         if member is None:
+            # no existing match found, add to memberlist
             memberlist.append(x)
-            continue
-        member.load_sheet_changes(x)
+        else:
+            # match found, load sheet data
+            member.load_sheet_changes(x)
 
 async def warnings_from_sheet(self):
     """

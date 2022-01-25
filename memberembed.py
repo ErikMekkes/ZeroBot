@@ -83,13 +83,22 @@ def member_embed(member):
         last_active_str = member.last_active.strftime('%Y-%m-%d')
     else:
         last_active_str = "Unknown"
+    
+    if zerobot_common.site_enabled:
+        site_str = (
+            f"**Site Profile :** {member.profile_link}\n"
+            f"**Site Rank :** {member.site_rank}\n"
+        )
+    else:
+        site_str = ""
 
     embed = discord.Embed()
     embed.set_author(name = f"{member.name} - {member.status}", icon_url = avatar_url)
     
     embed.description = (
         f"**Discord :** {mention}\u2001({member.discord_id})\n"
-        f"**Site Profile :** {member.profile_link}\n"
+        f"**Member ID:** {member.id}\u2001\u2001"
+        f"**Memberlist Entry ID:** {member.entry_id}\n"
 
         f"**Join Date :** {member.join_date}\u2001\u2001"
         f"**Last Active :** {last_active_str}\u2001\u2001"
@@ -99,8 +108,8 @@ def member_embed(member):
         f"**dps tags :** {gem_str}\n"
 
         f"**{rank_prefix}Ingame Rank :** {ingame_rank_str}\u2001\u2005"
-        f"**Site Rank :** {member.site_rank}\n"
         f"**Discord Rank :** {discord_rank_str}\u2001\u2001\n"
+        f"{site_str}"
         f"{old_names}"
         f"{leave_str}"
         f"{note1}"

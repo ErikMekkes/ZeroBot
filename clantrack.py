@@ -51,9 +51,11 @@ def compare_lists(ingame_members, current_members):
     ## PART 1: find possible joining members, load new data if stayed in clan
     # loop through ingame members list, try to find in current members list
     for ingame_memb in ingame_membs:
-        try:
-            index = current_membs.index(ingame_memb)
-        except ValueError:
+        existing_member = None
+        for cm in current_membs:
+            if cm.name == ingame_memb.name:
+                existing_member = cm
+        if existing_member is None:
             # not found = new ingame member or someone renamed to this
             ingame_memb.join_date = datetime.utcnow().strftime(
                 utilities.dateformat
@@ -62,7 +64,7 @@ def compare_lists(ingame_members, current_members):
             joining_members.append(ingame_memb)
         else:
             # found = just joined today or stayed in clan
-            existing_member = current_membs[index]
+
             # if the rank was needs invite, they joined the clan ingame today.
             if (existing_member.rank == "needs invite"):
                 just_joined = True
@@ -91,10 +93,11 @@ def compare_lists(ingame_members, current_members):
     ## PART 2: find possible leaving members
     # loop through current members list, try to find in ingame members list
     for current_memb in current_membs:
-        try:
-            index = ingame_membs.index(current_memb)
-        except ValueError:
-            # not found = member left or renamed to one in joining
+        found = False
+        for im in ingame_membs:
+            if im.name == current_memb.name: found = True
+        if not(found):
+            # member left or renamed to one in joining
             leaving_members.append(current_memb)
         # found = stayed in clan, already handled by PART1 loop.
 
@@ -179,10 +182,22 @@ def compare_lists(ingame_members, current_members):
     
     ## PART 4: sort out renamed and members who still needed invites in lists.
     for memb in renamed_members:
-        # renamed should be taken out of joining and leaving
+        # renamed = joining, with entry id set from leave so this should work
         joining_members.remove(memb)
+        leaving_members.remove(memb)
+        continue
+        # remove from joining
+        for jm in joining_members:
+            if jm.name == memb.name:
+                joining_members.remove(jm)
+                break # otherwise its removal while iterating
+        # remove from leaving
         old_name = memb.old_names[len(memb.old_names)-1]
-        leaving_members.remove(old_name)
+        for lm in leaving_members:
+            if lm.name == old_name:
+                leaving_members.remove(lm)
+                break # otherwise its removal while iterating
+    
     # anyone with needs invite rank should be assigned as staying, not leaving
     leaving = leaving_members.copy()
     for memb in leaving:
@@ -241,7 +256,12 @@ def _get_member_data(member, session=None, attempts=0):
     else:
         clantrack_log.log(f"Failed to get member data : {member.name}")
 
-def _get_clanmembers(session, ingame_members_list):
+def _get_clanmembers(
+    session,
+    ingame_members_list,
+    highest_id,
+    highest_entry_id
+):
     clantrack_log.log(f"Starting clan memberlist retrieval...")
     if not isinstance(ingame_members_list, list):
         text = (
@@ -268,18 +288,22 @@ def _get_clanmembers(session, ingame_members_list):
             # (char 32) normal spaces
             memb_str = memb_str.replace(" "," ")
             memb_info = memb_str.split(",")
-            ingame_members_list.append(
-                Member(
-                    memb_info[0], 
-                    memb_info[1], 
-                    int_0(memb_info[2]), 
-                    int_0(memb_info[3]))
+            memb = Member(
+                memb_info[0], 
+                memb_info[1], 
+                int_0(memb_info[2]), 
+                int_0(memb_info[3])
             )
+            memb.id = highest_id
+            highest_id += 1
+            memb.entry_id = highest_entry_id
+            highest_entry_id += 1
+            ingame_members_list.append(memb)
         clantrack_log.log(f"Retrieved clan memberlist.")
     else:
         clantrack_log.log("Failed to retrieve clan member list.")
 
-def get_ingame_memberlist():
+def get_ingame_memberlist(highest_id: int, highest_entry_id: int):
     #TODO: should remain disabled until .on_hiscores is disk saved
     if zerobot_common.use_cached_ingame_data:
         date_str = datetime.utcnow().strftime(utilities.dateformat)
@@ -295,7 +319,7 @@ def get_ingame_memberlist():
     # start session to try to speed up rs api requests
     session = requests.session()
     ingame_members_list = list()
-    _get_clanmembers(session, ingame_members_list)
+    _get_clanmembers(session, ingame_members_list, highest_id, highest_entry_id)
     
     # get updated stats for each member
     clantrack_log.log(f"Retrieving individual stats for members in clan...")

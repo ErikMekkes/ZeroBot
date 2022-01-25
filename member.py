@@ -167,16 +167,13 @@ class Member:
         self.sheet = None
         self.on_hiscores = False
     def __eq__(self, other):
-        #TODO: use matches_id instead
-        if isinstance(other, str):
-            # if string, compare to name
-            return (self.name.lower() == other.lower())
-        if not isinstance(other, Member):
-            # don't attempt to compare against other types
-            return False
-        # Names in RS are unique, case insensitive
-        return (self.name.lower() == other.name.lower())
-    def matches_id(self, id):
+        """
+        Used for native comparison and other functions like list.remove(), 
+        all members have a unique entry_id. For other comparisons look up a
+        member first, use that member object or the custom functions below.
+        """
+        return self.entry_id == other.entry_id
+    def matches_id(self, id, type=None):
         """
         Returns True iff id matches one of the unique ids of this member.
         The id must be either:
@@ -184,13 +181,22 @@ class Member:
         - A valid profile link, string url (https://zer0pvm.com/members/2790316)
         - A valid ingame name, string of 1 to 12 characters, case insensitive
         """
-        if valid_discord_id(id):
+        if type is None:
+            if valid_discord_id(id):
+                return self.discord_id == id
+            if valid_profile_link(id):
+                return self.profile_link == id
+            if isinstance(id, str):
+                return (self.name.lower() == id.lower())
+            return False
+        if type == "id":
+            return self.id == id
+        if type == "entry_id":
+            return self.entry_id == id
+        if type == "discord_id":
             return self.discord_id == id
-        if valid_profile_link(id):
-            return self.profile_link == id
-        if isinstance(id, str):
-            return (self.name.lower() == id.lower())
-        return False
+        if type == "name":
+            return self.name == id
     def __repr__(self):
         return str(self)
     def __str__(self):
@@ -515,19 +521,13 @@ class Member:
                 pow(hpxp_diff,2)
                 )
         )
-    def rankInfo(self):
-        discord_rank = self.discord_rank
-        if (self.discord_rank == ""):
-            discord_rank = "Unknown"
-        site_rank = self.site_rank
-        if (self.site_rank == ""):
-            site_rank = "Unknown"
-        message = (
-            f"{self.name} - ingame: {self.rank}, discord : {discord_rank}, "
-            f"site: {site_rank}, passed gem: {self.passed_gem}"
-        )
-        message += "\n"
-        return message
+    def name_fixed_length(self):
+        #TODO: make attribute and init / update it whenever changed
+        res = self.name
+        max_name_length = 12
+        for _ in range(max_name_length - len(self.name)):
+            res += " "
+        return res
     def bannedInfo(self):
         """
         Single line string containing info on a banned member.

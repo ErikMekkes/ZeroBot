@@ -92,6 +92,111 @@ class Slash(commands.Cog):
         await ctx.send(msg)
     
     @cog_ext.cog_slash(
+        name = "remove_member",
+        description = (
+            "Removes a member from the memberlist by entry_id."
+        ),
+        guild_ids = [zerobot_common.clan_server_id],
+        default_permission = False,
+        options = [
+            create_option(
+                name = "entry_id",
+                description = "entry_id number of memberlist entry to remove",
+                required = True,
+                option_type = 4
+            ),
+        ],
+        permissions = {
+            zerobot_common.clan_server_id: [
+                create_permission(
+                    zerobot_common.staff_role_id,
+                    SlashCommandPermissionType.ROLE,
+                    True)
+            ]
+        }
+    )
+    async def remove_member(
+        self, ctx: SlashContext, entry_id: int
+    ):
+        """
+        Removes a member from the memberlist by entry_id.
+        Only able to be used by staff members, in any channel.
+        """
+        # signal to discord that our response might take time
+        await ctx.defer()
+
+        memblist = self.bot.get_cog("MemberlistCog")
+        if memblist is None:
+            await ctx.send("zbot error: memberlist module not found.")
+            logfile.log("memberlist module not found")
+            return
+        
+        memb = await memblist.remove_entry(entry_id)
+        if memb is None:
+            await ctx.send(f"Could not find {entry_id} on the memberlists")
+        else:
+            await ctx.send(f"Removed {memb.name} from {memb.sheet}")
+    
+    @cog_ext.cog_slash(
+        name = "edit_member_id",
+        description = (
+            "Set a new id for a member on the memberlists."
+        ),
+        guild_ids = [zerobot_common.clan_server_id],
+        default_permission = False,
+        options = [
+            create_option(
+                name = "current_id",
+                description = "id number of member to edit",
+                required = True,
+                option_type = 4
+            ),
+            create_option(
+                name = "new_id",
+                description = "new id number for the member",
+                required = True,
+                option_type = 4
+            ),
+        ],
+        permissions = {
+            zerobot_common.clan_server_id: [
+                create_permission(
+                    zerobot_common.staff_role_id,
+                    SlashCommandPermissionType.ROLE,
+                    True)
+            ]
+        }
+    )
+    async def edit_member_id(
+        self, ctx: SlashContext, current_id: int, new_id: int
+    ):
+        """
+        Sets new_id as the id of all memberlist entries with id = current_id.
+        Only able to be used by staff members, in any channel.
+        """
+        # signal to discord that our response might take time
+        await ctx.defer()
+
+        memblist = self.bot.get_cog("MemberlistCog")
+        if memblist is None:
+            await ctx.send("zbot error: memberlist module not found.")
+            logfile.log("memberlist module not found")
+            return
+
+        edits = await memblist.edit_id(current_id, new_id)
+        if len(edits) == 0:
+            await ctx.send(f"Could not find {current_id} on the memberlists")
+        else:
+            msg = (
+                f"```{new_id} has been set as the new id for all {len(edits)} "
+                f"entries of {current_id}:\n"
+            )
+            for n in edits:
+                msg += f" {n[0]} : {n[1]}, entry {n[2]}\n"
+            msg += "```"
+            await ctx.send(msg)
+    
+    @cog_ext.cog_slash(
         name = "known_inactive",
         description = (
             "Lets you set a current member as known inactive "
@@ -127,7 +232,7 @@ class Slash(commands.Cog):
     ):
         """
         Sets a member as known inactive for a number of days.
-        Allowed for owner/admin/staff member, in any channel.
+        Only able to be used by staff members, in any channel.
         """
         # signal to discord that our response might take time
         await ctx.defer()

@@ -243,32 +243,91 @@ async def send_multiple(ctx, content, codeblock=False):
     for msg in messages:
         await ctx.send(msg)
 
+def add_dupe(list, dupe):
+    if dupe is None: return False
+
+    in_list = False
+    for m in list:
+        if m.entry_id == dupe.entry_id: in_list = True
+    if not(in_list):
+        list.append(dupe)
+        return True
+    return False
+
 async def warn_duplicates(self):
-    dupes = ["duplicates in memberlists:\n"]
+    res = ["duplicates in current memberlist:\n"]
+    dupes = []
+    # straight duplicate check
     for memb in self.current_members:
-        dupe = memberlist_get(self.old_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"current: {memb.name} old: {dupe.name}\n")
+        for m in self.current_members:
+            if memb.entry_id == m.entry_id:
+                continue
+            if memb.name == m.name and add_dupe(dupes, m):
+                res.append(
+                    f" name duplicate in current members: {m.name}, "
+                    f"entry id {m.entry_id}\n"
+                )
+    for memb in self.current_members:
+        for m in self.current_members:
+            if memb.entry_id == m.entry_id:
+                continue
+            if memb.discord_id == 0:
+                continue # no need to check
+            if memb.discord_id == m.discord_id and add_dupe(dupes, m):
+                res.append(
+                    f" discord_id duplicate in current members: {m.discord_id}, "
+                    f"entry id {m.entry_id}\n"
+                )
+    res.append(
+        "It is possible to remove memberlist entries with /remove_member."
+    )
+
+    # unmarked rejoiner check
+    res.append(
+        "\nmight have rejoined (different member ids but they look similar):\n"
+    )
+    for memb in self.current_members:
+        for m in self.old_members:
+            if memb.id == m.id:
+                continue # already marked as known rejoiner
+            if memb.name == m.name:
+                res.append(
+                    f" did current member id {memb.id}, old member id {m.id} "
+                    f"rejoin? same name: {m.name}\n"
+                )
+            if memb.discord_id == 0:
+                continue # no need to check
+            if memb.discord_id == m.discord_id:
+                res.append(
+                    f" did current member id {memb.id}, old member id {m.id} "
+                    f"rejoin? same discord_id: {m.discord_id}\n"
+                )
+    res.append(
+        "For rejoining members, re-use their member id from the old member "
+        "list. Use /edit_member_id to give them the same member id as before. "
+        "This lets zbot know they rejoined. (do not remove the old member,"
+        "leave the info on the old members list intact)\n"
+    )
+    
+    # got past banlist check
+    res.append(
+        "\nmight have sneakily gotten past our banlist:\n"
+    )
+    dupes = []
+    for memb in self.current_members:
+        # discord_id is on banlist
         dupe = memberlist_get(self.banned_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"current: {memb.name} bannned: {dupe.name}\n")
-    for memb in self.old_members:
-        dupe = memberlist_get(self.current_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"old: {memb.name} current: {dupe.name}\n")
-        dupe = memberlist_get(self.banned_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"old: {memb.name} bannned: {dupe.name}\n")
-    for memb in self.banned_members:
-        dupe = memberlist_get(self.current_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"banned: {memb.name} current: {dupe.name}\n")
-        dupe = memberlist_get(self.old_members, memb.discord_id)
-        if dupe is not None:
-            dupes.append(f"banned: {memb.name} old: {dupe.name}\n")
-    if len(dupes) == 1:
-        dupes.append("No duplicates found.")
-    await send_multiple(zerobot_common.bot_channel, dupes, codeblock=True)
+        if add_dupe(dupes, dupe):
+            res.append(f"shared discord_id {memb.discord_id}, current: {memb.name} bannned: {dupe.name}\n")
+        # name is on banlist
+        # name is in banlist.member.oldnames
+        # member.oldnames on banlist
+    
+    #TODO: check for entry_id dupes, these should not happen at all.
+    #    id dupes are expected from rejoiners, cant check if actual rejoiner.
+    #    maybe occasionally run a manual check / separate command to verify.
+    #TODO: could check if old members on banlist
+    await send_multiple(zerobot_common.bot_channel, res, codeblock=True)
 
 
 async def daily_update(self):
@@ -295,7 +354,7 @@ async def daily_update(self):
 
     # retrieve the latest ingame data as a new concurrent ask
     ingame_members = await self.bot.loop.run_in_executor(
-        None, get_ingame_memberlist
+        None, get_ingame_memberlist, self.highest_id, self.highest_entry_id
     )
     # backup ingame members right away, nice for testing
     date_str = datetime.utcnow().strftime(utilities.dateformat)
@@ -364,7 +423,7 @@ async def daily_update(self):
     to_join_discord = TodosJoinDiscord(self.current_members)
     await send_multiple(zerobot_common.bot_channel, to_join_discord)
     to_update_rank = TodosUpdateRanks(self.current_members)
-    await send_multiple(zerobot_common.bot_channel, to_update_rank)
+    await send_multiple(zerobot_common.bot_channel, to_update_rank, codeblock=True)
 
 async def process_leaving_member(self, memb):
     self.logfile.log(
@@ -815,7 +874,7 @@ class MemberlistCog(commands.Cog):
             "id: ingame name, discord_id or profile_link>"
         )
         if len(args) == 0:
-            await ctx.send("No enough arguments\n" + use_msg)
+            await ctx.send("Not enough arguments\n" + use_msg)
             return
         id = " ".join(args).lower()
         try:
@@ -831,19 +890,22 @@ class MemberlistCog(commands.Cog):
         if (len(results.combined_list()) == 0):
             await ctx.send("No results found in search.")
             return
-        if (len(results.combined_list()) >= 4):
-            await ctx.send("Too many results found in search.")
-            return
+        msg = (
+            "Found these results, ingame stats may be outdated, "
+            "info for those is from the last daily update:\n"
+        )
+        if (len(results.combined_list()) > 10):
+            msg += (
+                "Found more than 10 results, only showing the first 10:\n"
+            )
 
         # get latest information
         update_discord_info(results.combined_list())
         if zerobot_common.site_enabled:
             zerobot_common.siteops.update_site_info(results.combined_list())
-        await ctx.send(
-            "Found these results, Ingame stats may be outdated, "
-            "info for those is from the last daily update:"
-        )
-        for memb in results.combined_list():
+        await ctx.send(msg)
+
+        for memb in results.combined_list()[:10]:
             # no role, or did not have / dont know their discord.
             if (
                 memb.discord_id == 0 or 
@@ -855,6 +917,55 @@ class MemberlistCog(commands.Cog):
     @commands.command()
     async def checkdupes(self, ctx):
         await warn_duplicates(self)
+    
+    async def remove_entry(self, entry_id):
+        """
+        Removes an entry from the memberlists.
+        Returns the member entry if found, otherwise None.
+        """
+        await self.lock()
+        for m in self.current_members:
+            if m.entry_id == entry_id:
+                self.current_members.remove(m)
+                await self.unlock()
+                m.sheet = "current_members"
+                return m
+        for m in self.old_members:
+            if m.entry_id == entry_id:
+                self.old_members.remove(m)
+                await self.unlock()
+                m.sheet = "old_members"
+                return m
+        for m in self.banned_members:
+            if m.entry_id == entry_id:
+                self.banned_members.remove(m)
+                await self.unlock()
+                m.sheet = "banned_members"
+                return m
+        return None
+    
+    async def edit_id(self, current_id, new_id):
+        """
+        Sets new_id as the id of all memberlist entries with id = current_id.
+        """
+        await self.lock()
+        edits = []
+        for m in self.current_members:
+            if m.id == current_id:
+                m.id = new_id
+                edits.append(("current_members", m.name, m.entry_id))
+        for m in self.old_members:
+            if m.id == current_id:
+                m.id = new_id
+                edits.append(("old_members", m.name, m.entry_id))
+        for m in self.banned_members:
+            if m.id == current_id:
+                m.id = new_id
+                edits.append(("banned_members", m.name, m.entry_id))
+        if new_id > self.highest_id:
+            self.highest_id = new_id
+        await self.unlock()
+        return edits
     
     @commands.command()
     async def removemember(self, ctx, *args):
