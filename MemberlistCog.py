@@ -874,7 +874,7 @@ class MemberlistCog(commands.Cog):
             "id: ingame name, discord_id or profile_link>"
         )
         if len(args) == 0:
-            await ctx.send("No enough arguments\n" + use_msg)
+            await ctx.send("Not enough arguments\n" + use_msg)
             return
         id = " ".join(args).lower()
         try:
@@ -890,19 +890,22 @@ class MemberlistCog(commands.Cog):
         if (len(results.combined_list()) == 0):
             await ctx.send("No results found in search.")
             return
-        if (len(results.combined_list()) >= 4):
-            await ctx.send("Too many results found in search.")
-            return
+        msg = (
+            "Found these results, ingame stats may be outdated, "
+            "info for those is from the last daily update:\n"
+        )
+        if (len(results.combined_list()) > 10):
+            msg += (
+                "Found more than 10 results, only showing the first 10:\n"
+            )
 
         # get latest information
         update_discord_info(results.combined_list())
         if zerobot_common.site_enabled:
             zerobot_common.siteops.update_site_info(results.combined_list())
-        await ctx.send(
-            "Found these results, Ingame stats may be outdated, "
-            "info for those is from the last daily update:"
-        )
-        for memb in results.combined_list():
+        await ctx.send(msg)
+
+        for memb in results.combined_list()[:10]:
             # no role, or did not have / dont know their discord.
             if (
                 memb.discord_id == 0 or 

@@ -239,6 +239,19 @@ def TodosJoinDiscord(memberlist):
             response.append(f"{memb.name}\n")
     response = [f"**Need to join discord or need a discord id update on sheet:** {len(response)}\n"] + response
     return response
+def rankInfo(member):
+    msg = f" {member.name_fixed_length()} - entry id {member.entry_id}: "
+    discord_rank = member.discord_rank
+    if (member.discord_rank == ""):
+        discord_rank = "Unknown"
+    msg += f"ingame: {member.rank}, discord: {discord_rank}"
+    if zerobot_common.site_enabled:
+        site_rank = member.site_rank
+        if (member.site_rank == ""):
+            site_rank = "Unknown"
+        msg += f", site: {site_rank}"
+    msg += f", passed gem: {member.passed_gem}\n"
+    return msg
 def TodosUpdateRanks(memberlist):
     _need_rank_update = list()
     for memb in memberlist:
@@ -267,7 +280,7 @@ def TodosUpdateRanks(memberlist):
     # build up response
     response = list()
     for memb in _need_rank_update:
-        response.append(memb.rankInfo())
+        response.append(rankInfo(memb))
     response = [f"Need a rank update: {len(response)}\n"] + response
     return response
 def TodosInviteIngame(memberlist):

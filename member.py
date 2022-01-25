@@ -8,7 +8,6 @@ from utilities import (
 )
 import copy
 import ast
-import zerobot_common
 
 # key names for skills and activities, matches ingame api result.
 # using some easier lowercase naming for the ones that are used.
@@ -522,19 +521,6 @@ class Member:
                 pow(hpxp_diff,2)
                 )
         )
-    def rankInfo(self):
-        msg = f" {self.name_fixed_length()} - entry id {self.entry_id}: "
-        discord_rank = self.discord_rank
-        if (self.discord_rank == ""):
-            discord_rank = "Unknown"
-        msg += f"ingame: {self.rank}, discord: {discord_rank}"
-        if zerobot_common.site_enabled:
-            site_rank = self.site_rank
-            if (self.site_rank == ""):
-                site_rank = "Unknown"
-            msg += f", site: {site_rank}"
-        msg += f", passed gem: {self.passed_gem}\n"
-        return msg
     def name_fixed_length(self):
         #TODO: make attribute and init / update it whenever changed
         res = self.name

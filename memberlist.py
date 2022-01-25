@@ -4,6 +4,7 @@ from utilities import read_file, write_file
 from member import Member
 from datetime import datetime
 from exceptions import NotAMember, NotAMemberList
+from rapidfuzz import fuzz
 import copy
 
 def memberlist_get(
@@ -37,21 +38,32 @@ def memberlist_get_all(
      - A valid profile link, string url (https://zer0pvm.com/members/2790316)
      - A valid ingame name, string of 1 to 12 characters, case insensitive
     """
-    results = list()
+    exact = []
+    exact_old = []
+    partial = []
     for memb in memberlist:
+        similarity = fuzz.partial_token_sort_ratio(str(id), memb.name)
         if memb.matches_id(id):
             memb.result_type = "exactname"
-            results.append(memb)
-        # include partial name matches
-        elif str(id).lower() in memb.name.lower():
+            exact.append(memb)
+        elif similarity > 75:
             memb.result_type = "partialname"
-            results.append(memb)
+            # insert partial matches in order of similarity
+            for i in range(len(partial)):
+                if similarity > partial[i][1]:
+                    partial.insert(i, (memb, similarity))
+                    break
+            if len(partial) == 0 or i == len(partial)-1:
+                partial.append((memb, similarity))
         else:
             for old_name in memb.old_names:
                 if (old_name.lower() == id):
                     memb.result_type = "oldname"
-                    results.append(memb)
-    return results
+                    exact_old.append(memb)
+    # extract only the member part
+    partial = list(map(lambda memb: memb[0], partial))
+    # return sorted in this order
+    return exact + exact_old + partial
 def memberlist_add(memberlist, member):
     """
     Appends the member element to the memberlist by reference. The member 

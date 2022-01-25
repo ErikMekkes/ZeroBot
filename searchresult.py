@@ -1,7 +1,7 @@
 class SearchResult():
-    '''
+    """
     Represents result of searching the memberlist for some members.
-    '''
+    """
     def __init__(self):
         # results from current members sheet
         self.current_results = list()
@@ -13,9 +13,16 @@ class SearchResult():
         if not isinstance(other, SearchResult):
             raise TypeError
         result = SearchResult()
-        result.current_results = self.current_results + other.current_results
-        result.old_results = self.old_results + other.old_results
-        result.banned_results = self.banned_results + other.banned_results
+        # combine without duplicates (checks entry ids)
+        for m in self.current_results + other.current_results:
+            if m not in result.current_results:
+                result.current_results.append(m)
+        for m in self.old_results + other.old_results:
+            if m not in result.old_results:
+                result.old_results.append(m)
+        for m in self.banned_results + other.banned_results:
+            if m not in result.banned_results:
+                result.banned_results.append(m)
         return result
     def combined_list(self):
         """
