@@ -264,7 +264,7 @@ async def warn_duplicates(self):
                 continue
             if memb.name == m.name and add_dupe(dupes, m):
                 res.append(
-                    f"name duplicate in current members: {m.name}, "
+                    f" name duplicate in current members: {m.name}, "
                     f"entry id {m.entry_id}\n"
                 )
     for memb in self.current_members:
@@ -275,9 +275,12 @@ async def warn_duplicates(self):
                 continue # no need to check
             if memb.discord_id == m.discord_id and add_dupe(dupes, m):
                 res.append(
-                    f"discord_id duplicate in current members: {m.discord_id}, "
+                    f" discord_id duplicate in current members: {m.discord_id}, "
                     f"entry id {m.entry_id}\n"
                 )
+    res.append(
+        "It is possible to remove memberlist entries with /remove_member."
+    )
 
     # unmarked rejoiner check
     res.append(
@@ -289,21 +292,21 @@ async def warn_duplicates(self):
                 continue # already marked as known rejoiner
             if memb.name == m.name:
                 res.append(
-                    f" did current id {memb.id}, old id {m.id} rejoin? "
-                    f"same name: {m.name}\n"
+                    f" did current member id {memb.id}, old member id {m.id} "
+                    f"rejoin? same name: {m.name}\n"
                 )
             if memb.discord_id == 0:
                 continue # no need to check
             if memb.discord_id == m.discord_id:
                 res.append(
-                    f" did current id {memb.id}, old id {m.id} rejoin? "
-                    f"same discord_id: {m.discord_id}\n"
+                    f" did current member id {memb.id}, old member id {m.id} "
+                    f"rejoin? same discord_id: {m.discord_id}\n"
                 )
     res.append(
         "For rejoining members, re-use their member id from the old member "
         "list. Use /edit_member_id to give them the same member id as before. "
-        "This lets zbot know they rejoined. (leave their "
-        "info on the old members list intact!)\n"
+        "This lets zbot know they rejoined. (do not remove the old member,"
+        "leave the info on the old members list intact)\n"
     )
     
     # got past banlist check
@@ -420,7 +423,7 @@ async def daily_update(self):
     to_join_discord = TodosJoinDiscord(self.current_members)
     await send_multiple(zerobot_common.bot_channel, to_join_discord)
     to_update_rank = TodosUpdateRanks(self.current_members)
-    await send_multiple(zerobot_common.bot_channel, to_update_rank)
+    await send_multiple(zerobot_common.bot_channel, to_update_rank, codeblock=True)
 
 async def process_leaving_member(self, memb):
     self.logfile.log(

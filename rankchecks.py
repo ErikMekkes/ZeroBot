@@ -268,7 +268,7 @@ def TodosUpdateRanks(memberlist):
     response = list()
     for memb in _need_rank_update:
         response.append(memb.rankInfo())
-    response = [f"**Need a rank update:** {len(response)}\n"] + response
+    response = [f"Need a rank update: {len(response)}\n"] + response
     return response
 def TodosInviteIngame(memberlist):
     response = list()
