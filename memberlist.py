@@ -8,7 +8,8 @@ import copy
 
 def memberlist_get(
     memberlist,
-    id
+    id,
+    type=None
 ):
     """
     Find a member in a memberlist that can be identified by the id.
@@ -20,7 +21,7 @@ def memberlist_get(
     Assumes unique ids, returns the first match found. None if no match found.
     """
     for memb in memberlist:
-        if memb.matches_id(id):
+        if memb.matches_id(id, type):
             return memb
     return None
 def memberlist_get_all(
