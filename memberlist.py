@@ -27,7 +27,8 @@ def memberlist_get(
     return None
 def memberlist_get_all(
     memberlist,
-    id
+    id,
+    partial=False
 ):
     """
     Find members in a memberlist that can be identified by the id. Includes
@@ -46,15 +47,17 @@ def memberlist_get_all(
         if memb.matches_id(id):
             memb.result_type = "exactname"
             exact.append(memb)
-        elif similarity > 75:
-            memb.result_type = "partialname"
-            # insert partial matches in order of similarity
-            for i in range(len(partial)):
-                if similarity > partial[i][1]:
-                    partial.insert(i, (memb, similarity))
-                    break
-            if len(partial) == 0 or i == len(partial)-1:
-                partial.append((memb, similarity))
+        elif partial:
+            similarity = fuzz.partial_token_sort_ratio(str(id), memb.name)
+            if similarity > 75:
+                memb.result_type = "partialname"
+                # insert partial matches in order of similarity
+                for i in range(len(partial)):
+                    if similarity > partial[i][1]:
+                        partial.insert(i, (memb, similarity))
+                        break
+                if len(partial) == 0 or i == len(partial)-1:
+                    partial.append((memb, similarity))
         else:
             for old_name in memb.old_names:
                 if (old_name.lower() == id):
