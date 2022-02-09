@@ -53,7 +53,7 @@ def compare_lists(ingame_members, current_members):
     for ingame_memb in ingame_membs:
         existing_member = None
         for cm in current_membs:
-            if cm.name == ingame_memb.name:
+            if cm.name.lower() == ingame_memb.name.lower():
                 existing_member = cm
         if existing_member is None:
             # not found = new ingame member or someone renamed to this
@@ -95,7 +95,7 @@ def compare_lists(ingame_members, current_members):
     for current_memb in current_membs:
         found = False
         for im in ingame_membs:
-            if im.name == current_memb.name: found = True
+            if im.name.lower() == current_memb.name.lower(): found = True
         if not(found):
             # member left or renamed to one in joining
             leaving_members.append(current_memb)
