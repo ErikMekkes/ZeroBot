@@ -73,7 +73,9 @@ def compare_lists(ingame_members, current_members):
             
             # load old data from last memberlist
             ingame_memb.loadFromOldName(existing_member)
-            #TODO: if not on hiscores also load ingame stats from old name, loadfromold doesnt.
+            # keep old ingame stats if no longer on hiscores.
+            if not(ingame_memb.on_hiscores):
+                ingame_memb.transferIngameData(existing_member)
 
             # if last active is not set in future...
             if (
@@ -186,17 +188,6 @@ def compare_lists(ingame_members, current_members):
         joining_members.remove(memb)
         leaving_members.remove(memb)
         continue
-        # remove from joining
-        for jm in joining_members:
-            if jm.name == memb.name:
-                joining_members.remove(jm)
-                break # otherwise its removal while iterating
-        # remove from leaving
-        old_name = memb.old_names[len(memb.old_names)-1]
-        for lm in leaving_members:
-            if lm.name == old_name:
-                leaving_members.remove(lm)
-                break # otherwise its removal while iterating
     
     # anyone with needs invite rank should be assigned as staying, not leaving
     leaving = leaving_members.copy()
