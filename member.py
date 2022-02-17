@@ -308,6 +308,15 @@ class Member:
         memb.misc["discord_roles"] = ast.literal_eval(memb.misc["discord_roles"])
         memb.misc["events_started"] = int_0(memb.misc["events_started"])
         return memb
+    def transferIngameData(self, other):
+        """
+        Transfers ingame hiscore stats to self from another member object.
+        Skips clan stats (name, rank, clan xp, kills) and non-hiscore stats.
+        """
+        for k, v in other.skills.items():
+            self.skills[k] = v
+        for k, v in other.activities.items():
+            self.activities[k] = v
     def loadFromOldName(self, other):
         """
         Load all the old data except the new ingame stats.
