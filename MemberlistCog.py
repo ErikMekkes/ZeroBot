@@ -661,6 +661,21 @@ class MemberlistCog(commands.Cog):
         await self.bot.logout()
     
     @commands.command()
+    async def show_highest_ids(self, ctx, *args):
+        # log command attempt and check if command allowed
+        self.logfile.log(
+            f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
+        )
+        if not(
+            zerobot_common.permissions.is_allowed("get_highest_ids", ctx.channel.id)
+        ): return
+        get_highest_ids(self)
+        await ctx.send(
+            f"current highest member id: {self.highest_id}\n"
+            f"current highest entry id: {self.highest_entry_id}\n"
+        )
+    
+    @commands.command()
     async def message(self, ctx, *args):
         # log command attempt and check if command allowed
         self.logfile.log(
