@@ -667,7 +667,7 @@ class MemberlistCog(commands.Cog):
             f"{ctx.channel.name}:{ctx.author.name}:{ctx.message.content}"
         )
         if not(
-            zerobot_common.permissions.is_allowed("get_highest_ids", ctx.channel.id)
+            zerobot_common.permissions.is_allowed("show_highest_ids", ctx.channel.id)
         ): return
         get_highest_ids(self)
         await ctx.send(
