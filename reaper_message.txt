@@ -1,0 +1,14 @@
+Advice (for those that want to help as well):
+
+Be talkative! let people know you're here.
+
+For solo only bosses, use <#755485394778194000> for advice. That channel is more active and the advice will stay visible and useful for others.
+Some bosses can be solod or done in a group, it's fine to ask for help to do those together (people telling you to just solo them arent exactly helping)
+
+Some boss groups occasionally host masses in fc's where you can get the kc in a large group, ask when / where you can find them.
+(its good to help eachother find masses if there are any planned soon, but dont use it as an excuse to not help further)
+
+Notify pings and friendlybot -host templates are allowed in here, but please dont just spam pings, have a plan or some interest from others first.
+
+You should enable discord pings for all messages in your channel. This way you wont miss it if others are interested in helping you.
+You can do this by right clicking your channel and selecting 'All Messages' under Notification Settings:

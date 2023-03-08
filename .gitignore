@@ -1,0 +1,11 @@
+.venv
+.zbotenv
+.vscode
+.zbotenv
+__pycache__
+credentials
+logs
+memberlists
+applications
+clan_events.txt
+

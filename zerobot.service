@@ -1,0 +1,34 @@
+# Ubuntu systemd service for the listbot startup script, place in /lib/systemd/system/
+# Lets you use `service listbot start/stop/restart` commands in terminal and
+# handles automatic restarting when the python code exits. You can even configure it
+# to restart when your server machine reboots with `systemctl enable listbot.service`
+#
+# Remember to EDIT THIS with your user:group and the correct listbot folder location.
+# you can see startup script issues in the logs with `journalctl -u listbot.service`
+# use `systemctl daemon-reload` to load changes after editing this file.
+#
+# If there are more than 5 restarts within 60 seconds it will stop restarting.
+# This is a safety feature to prevent endless restarts. That could get the bot's
+# login credentials reset or get it blocked from discord for 24h.
+
+[Unit]
+Description=ZeroBot
+After=network.target
+
+StartLimitBurst=5
+StartLimitIntervalSec=60
+
+[Service]
+Type=simple
+User=zbot
+Group=zbot
+WorkingDirectory=/mnt/shared/Zer0Bot
+ExecStart=/mnt/shared/Zer0Bot/startup_script
+# If you dont need code updates from github you do not need the startup shell script,
+# just switch out the execstart above for the one in the comment below.
+#ExecStart=/mnt/shared/Zer0Bot/.venv/bin/python /mnt/shared/Zer0Bot/ZeroBot.py
+Restart=always
+RestartSec=4
+
+[Install]
+WantedBy=multi-user.target

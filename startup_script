@@ -1,0 +1,24 @@
+#!/bin/sh
+# This is a very simple shell script that pulls the latest version from the git repo
+# and starts the bot using the main python file in the install environment.
+#
+# If you have no need for pulling the latest code version from github each time the bot
+# restarts just forget about this file and read the info in listbot.service
+#
+# Troubleshooting:
+# - Make sure you have access to the git repository
+# - Make sure you have ssh, git and a private key ready if you need them to access git.
+# - make sure the .venv for python has the required libraries installed
+#   - gspread, gspread_formatting, google-auth, oauth2client, requests, discord.py, numpy
+# - make sure the folder names are correct and you have read/write/execute access for them
+
+# check ssh is active and add the private key to access git repo if it needs one.
+eval `ssh-agent -s`
+ssh-add /home/zbot/.ssh/zbot@ubuzbot_2022-08-06
+# switch to the git folder and pull latest version, make sure it's on the right branch.
+cd /mnt/shared/Zer0Bot
+git stash
+git pull
+git stash pop
+# start the actual listbot python code.
+/mnt/shared/Zer0Bot/.venv/bin/python /mnt/shared/Zer0Bot/ZeroBot.py

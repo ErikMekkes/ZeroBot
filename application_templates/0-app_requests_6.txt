@@ -1,0 +1,9 @@
+_ _
+
+**Again, if you can't type in here, read and accept (👍) our clan rules in <#1064937062060531804> first :)**
+
+To start an application for guest access to our discord, type: `-zbot guest`
+To start an application to join our clan, type: `-zbot join`
+To start an application to rank up in the clan, type: `-zbot rankup <rank you want>` _ _ _ _ example: `-zbot rankup advanced member`
+
+If you accidentally started the wrong app, you can cancel it by typing `-zbot cancel` in your app's channel. This deletes the channel and everything you posted in it.
