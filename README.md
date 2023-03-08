@@ -1,5 +1,17 @@
-# Zer0Bot
-Zer0Bot collaboration
+# ZeroBot
+ZeroBot is designed specifically for our clan to be able to do member applications and rankups on discord, and to track members namechanges, stats and activity.
+It can do a lot more cool stuff like roles assigned by emojis reactions, guides that can be edited through google drive and I'm usually looking to add more fun stuff for things like clan competitions and events.
+
+Because it is so specific to our clan, you would have to make many changes or cut out parts to make this work for you.
+Even so, if you're looking to make something similar there should be many usable parts / ideas / examples here.
+
+Everything except for some .json settings / data files is in python, python's libraries for discord and google sheets are excellent and it is fun coding practise.
+
+I do not plan to assist you with installing or adapting this to your use. This is mostly a passion project specifically for Zer0 PvM.
+But, if you found a bug, added something cool or think you've cleaned something up or made it more efficient you can let me know by email or by opening a pull request.
+
+As the project is simple python, use any editor you like. The actual setup to run is quite complex though.
+I run our live version on a very simple but secure ubuntu server. I did include an example systemd service file with a startup script that can pull a most recent version from git.
 
 ## Installation / Workspace Requirements to run the bot
 Very simple:
@@ -16,33 +28,34 @@ Your editor of choice should now be able to find and activate the .zbotvenv and 
 2022-08-07 note: some of these packages are outdated / have newer versions, but I have not tested or migrated over to them yet.
 chat-exporter is copied because I MODIFIED the chat-exporter package to support local downloads, do not update / replace it. TODO: move to own repository, the original author doesnt want local download options in their package for good reasons.
 
-## RULES
-Obviously if you're here you're invited on a pure 'I trust you' basis, but the protection I can enforce on a free repository is limited, so some basics to keep this manageable:
+## Setting up to run the bot (or a test setup)
+First off, a warning, while the bot cant make any ingame changes, keep in mind that depending on the access rights, it can do very real damage to your linked discord, spreadsheet or site when it is set up wrong or modified. It is highly recommended to make a separate test setup for all of the components below, and to run that test bot first any time you make changes, to prevent mistakes from affecting your real version.
 
-  1. No commits to the main branch, no merges, no pull requests, you **do not touch the main branch** for now.
+I obviously made it so you cant use our live versions unless I grant you access to them, so you will need:
+- your own discord application / bot (https://discord.com/developers/applications), along with its bot auth token
+- your own discord server, to which you have added your bot so that it is allowed to connect, with permissions that let the bot access what it needs.
+Go through the steps and comments in zerobot_common.py and check the settings.json entries mentioned in there along the way.
+Doing that should guide you to a memberlist management bot that has ingame stats like runeclan, by going through these steps:
+  - getting the bot in your discord server and configuring your clan name
+  - setting up a discord channel for bot commands and responses
+  - permissions.json : telling the bot which commands are allowed where
+  - enabling the daily memberlist update at a convenient time.
+  - setting up discord roles and which ranks they match with, using discord_ranks.json and rankchecks.py
+  - setting up the list of inactivite members, and using inactive_exceptions.json
 
-### Git workflow practices:
-   - **Start by making your own new work branch from Zer0BotTest**, it has a working setup with login credentials for the test discord & test google drive memberlist, and pre-configured test settings for those. There is nothing important that you could break here.
-   - When you have something finalized, you will need to make a new release branch from your work that is compatible with the latest version of Zer0BotDev. On there you remove test settings / config files and credential files, and finally you merge Zer0BotDev into this release branch & resolve conflicts if there are any (remember to re-add any new stuff you needed to the live settings / config files at this point).
-   - Make a pull request for your release branch to Zer0BotDev
-   - Make a pull request for your work branch to Zer0BotTest to keep that one updated for the next persons work.
-   - We check together how you solved any conflicts, check for bugs/mistakes and make sure your personal / test stuff stays off the dev branch
-   - We merge both your pull requests, both your new branches can be deleted at this point.
-   - Unless absent only Yathsou merges new Dev versions onto the live main branch.
+As long as you followed the above when you run zerobot.py it should connect to your discord and start its timer for the daily memberlist update. You can force the first update right away by typing -zbot updatelist in you bot command channel, and then try out commands like, -zbot find, -zbot inactives, and -zbot activity.
 
-### Why so strict:
-minimises conflicts from working on similar code parts and keeps it easy to start with new work from test branch, but more importantly... 
-**If you break the main branch you take down zbot the next time it restarts**, let me be the one to break the main branch, because I have direct access to un-break it.
+There are many other modules you can enable afterwards.
+- module to handle applications to join the clan or rankup on discord. Also includes the option to safely archive discord channels (copies all text and images to disk)
+- google drive memberlist spreadsheet connection, to show and edit member info easily in one place
+- module for a shivtr clan site connection, to manage member ranks there
+- module to let the bot get text from a spreadsheet, and post it as discord messages. Very nice for working on discord messages together, like channels with guides or large amounts of info text. 
+- module to track when our clan recruitment thread needs a bump.
+- module to assign roles when people react with emojis to posts.
+- module with some fun examples of random bot chat responses.
+- module to let members create and manage discord channels safely for events
+- module to upload screenshots from discord channels to a spreadsheet for clan competitions.
 
-The discord bot is configured to automatically pull the latest version from main on startup, and can be restarted within discord with the `-zbot restart` command. If I'm away for an extended period of time and you're sure of your work, you can use this to carefully update the main branch. If you break the bot in any way that prevents the restart command you wont be able to undo any mistakes (until we rent a nice shared virtual machine somewhere cheap for $4 a month or so) and the bot will remain broken until I'm back.
-
-Obviously there is some potential for abuse here, again, i'm trusting you to not abuse the potential for entering malicious code onto the main branch and running it on my machine. Let me make it clear that abuse here goes beyond joking around and 'roleplaying games' together, this is software development and server administration responsibility.
-
-## I don't care much for Code Style, but... ;)
-- try to keep lines short-ish, press enter key many often much happy, feeling like you need too many ugly indents -> means you could have made a new function / file -> leads to better organised code. And much easier for me to review side by side in comparison editors when I dont have to scroll horizontally to find whats at the end of your line.
-- descriptive names please, i_like_dashes but CamelCaseNames is fine too as long as I can figure out what its for.
-- comments are good, I forget what I made and go "how the hell did I do this" or "where does that go/come from" **all the time**, doing that for your stuff will be more difficult...
-- with how much text is involved with all the stuff zbot has to say, I dont really care how or where you format those as long as it works, use whatever you feel like.
 
 ## Zer0Bot Code Overview
 ### Components
